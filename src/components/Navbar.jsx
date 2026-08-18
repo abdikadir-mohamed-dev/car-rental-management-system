@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 
 import { useAuth } from '@/lib/auth'
 import { api } from '@/lib/api'
+import { useIsMobile } from '@/hooks/use-mobile'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
@@ -74,7 +75,14 @@ function NotificationBell() {
 export default function Navbar() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+  const isMobile = useIsMobile()
   const [mobileOpen, setMobileOpen] = useState(false)
+
+  useEffect(() => {
+    if (!isMobile) {
+      setMobileOpen(false)
+    }
+  }, [isMobile])
 
   const nav = (
     <>
@@ -98,7 +106,7 @@ export default function Navbar() {
           <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-600 text-white">
             <Car className="h-5 w-5" />
           </span>
-          <span className="text-lg font-bold tracking-tight text-slate-900">DriveEasy</span>
+          <span className="text-lg font-bold tracking-tight text-slate-900">Car Rental Management System</span>
         </Link>
 
         <nav className="hidden items-center gap-6 md:flex">{nav}</nav>
@@ -144,13 +152,15 @@ export default function Navbar() {
           )}
         </div>
 
-        <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setMobileOpen((o) => !o)}>
-          {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </Button>
+        {isMobile && (
+          <Button variant="ghost" size="icon" onClick={() => setMobileOpen((o) => !o)}>
+            {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </Button>
+        )}
       </div>
 
-      {mobileOpen && (
-        <div className="border-t bg-white px-4 py-4 md:hidden">
+      {isMobile && mobileOpen && (
+        <div className="border-t bg-white px-4 py-4">
           <nav className="flex flex-col gap-3">{nav}</nav>
           <div className="mt-4 flex gap-2">
             {user ? (

@@ -116,7 +116,7 @@ export default function Home() {
 
       {/* Services / benefits */}
       <section className="mx-auto max-w-7xl px-4 py-14 sm:px-6">
-        <h2 className="text-center text-2xl font-bold text-slate-900">Why rent with DriveEasy</h2>
+        <h2 className="text-center text-2xl font-bold text-slate-900">Why rent with Car Rental Management System</h2>
         <div className="mt-8 grid gap-6 sm:grid-cols-3">
           {[
             { icon: CalendarCheck, title: 'Live availability', text: 'Every booking updates the fleet calendar instantly, so double-booking is impossible.' },
@@ -192,9 +192,9 @@ export default function Home() {
       <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6">
         <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
           <div>
-            <h2 className="text-2xl font-bold text-slate-900">About DriveEasy</h2>
+            <h2 className="text-2xl font-bold text-slate-900">About Car Rental Management System</h2>
             <p className="mt-4 text-slate-600">
-              DriveEasy is a role-aware car rental management platform built to replace paper
+              Car Rental Management System is a role-aware car rental management platform built to replace paper
               forms, spreadsheets and phone bookings with one connected system. Customers book
               online with confidence, staff run pickup and return smoothly, and admins get a
               real-time view of the fleet — all from a single source of truth.
@@ -222,7 +222,7 @@ export default function Home() {
               </p>
               <div className="mt-6 space-y-3 text-sm text-slate-600">
                 <p className="flex items-center gap-2"><Phone className="h-4 w-4 text-emerald-600" /> +254 700 000 000</p>
-                <p className="flex items-center gap-2"><Mail className="h-4 w-4 text-emerald-600" /> hello@driveeasy.example</p>
+                <p className="flex items-center gap-2"><Mail className="h-4 w-4 text-emerald-600" /> hello@carrental.example</p>
                 <p className="flex items-center gap-2"><MapPin className="h-4 w-4 text-emerald-600" /> Westlands, Nairobi</p>
               </div>
             </div>

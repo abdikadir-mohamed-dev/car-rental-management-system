@@ -23,7 +23,7 @@ export default function Register() {
     setBusy(true)
     try {
       const user = await register(form)
-      toast.success(`Welcome to DriveEasy, ${user.name.split(' ')[0]}!`)
+      toast.success(`Welcome to Car Rental Management System, ${user.name.split(' ')[0]}!`)
       navigate('/catalog')
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Registration failed'
