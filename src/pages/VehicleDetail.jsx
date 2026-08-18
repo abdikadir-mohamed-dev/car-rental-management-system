@@ -22,9 +22,16 @@ export default function VehicleDetail() {
   const [range, setRange] = useState(undefined)
   const [booking, setBooking] = useState(null)
   const [submitting, setSubmitting] = useState(false)
+  const [loadError, setLoadError] = useState(null)
 
   const load = () => {
-    api(`/api/vehicles/${id}`).then((d) => setVehicle(d.vehicle)).catch(() => setVehicle(null))
+    setLoadError(null)
+    api(`/api/vehicles/${id}`)
+      .then((d) => setVehicle(d.vehicle))
+      .catch((err) => {
+        setLoadError(err instanceof Error ? err.message : 'Failed to load vehicle details')
+        setVehicle(null)
+      })
   }
   useEffect(load, [id])
 
@@ -68,6 +75,15 @@ export default function VehicleDetail() {
     } finally {
       setSubmitting(false)
     }
+  }
+
+  if (loadError) {
+    return (
+      <div className="mx-auto max-w-5xl p-8 text-center">
+        <p className="text-lg font-medium text-slate-700">{loadError}</p>
+        <Button className="mt-4" onClick={load}>Try Again</Button>
+      </div>
+    )
   }
 
   if (!vehicle) return <div className="mx-auto max-w-5xl p-8"><Skeleton className="h-96 rounded-xl" /></div>
