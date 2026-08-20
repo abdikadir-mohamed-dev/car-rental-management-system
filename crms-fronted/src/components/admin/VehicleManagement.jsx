@@ -1,22 +1,29 @@
 import { useState, useEffect } from 'react'
-import { useDispatch } from 'react-redux'
-import { fetchVehicles, deleteVehicle } from '../../redux/slices/vehicleSlice'
 import toast from 'react-hot-toast'
 import { Edit, Trash2, Search } from 'lucide-react'
+import ConfirmDialog from '../../components/common/ConfirmDialog'
 
 function VehicleManagement({ onEdit }) {
-  const dispatch = useDispatch()
   const [vehicles, setVehicles] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const [deleteId, setDeleteId] = useState(null)
+  const [confirmOpen, setConfirmOpen] = useState(false)
+
+  const mockVehicles = [
+    { _id: 'V001', name: 'Toyota RAV4', type: 'SUV', pricePerDay: 80, available: true, brand: 'Toyota' },
+    { _id: 'V002', name: 'Honda Accord', type: 'Sedan', pricePerDay: 65, available: true, brand: 'Honda' },
+    { _id: 'V003', name: 'BMW 3 Series', type: 'Luxury', pricePerDay: 120, available: false, brand: 'BMW' },
+    { _id: 'V004', name: 'Mercedes C-Class', type: 'Luxury', pricePerDay: 140, available: true, brand: 'Mercedes' },
+    { _id: 'V005', name: 'Nissan X-Trail', type: 'SUV', pricePerDay: 75, available: true, brand: 'Nissan' },
+  ]
 
   const loadVehicles = () => {
     setLoading(true)
-    dispatch(fetchVehicles({}))
-      .unwrap()
-      .then((res) => setVehicles(res.data.vehicles || res.data))
-      .catch(() => {})
-      .finally(() => setLoading(false))
+    setTimeout(() => {
+      setVehicles(mockVehicles)
+      setLoading(false)
+    }, 600)
   }
 
   useEffect(() => {
@@ -24,16 +31,23 @@ function VehicleManagement({ onEdit }) {
     loadVehicles()
   }, [])
 
-  const handleDelete = (id) => {
-    if (window.confirm('Are you sure you want to delete this vehicle?')) {
-      deleteVehicle(id)
-        .unwrap()
-        .then(() => {
-          toast.success('Vehicle deleted')
-          loadVehicles()
-        })
-        .catch((err) => toast.error(err))
+  const handleDeleteClick = (id) => {
+    setDeleteId(id)
+    setConfirmOpen(true)
+  }
+
+  const handleDeleteConfirm = () => {
+    setConfirmOpen(false)
+    if (deleteId) {
+      setVehicles(vehicles.filter(v => v._id !== deleteId))
+      toast.success('Vehicle deleted')
+      setDeleteId(null)
     }
+  }
+
+  const handleDeleteCancel = () => {
+    setConfirmOpen(false)
+    setDeleteId(null)
   }
 
   const filteredVehicles = vehicles.filter(vehicle =>
@@ -76,7 +90,7 @@ function VehicleManagement({ onEdit }) {
                 <tr key={vehicle._id} className="border-b border-slate-100 hover:bg-slate-50">
                   <td className="py-3 px-4 text-slate-900">{vehicle.name}</td>
                   <td className="py-3 px-4 capitalize text-slate-600">{vehicle.type}</td>
-                  <td className="py-3 px-4 text-slate-600">${vehicle.pricePerDay}</td>
+                  <td className="py-3 px-4 text-slate-600">KES {vehicle.pricePerDay.toLocaleString()}</td>
                   <td className="py-3 px-4">
                     <span className={`badge ${vehicle.available ? 'badge-success' : 'badge-danger'}`}>
                       {vehicle.available ? 'Available' : 'Unavailable'}
@@ -87,7 +101,7 @@ function VehicleManagement({ onEdit }) {
                       <button onClick={() => onEdit?.(vehicle)} className="p-2 text-primary hover:bg-primary-light rounded-lg">
                         <Edit className="w-4 h-4" />
                       </button>
-                      <button onClick={() => handleDelete(vehicle._id)} className="p-2 text-danger hover:bg-red-50 rounded-lg">
+                      <button onClick={() => handleDeleteClick(vehicle._id)} className="p-2 text-danger hover:bg-red-50 rounded-lg">
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
@@ -101,6 +115,14 @@ function VehicleManagement({ onEdit }) {
           )}
         </div>
       )}
+      <ConfirmDialog
+        isOpen={confirmOpen}
+        title="Delete Vehicle"
+        message="Are you sure you want to delete this vehicle? This action cannot be undone."
+        onConfirm={handleDeleteConfirm}
+        onCancel={handleDeleteCancel}
+        confirmText="Yes, Delete"
+      />
     </div>
   )
 }
