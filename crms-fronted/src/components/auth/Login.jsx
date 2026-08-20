@@ -1,14 +1,16 @@
 import { useState } from 'react'
-import { useDispatch, useSelector } from 'react-redux'
-import { login } from '../../redux/slices/authSlice'
-import toast from 'react-hot-toast'
 import { Link, useNavigate } from 'react-router-dom'
+import toast from 'react-hot-toast'
+
+const mockUsers = [
+  { email: 'customer@drivego.com', password: 'password123', name: 'John Doe', role: 'customer' },
+  { email: 'admin@drivego.com', password: 'admin123', name: 'Admin User', role: 'admin' },
+]
 
 function Login() {
   const [formData, setFormData] = useState({ email: '', password: '' })
   const [errors, setErrors] = useState({})
-  const { loading, error } = useSelector((state) => state.auth)
-  const dispatch = useDispatch()
+  const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
 
   const handleChange = (e) => {
@@ -29,51 +31,64 @@ function Login() {
       return
     }
 
-    dispatch(login(formData))
-      .unwrap()
-      .then(() => {
+    setLoading(true)
+    setTimeout(() => {
+      const user = mockUsers.find(u => u.email === formData.email && u.password === formData.password)
+      if (user) {
+        localStorage.setItem('user', JSON.stringify(user))
         toast.success('Login successful!')
-        navigate('/customer')
-      })
-      .catch((err) => {
-        toast.error(err)
-      })
+        if (user.role === 'admin') {
+          navigate('/admin')
+        } else {
+          navigate('/customer')
+        }
+      } else {
+        toast.error('Invalid email or password')
+      }
+      setLoading(false)
+    }, 800)
   }
 
   return (
-    <form onSubmit={handleSubmit} className="card space-y-4">
+    <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-lg p-8 space-y-5">
       <div>
-        <label className="label">Email</label>
+        <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
         <input
           type="email"
           name="email"
           value={formData.email}
           onChange={handleChange}
           className={`input ${errors.email ? 'border-red-500' : ''}`}
+          placeholder="customer@drivego.com"
         />
         {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
       </div>
       <div>
-        <label className="label">Password</label>
+        <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
         <input
           type="password"
           name="password"
           value={formData.password}
           onChange={handleChange}
           className={`input ${errors.password ? 'border-red-500' : ''}`}
+          placeholder="password123"
         />
         {errors.password && <p className="text-red-500 text-sm mt-1">{errors.password}</p>}
       </div>
-      {error && <p className="text-red-500 text-sm">{error}</p>}
       <button type="submit" className="btn-primary w-full" disabled={loading}>
         {loading ? 'Signing in...' : 'Sign In'}
       </button>
-      <p className="text-center text-sm text-gray-600">
-        Don't have an account? <Link to="/auth/register" className="text-blue-600 hover:underline">Register</Link>
-      </p>
-      <p className="text-center text-sm">
+      <p className="text-center text-sm text-slate-600">
         <Link to="/auth/forgot-password" className="text-blue-600 hover:underline">Forgot password?</Link>
       </p>
+      <p className="text-center text-sm text-slate-600">
+        Don't have an account? <Link to="/auth/register" className="text-blue-600 hover:underline font-medium">Create Account</Link>
+      </p>
+      <div className="bg-slate-50 rounded-lg p-3 text-xs text-slate-500">
+        <p className="font-medium mb-1">Demo credentials:</p>
+        <p>Customer: customer@drivego.com / password123</p>
+        <p>Admin: admin@drivego.com / admin123</p>
+      </div>
     </form>
   )
 }
