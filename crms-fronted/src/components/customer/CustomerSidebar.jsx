@@ -80,7 +80,7 @@ function CustomerSidebar({ isOpen, onClose }) {
               }
               onClick={onClose}
             >
-              <link.icon className="w-5 h-5" />
+              {link.icon && <link.icon className="w-5 h-5" />}
               {link.label}
             </NavLink>
           ))}
