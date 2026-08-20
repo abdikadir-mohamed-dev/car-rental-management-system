@@ -6,30 +6,14 @@ import {
   Download, Route
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-
-const navItems = [
-  { label: 'Dashboard', icon: LayoutGrid },
-  { label: 'My Assignments', icon: ClipboardList },
-  { label: 'Trips', icon: Route },
-  { label: 'Earnings', icon: DollarSign },
-  { label: 'Bookings', icon: Calendar },
-  { label: 'Check-out', icon: LogOut },
-  { label: 'Check-in', icon: LogIn },
-  { label: 'Vehicles', icon: Car },
-  { label: 'Customers', icon: Users },
-  { label: 'Maintenance', icon: Wrench },
-  { label: 'Reports', icon: BarChart2 },
-  { label: 'Notifications', icon: Bell },
-  { label: 'Profile', icon: User },
-  { label: 'Logout', icon: Power },
-];
+import { toast } from 'react-hot-toast';
 
 const earningsByPeriod = {
   week: {
-    total: '$420',
+    total: 'KSH 420',
     trips: 15,
-    avg: '$28',
-    pending: '$60',
+    avg: 'KSH 28',
+    pending: 'KSH 60',
     chart: [
       { label: 'Mon', amount: 60 },
       { label: 'Tue', amount: 45 },
@@ -41,10 +25,10 @@ const earningsByPeriod = {
     ],
   },
   month: {
-    total: '$1,680',
+    total: 'KSH 1,680',
     trips: 56,
-    avg: '$30',
-    pending: '$180',
+    avg: 'KSH 30',
+    pending: 'KSH 180',
     chart: [
       { label: 'Wk 1', amount: 380 },
       { label: 'Wk 2', amount: 420 },
@@ -53,10 +37,10 @@ const earningsByPeriod = {
     ],
   },
   year: {
-    total: '$19,240',
+    total: 'KSH 19,240',
     trips: 642,
-    avg: '$30',
-    pending: '$180',
+    avg: 'KSH 30',
+    pending: 'KSH 180',
     chart: [
       { label: 'Q1', amount: 4200 },
       { label: 'Q2', amount: 4800 },
@@ -67,11 +51,11 @@ const earningsByPeriod = {
 };
 
 const recentTrips = [
-  { id: 'T-2291', date: 'Aug 19', customer: 'Wanjiru Kamau', vehicle: 'Toyota Prado', amount: '$32', status: 'Paid' },
-  { id: 'T-2288', date: 'Aug 19', customer: 'Brian Otieno', vehicle: 'Subaru Forester', amount: '$26', status: 'Paid' },
-  { id: 'T-2285', date: 'Aug 18', customer: 'Amina Yusuf', vehicle: 'Mazda Demio', amount: '$18', status: 'Paid' },
-  { id: 'T-2279', date: 'Aug 18', customer: 'Kevin Njoroge', vehicle: 'Toyota Prado', amount: '$40', status: 'Pending' },
-  { id: 'T-2274', date: 'Aug 17', customer: 'Grace Achieng', vehicle: 'Honda Accord', amount: '$24', status: 'Paid' },
+  { id: 'T-2291', date: 'Aug 19', customer: 'Wanjiru Kamau', vehicle: 'Toyota Prado', amount: 'KSH 32', status: 'Paid' },
+  { id: 'T-2288', date: 'Aug 19', customer: 'Brian Otieno', vehicle: 'Subaru Forester', amount: 'KSH 26', status: 'Paid' },
+  { id: 'T-2285', date: 'Aug 18', customer: 'Amina Yusuf', vehicle: 'Mazda Demio', amount: 'KSH 18', status: 'Paid' },
+  { id: 'T-2279', date: 'Aug 18', customer: 'Kevin Njoroge', vehicle: 'Toyota Prado', amount: 'KSH 40', status: 'Pending' },
+  { id: 'T-2274', date: 'Aug 17', customer: 'Grace Achieng', vehicle: 'Honda Accord', amount: 'KSH 24', status: 'Paid' },
 ];
 
 const statusStyle = {
@@ -85,74 +69,37 @@ export default function DriverEarningsPage() {
 
   const data = earningsByPeriod[period];
 
-  return (
-    <div className="bg-slate-100 h-screen overflow-hidden flex">
-      {/* Sidebar — anchored, scrolls independently */}
-      <div className="bg-[#0D1B2A] w-56 h-screen overflow-y-auto text-slate-400 flex-shrink-0">
-        <div className="flex items-center gap-2 text-xl font-bold text-white py-6 px-5">
-          <ShipWheel size={22} className="text-blue-500" />
-          DriveGo
-        </div>
+  const handleExport = () => {
+    toast.success('Earnings report exported')
+  }
 
-        <nav className="flex flex-col gap-1 px-3">
-          {navItems.map(({ label, icon: Icon }) => {
-            const isActive = active === label;
-            return (
-              <button
-                key={label}
-                onClick={() => setActive(label)}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-left
-                  ${isActive
-                    ? 'bg-emerald-600 text-white'
-                    : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}
-              >
-                <Icon size={18} />
-                {label}
-              </button>
-            );
-          })}
-        </nav>
+  return (
+    <div className="p-6 space-y-6 overflow-y-auto">
+      <div>
+        <h1 className="text-2xl font-bold text-slate-800">Earnings</h1>
+        <p className="text-sm text-slate-500">Track your trip income and payouts</p>
+      </div>
+      <div className="flex items-center gap-3">
+        <div className="flex bg-white border border-slate-200 rounded-lg p-0.5 text-sm font-medium shadow-sm">
+          {['week', 'month', 'year'].map((p) => (
+            <button
+              key={p}
+              onClick={() => setPeriod(p)}
+              className={`px-3 py-1.5 rounded-md capitalize transition-colors ${
+                period === p ? 'bg-emerald-600 text-white' : 'text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              {p}
+            </button>
+          ))}
+        </div>
+        <button onClick={handleExport} className="flex items-center gap-2 bg-white border border-slate-200 text-slate-700 text-sm font-medium px-3 py-2 rounded-lg shadow-sm hover:bg-slate-50 transition-colors">
+          <Download size={16} />
+          Export
+        </button>
       </div>
 
-      {/* Main content */}
-      <div className="flex-1 flex flex-col min-w-0 h-screen">
-        {/* Topbar */}
-        <nav className="bg-white flex items-center justify-end gap-2 px-6 py-3 border-b border-slate-200 flex-shrink-0">
-          <div className="w-8 h-8 rounded-full bg-slate-300 flex items-center justify-center overflow-hidden">
-            <User size={18} className="text-slate-600" />
-          </div>
-          <span className="text-sm font-medium text-slate-700">James Driver</span>
-          <ChevronDown size={16} className="text-slate-400" />
-        </nav>
-
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-slate-800">Earnings</h1>
-              <p className="text-sm text-slate-500">Track your trip income and payouts</p>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="flex bg-white border border-slate-200 rounded-lg p-0.5 text-sm font-medium shadow-sm">
-                {['week', 'month', 'year'].map((p) => (
-                  <button
-                    key={p}
-                    onClick={() => setPeriod(p)}
-                    className={`px-3 py-1.5 rounded-md capitalize transition-colors ${
-                      period === p ? 'bg-emerald-600 text-white' : 'text-slate-500 hover:text-slate-800'
-                    }`}
-                  >
-                    {p}
-                  </button>
-                ))}
-              </div>
-              <button className="flex items-center gap-2 bg-white border border-slate-200 text-slate-700 text-sm font-medium px-3 py-2 rounded-lg shadow-sm hover:bg-slate-50 transition-colors">
-                <Download size={16} />
-                Export
-              </button>
-            </div>
-          </div>
-
-          {/* Summary cards */}
+      {/* Summary cards */}
           <div className="grid grid-cols-4 gap-6">
             {[
               { label: 'Total Earnings', value: data.total, icon: DollarSign, bg: 'bg-emerald-500' },
@@ -221,7 +168,5 @@ export default function DriverEarningsPage() {
             </table>
           </div>
         </div>
-      </div>
-    </div>
-  );
+  )
 }

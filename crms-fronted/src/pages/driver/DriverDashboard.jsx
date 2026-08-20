@@ -5,27 +5,13 @@ import {
   ShipWheel, CheckCircle, DollarSign, ChevronDown, ArrowRight
 } from 'lucide-react';
 import { PieChart, Pie, Cell } from 'recharts';
-
-const navItems = [
-  { label: 'Dashboard', icon: LayoutGrid },
-  { label: 'My Assignments', icon: ClipboardList },
-  { label: 'Bookings', icon: Calendar },
-  { label: 'Check-out', icon: LogOut },
-  { label: 'Check-in', icon: LogIn },
-  { label: 'Vehicles', icon: Car },
-  { label: 'Customers', icon: Users },
-  { label: 'Maintenance', icon: Wrench },
-  { label: 'Reports', icon: BarChart2 },
-  { label: 'Notifications', icon: Bell },
-  { label: 'Profile', icon: User },
-  { label: 'Logout', icon: Power },
-];
+import { toast } from 'react-hot-toast';
 
 const statCards = [
   { label: "Today's Trips", value: 3, icon: ClipboardList, bg: 'bg-blue-500' },
   { label: 'Upcoming', value: 1, icon: Calendar, bg: 'bg-emerald-500' },
   { label: 'Completed', value: 2, icon: CheckCircle, bg: 'bg-violet-500' },
-  { label: 'Total Earnings', value: '$120', icon: DollarSign, bg: 'bg-amber-500' },
+  { label: 'Total Earnings', value: 'KSH 120', icon: DollarSign, bg: 'bg-amber-500' },
 ];
 
 const assignments = [
@@ -50,57 +36,22 @@ const vehicleData = [
 const totalVehicles = vehicleData.reduce((sum, v) => sum + v.value, 0);
 
 const bookings = [
-  { id: '#BK001', customer: 'John Doe', vehicle: 'Toyota RAV4', date: '20 May', amount: '$300', status: 'Confirmed' },
-  { id: '#BK002', customer: 'Mary Wanjiku', vehicle: 'Honda Accord', date: '21 May', amount: '$280', status: 'Confirmed' },
-  { id: '#BK003', customer: 'Peter Mwangi', vehicle: 'BMW 3 Series', date: '22 May', amount: '$350', status: 'Confirmed' },
-  { id: '#BK004', customer: 'Ali Hassan', vehicle: 'Mercedes C-Class', date: '23 May', amount: '$420', status: 'Pending' },
+  { id: '#BK001', customer: 'John Doe', vehicle: 'Toyota RAV4', date: '20 May', amount: 'KSH 300', status: 'Confirmed' },
+  { id: '#BK002', customer: 'Mary Wanjiku', vehicle: 'Honda Accord', date: '21 May', amount: 'KSH 280', status: 'Confirmed' },
+  { id: '#BK003', customer: 'Peter Mwangi', vehicle: 'BMW 3 Series', date: '22 May', amount: 'KSH 350', status: 'Confirmed' },
+  { id: '#BK004', customer: 'Ali Hassan', vehicle: 'Mercedes C-Class', date: '23 May', amount: 'KSH 420', status: 'Pending' },
 ];
 
 export default function App() {
   const [active, setActive] = React.useState('Dashboard');
   const [earningsView, setEarningsView] = React.useState('week');
 
+  const handleCompleteTrip = () => {
+    toast.success('Trip completed successfully')
+  }
+
   return (
-    <div className="bg-slate-100 h-screen overflow-hidden flex">
-      {/* Sidebar — scrolls*/}
-      <div className="bg-[#0D1B2A] w-56 h-screen overflow-y-auto text-slate-400 flex-shrink-0">
-        <div className="flex items-center gap-2 text-xl font-bold text-white py-6 px-5">
-          <ShipWheel size={22} className="text-blue-500" />
-          DriveGo
-        </div>
-
-        <nav className="flex flex-col gap-1 px-3">
-          {navItems.map(({ label, icon: Icon }) => {
-            const isActive = active === label;
-            return (
-              <button
-                key={label}
-                onClick={() => setActive(label)}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-left
-                  ${isActive
-                    ? 'bg-emerald-600 text-white'
-                    : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}
-              >
-                <Icon size={18} />
-                {label}
-              </button>
-            );
-          })}
-        </nav>
-      </div>
-
-      {/* Main content — topbar stays pinned, content below scrolls independently */}
-      <div className="flex-1 flex flex-col min-w-0 h-screen">
-        {/* Topbar */}
-        <nav className="bg-white flex items-center justify-end gap-2 px-6 py-3 border-b border-slate-200 flex-shrink-0">
-          <div className="w-8 h-8 rounded-full bg-slate-300 flex items-center justify-center overflow-hidden">
-            <User size={18} className="text-slate-600" />
-          </div>
-          <span className="text-sm font-medium text-slate-700">James Driver</span>
-          <ChevronDown size={16} className="text-slate-400" />
-        </nav>
-
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+    <div className="p-6 space-y-6 overflow-y-auto">
           <h1 className="text-2xl font-bold text-slate-800">Driver Dashboard</h1>
 
           {/* Stat cards */}
@@ -212,9 +163,9 @@ export default function App() {
                   </div>
                 ))}
               </dl>
-              <button className="w-full mt-5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
-                Complete Trip
-              </button>
+               <button onClick={handleCompleteTrip} className="w-full mt-5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
+                 Complete Trip
+               </button>
             </div>
 
             <div className="bg-white rounded-xl shadow-sm p-5">
@@ -238,7 +189,7 @@ export default function App() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-xs text-slate-400 mb-1">{earningsView === 'week' ? 'This Week' : 'This Month'}</p>
-                  <p className="text-2xl font-bold text-slate-800">{earningsView === 'week' ? '$120' : '$480'}</p>
+                   <p className="text-2xl font-bold text-slate-800">{earningsView === 'week' ? 'KSH 120' : 'KSH 480'}</p>
                 </div>
                 <div>
                   <p className="text-xs text-slate-400 mb-1">Total Trips</p>
@@ -271,7 +222,5 @@ export default function App() {
             </div>
           </div>
         </div>
-      </div>
-    </div>
   )
 }

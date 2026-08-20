@@ -1,27 +1,10 @@
 import React from 'react'
 import {
-  LayoutGrid, ClipboardList, Calendar, LogOut, LogIn,
   Car, Users, Wrench, BarChart2, Bell, User, Power,
   ShipWheel, ChevronDown, DollarSign, Mail, Phone,
-  Route, Edit2, Save, X, Shield, Star
+  Route, Edit2, Save, X, Shield, Star, Calendar
 } from 'lucide-react';
-
-const navItems = [
-  { label: 'Dashboard', icon: LayoutGrid },
-  { label: 'My Assignments', icon: ClipboardList },
-  { label: 'Trips', icon: Route },
-  { label: 'Earnings', icon: DollarSign },
-  { label: 'Bookings', icon: Calendar },
-  { label: 'Check-out', icon: LogOut },
-  { label: 'Check-in', icon: LogIn },
-  { label: 'Vehicles', icon: Car },
-  { label: 'Customers', icon: Users },
-  { label: 'Maintenance', icon: Wrench },
-  { label: 'Reports', icon: BarChart2 },
-  { label: 'Notifications', icon: Bell },
-  { label: 'Profile', icon: User },
-  { label: 'Logout', icon: Power },
-];
+import { toast } from 'react-hot-toast';
 
 const initialProfile = {
   name: 'James Driver',
@@ -39,7 +22,6 @@ const stats = [
 ];
 
 export default function DriverProfilePage() {
-  const [active, setActive] = React.useState('Profile');
   const [isEditing, setIsEditing] = React.useState(false);
   const [profile, setProfile] = React.useState(initialProfile);
   const [formData, setFormData] = React.useState(initialProfile);
@@ -54,6 +36,7 @@ export default function DriverProfilePage() {
   const cancelEditing = () => {
     setFormData(profile);
     setIsEditing(false);
+    toast.success('Editing cancelled')
   };
 
   const handleChange = (e) => {
@@ -65,68 +48,30 @@ export default function DriverProfilePage() {
     setProfile(formData);
     setIsEditing(false);
     setSaved(true);
+    toast.success('Profile updated successfully')
     setTimeout(() => setSaved(false), 2500);
   };
 
   return (
-    <div className="bg-slate-100 h-screen overflow-hidden flex">
-      {/* Sidebar — anchored, scrolls independently */}
-      <div className="bg-[#0D1B2A] w-56 h-screen overflow-y-auto text-slate-400 flex-shrink-0">
-        <div className="flex items-center gap-2 text-xl font-bold text-white py-6 px-5">
-          <ShipWheel size={22} className="text-blue-500" />
-          DriveGo
-        </div>
-
-        <nav className="flex flex-col gap-1 px-3">
-          {navItems.map(({ label, icon: Icon }) => {
-            const isActive = active === label;
-            return (
-              <button
-                key={label}
-                onClick={() => setActive(label)}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-left
-                  ${isActive
-                    ? 'bg-emerald-600 text-white'
-                    : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}
-              >
-                <Icon size={18} />
-                {label}
-              </button>
-            );
-          })}
-        </nav>
+    <div className="p-6 space-y-6 overflow-y-auto max-w-3xl">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-slate-800">Profile</h1>
+        {!isEditing && (
+          <button
+            onClick={startEditing}
+            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+          >
+            <Edit2 size={16} />
+            Edit Profile
+          </button>
+        )}
       </div>
 
-      {/* Main content */}
-      <div className="flex-1 flex flex-col min-w-0 h-screen">
-        {/* Topbar */}
-        <nav className="bg-white flex items-center justify-end gap-2 px-6 py-3 border-b border-slate-200 flex-shrink-0">
-          <div className="w-8 h-8 rounded-full bg-slate-300 flex items-center justify-center overflow-hidden">
-            <User size={18} className="text-slate-600" />
-          </div>
-          <span className="text-sm font-medium text-slate-700">{profile.name}</span>
-          <ChevronDown size={16} className="text-slate-400" />
-        </nav>
-
-        <div className="flex-1 overflow-y-auto p-6 space-y-6 max-w-3xl">
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-slate-800">Profile</h1>
-            {!isEditing && (
-              <button
-                onClick={startEditing}
-                className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
-              >
-                <Edit2 size={16} />
-                Edit Profile
-              </button>
-            )}
-          </div>
-
-          {saved && (
-            <div className="bg-emerald-50 text-emerald-700 text-sm font-medium px-4 py-3 rounded-lg">
-              Profile updated successfully.
-            </div>
-          )}
+      {saved && (
+        <div className="bg-emerald-50 text-emerald-700 text-sm font-medium px-4 py-3 rounded-lg">
+          Profile updated successfully.
+        </div>
+      )}
 
           {/* Profile header card */}
           <div className="bg-white rounded-xl shadow-sm p-6 flex items-center gap-5">
@@ -251,7 +196,5 @@ export default function DriverProfilePage() {
             )}
           </div>
         </div>
-      </div>
-    </div>
   );
 }

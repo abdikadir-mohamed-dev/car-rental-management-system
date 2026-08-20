@@ -1,26 +1,9 @@
 import React from 'react'
 import {
-  LayoutGrid, ClipboardList, Calendar, LogOut, LogIn,
-  Car, Users, Wrench, BarChart2, Bell, User, Power,
+  Car, Wrench, BarChart2, Bell, User, Power,
   ShipWheel, ChevronDown, DollarSign, Route, Search, Fuel, Gauge
 } from 'lucide-react';
-
-const navItems = [
-  { label: 'Dashboard', icon: LayoutGrid },
-  { label: 'My Assignments', icon: ClipboardList },
-  { label: 'Trips', icon: Route },
-  { label: 'Earnings', icon: DollarSign },
-  { label: 'Bookings', icon: Calendar },
-  { label: 'Check-out', icon: LogOut },
-  { label: 'Check-in', icon: LogIn },
-  { label: 'Vehicles', icon: Car },
-  { label: 'Customers', icon: Users },
-  { label: 'Maintenance', icon: Wrench },
-  { label: 'Reports', icon: BarChart2 },
-  { label: 'Notifications', icon: Bell },
-  { label: 'Profile', icon: User },
-  { label: 'Logout', icon: Power },
-];
+import { toast } from 'react-hot-toast';
 
 const vehicles = [
   { plate: 'KDA 221B', model: 'Toyota Prado', mileage: 45210, fuel: 'Full', status: 'Available' },
@@ -41,7 +24,6 @@ const statusStyle = {
 };
 
 export default function DriverVehiclesPage() {
-  const [active, setActive] = React.useState('Vehicles');
   const [tab, setTab] = React.useState('All');
   const [query, setQuery] = React.useState('');
 
@@ -51,58 +33,27 @@ export default function DriverVehiclesPage() {
     return matchesTab && matchesQuery;
   });
 
+  const handleVehicleAction = (vehicle, action) => {
+    toast.success(`${vehicle.model} ${action}`)
+  }
+
   return (
-    <div className="bg-slate-100 h-screen overflow-hidden flex">
-      <div className="bg-[#0D1B2A] w-56 h-screen overflow-y-auto text-slate-400 flex-shrink-0">
-        <div className="flex items-center gap-2 text-xl font-bold text-white py-6 px-5">
-          <ShipWheel size={22} className="text-blue-500" />
-          DriveGo
-        </div>
-        <nav className="flex flex-col gap-1 px-3">
-          {navItems.map(({ label, icon: Icon }) => {
-            const isActive = active === label;
-            return (
-              <button
-                key={label}
-                onClick={() => setActive(label)}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-left
-                  ${isActive ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}
-              >
-                <Icon size={18} />
-                {label}
-              </button>
-            );
-          })}
-        </nav>
+    <div className="p-6 space-y-6 overflow-y-auto">
+      <div>
+        <h1 className="text-2xl font-bold text-slate-800">Vehicles</h1>
+        <p className="text-sm text-slate-500">{filtered.length} vehicle{filtered.length !== 1 ? 's' : ''} in fleet</p>
+      </div>
+      <div className="relative">
+        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search model or plate..."
+          className="pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg bg-white w-64 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+        />
       </div>
 
-      <div className="flex-1 flex flex-col min-w-0 h-screen">
-        <nav className="bg-white flex items-center justify-end gap-2 px-6 py-3 border-b border-slate-200 flex-shrink-0">
-          <div className="w-8 h-8 rounded-full bg-slate-300 flex items-center justify-center overflow-hidden">
-            <User size={18} className="text-slate-600" />
-          </div>
-          <span className="text-sm font-medium text-slate-700">James Driver</span>
-          <ChevronDown size={16} className="text-slate-400" />
-        </nav>
-
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-slate-800">Vehicles</h1>
-              <p className="text-sm text-slate-500">{filtered.length} vehicle{filtered.length !== 1 ? 's' : ''} in fleet</p>
-            </div>
-            <div className="relative">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search model or plate..."
-                className="pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg bg-white w-64 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              />
-            </div>
-          </div>
-
-          <div className="flex gap-2 border-b border-slate-200">
+      <div className="flex gap-2 border-b border-slate-200">
             {tabs.map((t) => (
               <button
                 key={t}
@@ -142,7 +93,5 @@ export default function DriverVehiclesPage() {
             )}
           </div>
         </div>
-      </div>
-    </div>
-  );
+  )
 }
