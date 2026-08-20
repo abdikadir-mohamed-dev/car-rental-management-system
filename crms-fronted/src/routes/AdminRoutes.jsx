@@ -7,6 +7,7 @@ import ManageBookingsPage from '../pages/admin/ManageBookingsPage'
 import ManagePaymentsPage from '../pages/admin/ManagePaymentsPage'
 import ReportsPage from '../pages/admin/ReportsPage'
 import SettingsPage from '../pages/admin/SettingsPage'
+import AdminProfilePage from '../pages/admin/AdminProfilePage'
 
 function AdminRoutes() {
   return (
@@ -19,6 +20,7 @@ function AdminRoutes() {
         <Route path="payments" element={<ManagePaymentsPage />} />
         <Route path="reports" element={<ReportsPage />} />
         <Route path="settings" element={<SettingsPage />} />
+        <Route path="profile" element={<AdminProfilePage />} />
       </Route>
     </Routes>
   )
