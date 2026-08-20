@@ -24,7 +24,7 @@ function ManageBookingsPage() {
               <div><span className="text-slate-600">Pickup:</span> <span className="font-medium text-slate-900">{selectedBooking.pickupDate}</span></div>
               <div><span className="text-slate-600">Dropoff:</span> <span className="font-medium text-slate-900">{selectedBooking.dropoffDate}</span></div>
               <div><span className="text-slate-600">Status:</span> <span className="font-medium text-slate-900 capitalize">{selectedBooking.status}</span></div>
-              <div><span className="text-slate-600">Total:</span> <span className="font-medium text-slate-900">${selectedBooking.totalAmount}</span></div>
+               <div><span className="text-slate-600">Total:</span> <span className="font-medium text-slate-900">KES {selectedBooking.totalAmount.toLocaleString()}</span></div>
             </div>
             <div className="p-6 border-t border-slate-200">
               <button onClick={() => setSelectedBooking(null)} className="btn-secondary w-full">Close</button>
