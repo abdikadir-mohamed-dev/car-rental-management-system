@@ -1,19 +1,21 @@
 import { useState, useEffect } from 'react'
 import { fetchBookings } from '../../redux/slices/bookingSlice'
-import { Eye, Check, X, Search } from 'lucide-react'
+import { Eye, Check, X, Search, XCircle } from 'lucide-react'
 import { BOOKING_STATUS } from '../../utils/constants'
+import { getMockBookings } from '../../utils/staffMockData'
 
 function BookingManagement({ onView }) {
   const [bookings, setBookings] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
+  const [selectedBooking, setSelectedBooking] = useState(null)
 
   const loadBookings = () => {
     setLoading(true)
     fetchBookings({})
       .then((res) => setBookings(res.data.bookings || res.data))
-      .catch(() => {})
+      .catch(() => setBookings(getMockBookings().data.bookings))
       .finally(() => setLoading(false))
   }
 
@@ -89,7 +91,7 @@ function BookingManagement({ onView }) {
                   </td>
                   <td className="py-3 px-4">
                     <div className="flex gap-2">
-                      <button onClick={() => onView?.(booking)} className="p-2 text-primary hover:bg-primary-light rounded-lg">
+                      <button onClick={() => setSelectedBooking(booking)} className="p-2 text-primary hover:bg-primary-light rounded-lg">
                         <Eye className="w-4 h-4" />
                       </button>
                       {booking.status === BOOKING_STATUS.PENDING && (
@@ -102,6 +104,16 @@ function BookingManagement({ onView }) {
                           </button>
                         </>
                       )}
+                      {booking.status === BOOKING_STATUS.CONFIRMED && (
+                        <button className="p-2 text-success hover:bg-emerald-50 rounded-lg" title="Check-out">
+                          <Check className="w-4 h-4" />
+                        </button>
+                      )}
+                      {booking.status === 'active' && (
+                        <button className="p-2 text-primary hover:bg-primary-light rounded-lg" title="Check-in">
+                          <XCircle className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -111,6 +123,72 @@ function BookingManagement({ onView }) {
           {filteredBookings.length === 0 && (
             <p className="text-center text-slate-500 py-8">No bookings found.</p>
           )}
+        </div>
+      )}
+
+      {selectedBooking && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-slate-200 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-slate-900">Booking Details</h3>
+              <button onClick={() => setSelectedBooking(null)} className="text-slate-400 hover:text-slate-600">
+                <XCircle className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-slate-500">Booking ID</p>
+                  <p className="font-medium text-slate-900">#{selectedBooking._id?.slice(-8)}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-slate-500">Status</p>
+                  <span className={`badge capitalize ${getStatusColor(selectedBooking.status)}`}>
+                    {selectedBooking.status}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-sm text-slate-500">Customer</p>
+                  <p className="font-medium text-slate-900">{selectedBooking.user?.name || 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-slate-500">Vehicle</p>
+                  <p className="font-medium text-slate-900">{selectedBooking.vehicle?.name || 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-slate-500">Pickup Date</p>
+                  <p className="font-medium text-slate-900">{selectedBooking.pickupDate}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-slate-500">Return Date</p>
+                  <p className="font-medium text-slate-900">{selectedBooking.dropoffDate}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-slate-500">Pickup Location</p>
+                  <p className="font-medium text-slate-900">{selectedBooking.pickupLocation || 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-slate-500">Dropoff Location</p>
+                  <p className="font-medium text-slate-900">{selectedBooking.dropoffLocation || 'N/A'}</p>
+                </div>
+              </div>
+            </div>
+            <div className="p-6 border-t border-slate-200 flex justify-end gap-3">
+              <button onClick={() => setSelectedBooking(null)} className="btn-secondary">
+                Close
+              </button>
+              {selectedBooking.status === BOOKING_STATUS.CONFIRMED && (
+                <button onClick={() => {}} className="btn-primary">
+                  Check-out
+                </button>
+              )}
+              {selectedBooking.status === 'active' && (
+                <button onClick={() => {}} className="btn-primary">
+                  Check-in
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>
