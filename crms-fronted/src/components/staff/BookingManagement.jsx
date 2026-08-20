@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react'
+import { useDispatch } from 'react-redux'
 import { fetchBookings } from '../../redux/slices/bookingSlice'
 import { Eye, Check, X, Search, XCircle } from 'lucide-react'
 import { BOOKING_STATUS } from '../../utils/constants'
 import { getMockBookings } from '../../utils/staffMockData'
 
 function BookingManagement({ onView }) {
+  const dispatch = useDispatch()
   const [bookings, setBookings] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -13,8 +15,9 @@ function BookingManagement({ onView }) {
 
   const loadBookings = () => {
     setLoading(true)
-    fetchBookings({})
-      .then((res) => setBookings(res.data.bookings || res.data))
+    dispatch(fetchBookings({}))
+      .unwrap()
+      .then((res) => setBookings(res.bookings || res))
       .catch(() => setBookings(getMockBookings().data.bookings))
       .finally(() => setLoading(false))
   }
