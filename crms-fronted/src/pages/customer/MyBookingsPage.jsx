@@ -21,13 +21,15 @@ function MyBookingsPage() {
 
   const filteredBookings = bookings.filter((b) => {
     if (activeTab === 'all') return true
+    if (activeTab === 'upcoming') return b.status === BOOKING_STATUS.CONFIRMED && new Date(b.pickupDate) > new Date()
+    if (activeTab === 'active') return b.status === BOOKING_STATUS.CONFIRMED && new Date(b.pickupDate) <= new Date() && new Date(b.dropoffDate) >= new Date()
     return b.status === activeTab
   })
 
   const tabs = [
     { key: 'all', label: 'All', count: bookings.length },
-    { key: BOOKING_STATUS.UPCOMING, label: 'Upcoming', count: bookings.filter((b) => b.status === BOOKING_STATUS.CONFIRMED && new Date(b.pickupDate) > new Date()).length },
-    { key: BOOKING_STATUS.ACTIVE, label: 'Active', count: bookings.filter((b) => b.status === BOOKING_STATUS.CONFIRMED && new Date(b.pickupDate) <= new Date() && new Date(b.dropoffDate) >= new Date()).length },
+    { key: 'upcoming', label: 'Upcoming', count: bookings.filter((b) => b.status === BOOKING_STATUS.CONFIRMED && new Date(b.pickupDate) > new Date()).length },
+    { key: 'active', label: 'Active', count: bookings.filter((b) => b.status === BOOKING_STATUS.CONFIRMED && new Date(b.pickupDate) <= new Date() && new Date(b.dropoffDate) >= new Date()).length },
     { key: BOOKING_STATUS.COMPLETED, label: 'Completed', count: bookings.filter((b) => b.status === BOOKING_STATUS.COMPLETED).length },
     { key: BOOKING_STATUS.CANCELLED, label: 'Cancelled', count: bookings.filter((b) => b.status === BOOKING_STATUS.CANCELLED).length },
   ]

@@ -1,5 +1,5 @@
 import { Car, Calendar, MapPin, Users } from 'lucide-react'
-import { formatCurrency, formatDate } from '../../utils/formatCurrency'
+import { formatCurrency } from '../../utils/formatCurrency'
 import { formatDate as formatDateUtil } from '../../utils/formatDate'
 import StatusBadge from '../common/StatusBadge'
 
