@@ -3,12 +3,16 @@ import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react'
 
 const BOOKING_DAYS = {
   '2026-08-03': [{ time: '09:00 AM', customer: 'John Doe', vehicle: 'Toyota Camry', action: 'Check-out' }],
+  '2026-08-05': [{ time: '08:00 AM', customer: 'Grace Njeri', vehicle: 'Nissan X-Trail', action: 'Check-out' }],
   '2026-08-07': [{ time: '10:30 AM', customer: 'Jane Smith', vehicle: 'Honda CR-V', action: 'Check-in' }],
-  '2026-08-12': [{ time: '08:00 AM', customer: 'Alice Mwangi', vehicle: 'Toyota RAV4', action: 'Check-out' }],
+  '2026-08-10': [{ time: '09:00 AM', customer: 'Alice Mwangi', vehicle: 'Toyota RAV4', action: 'Check-out' }],
+  '2026-08-12': [{ time: '08:00 AM', customer: 'Alice Mwangi', vehicle: 'Toyota RAV4', action: 'Check-out' }, { time: '11:00 AM', customer: 'Brian Otieno', vehicle: 'Mazda CX-5', action: 'Check-in' }],
   '2026-08-15': [{ time: '11:00 AM', customer: 'Brian Otieno', vehicle: 'Mazda CX-5', action: 'Check-in' }],
   '2026-08-18': [{ time: '09:30 AM', customer: 'Grace Njeri', vehicle: 'Nissan X-Trail', action: 'Check-out' }],
+  '2026-08-20': [{ time: '08:00 AM', customer: 'John Doe', vehicle: 'Toyota Camry', action: 'Check-out' }],
   '2026-08-22': [{ time: '02:00 PM', customer: 'David Kipchoge', vehicle: 'Subaru Forester', action: 'Check-in' }],
   '2026-08-25': [{ time: '10:00 AM', customer: 'Mary Wanjiku', vehicle: 'Volkswagen Golf', action: 'Check-out' }],
+  '2026-08-28': [{ time: '09:00 AM', customer: 'Jane Smith', vehicle: 'Honda CR-V', action: 'Check-in' }],
 }
 
 function StaffCalendar() {
