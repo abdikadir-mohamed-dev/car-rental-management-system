@@ -4,6 +4,7 @@ import CustomerSidebar from '../components/customer/CustomerSidebar'
 import CustomerHeader from '../components/customer/CustomerHeader'
 
 function CustomerLayout() {
+  console.log('[CustomerLayout] rendering')
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (

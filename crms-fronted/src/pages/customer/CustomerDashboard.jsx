@@ -24,6 +24,7 @@ import BookingSummary from '../../components/booking/BookingSummary'
 import Loader from '../../components/common/Loader'
 
 function CustomerDashboard() {
+  console.log('[CustomerDashboard] rendering')
   const dispatch = useDispatch()
   const { profile } = useSelector((state) => state.user || {})
   const { bookings = [] } = useSelector((state) => state.bookings || {})
