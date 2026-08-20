@@ -16,7 +16,7 @@ import {
   Download,
   Shield,
 } from 'lucide-react'
-import { formatCurrency, formatDate } from '../../utils/formatCurrency'
+import { formatCurrency } from '../../utils/formatCurrency'
 import { formatDate as formatDateUtil } from '../../utils/formatDate'
 import { BOOKING_STATUS, PAYMENT_STATUS } from '../../utils/constants'
 import StatusBadge from '../../components/common/StatusBadge'

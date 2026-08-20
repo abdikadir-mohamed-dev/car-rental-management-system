@@ -12,7 +12,7 @@ import {
   Shield,
   CheckCircle,
 } from 'lucide-react'
-import { formatCurrency, formatDate } from '../../utils/formatCurrency'
+import { formatCurrency } from '../../utils/formatCurrency'
 import { formatDate as formatDateUtil } from '../../utils/formatDate'
 import StatusBadge from '../../components/common/StatusBadge'
 import Loader from '../../components/common/Loader'
