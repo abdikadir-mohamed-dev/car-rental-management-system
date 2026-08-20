@@ -3,14 +3,13 @@ import { X, Car } from 'lucide-react'
 
 const adminLinks = [
   { to: '/admin', icon: 'LayoutDashboard', label: 'Dashboard', end: true },
+  { to: '/admin/users', icon: 'Users', label: 'Users' },
   { to: '/admin/vehicles', icon: 'Car', label: 'Vehicles' },
   { to: '/admin/bookings', icon: 'Calendar', label: 'Bookings' },
-  { to: '/admin/customers', icon: 'Users', label: 'Customers' },
-  { to: '/admin/drivers', icon: 'User', label: 'Drivers' },
-  { to: '/admin/staff', icon: 'UserCheck', label: 'Staff' },
-  { to: '/admin/pricing', icon: 'DollarSign', label: 'Pricing' },
+  { to: '/admin/payments', icon: 'DollarSign', label: 'Payments' },
   { to: '/admin/reports', icon: 'BarChart3', label: 'Reports' },
   { to: '/admin/settings', icon: 'Settings', label: 'Settings' },
+  { to: '/admin/profile', icon: 'User', label: 'Profile' },
 ]
 
 const staffLinks = [
@@ -70,7 +69,7 @@ function Sidebar({ isOpen, onClose, role }) {
         onClick={onClose}
       />
       <aside
-        className={`fixed top-0 left-0 z-50 h-full w-64 bg-sidebar text-white transform transition-transform lg:translate-x-0 ${
+        className={`fixed top-0 left-0 z-50 h-full w-64 bg-sidebar text-white transform transition-transform lg:translate-x-0 lg:sticky lg:top-0 lg:z-auto ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
