@@ -3,8 +3,15 @@ import { getTrips, updateTripStatus } from '../../services/staffService'
 import toast from 'react-hot-toast'
 import { Search, XCircle, AlertTriangle } from 'lucide-react'
 
+const MOCK_TRIPS = [
+  { _id: 'TRP-201', customer: { name: 'John Doe' }, vehicle: { name: 'Toyota Camry' }, pickupLocation: 'Nairobi CBD', dropoffLocation: 'JKIA', pickupTime: '08:00 AM', status: 'assigned' },
+  { _id: 'TRP-202', customer: { name: 'Jane Smith' }, vehicle: { name: 'Honda CR-V' }, pickupLocation: 'Westlands', dropoffLocation: 'Nairobi CBD', pickupTime: '10:30 AM', status: 'in_progress' },
+  { _id: 'TRP-203', customer: { name: 'Alice Mwangi' }, vehicle: { name: 'Toyota RAV4' }, pickupLocation: 'Kilimani', dropoffLocation: 'JKIA', pickupTime: '09:00 AM', status: 'completed' },
+  { _id: 'TRP-204', customer: { name: 'Brian Otieno' }, vehicle: { name: 'Mazda CX-5' }, pickupLocation: 'Kileleshwa', dropoffLocation: 'Westlands', pickupTime: '11:00 AM', status: 'assigned' },
+]
+
 function TripManagement() {
-  const [trips, setTrips] = useState([])
+  const [trips, setTrips] = useState(MOCK_TRIPS)
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [selectedTrip, setSelectedTrip] = useState(null)
@@ -14,7 +21,7 @@ function TripManagement() {
     setLoading(true)
     getTrips({})
       .then((res) => setTrips(res.data.trips || res.data))
-      .catch(() => {})
+      .catch(() => setTrips(MOCK_TRIPS))
       .finally(() => setLoading(false))
   }
 
