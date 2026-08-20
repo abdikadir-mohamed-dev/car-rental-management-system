@@ -2,9 +2,9 @@ import { Link } from 'react-router-dom'
 import { Car, Users, Gauge, Fuel, Star } from 'lucide-react'
 import { formatCurrency } from '../../utils/formatCurrency'
 
-function VehicleCard({ vehicle }) {
+function VehicleCard({ vehicle, to = `/vehicles/${vehicle._id}` }) {
   return (
-    <Link to={`/vehicles/${vehicle._id}`} className="card overflow-hidden hover:shadow-md transition-shadow group">
+    <Link to={to} className="card overflow-hidden hover:shadow-md transition-shadow group">
       <div className="aspect-video bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
         {vehicle.image ? (
           <img src={vehicle.image} alt={vehicle.name} className="w-full h-full object-cover" />

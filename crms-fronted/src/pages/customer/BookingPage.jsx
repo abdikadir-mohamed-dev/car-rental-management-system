@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { fetchVehicle } from '../../redux/slices/vehicleSlice'
 import { createBooking } from '../../redux/slices/bookingSlice'
@@ -8,8 +8,9 @@ import Loader from '../../components/common/Loader'
 
 function BookingPage() {
   const { vehicleId } = useParams()
+  const navigate = useNavigate()
   const dispatch = useDispatch()
-  const { currentVehicle, loading } = useSelector((state) => state.vehicles)
+  const { currentVehicle, loading, error } = useSelector((state) => state.vehicles)
   const [formData, setFormData] = useState({
     pickupDate: '',
     dropoffDate: '',
@@ -20,8 +21,13 @@ function BookingPage() {
   const { loading: bookingLoading } = useSelector((state) => state.bookings)
 
   useEffect(() => {
+    if (!vehicleId) {
+      toast.error('Invalid booking link')
+      navigate('/customer/vehicles')
+      return
+    }
     dispatch(fetchVehicle(vehicleId))
-  }, [dispatch, vehicleId])
+  }, [dispatch, vehicleId, navigate])
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
@@ -33,11 +39,38 @@ function BookingPage() {
       .unwrap()
       .then(() => {
         toast.success('Booking created successfully!')
+        setFormData({
+          pickupDate: '',
+          dropoffDate: '',
+          pickupLocation: '',
+          dropoffLocation: '',
+          specialRequests: '',
+        })
+        navigate('/customer/bookings')
       })
       .catch((err) => toast.error(err))
   }
 
   if (loading) return <Loader />
+
+  if (error) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-danger text-lg mb-4">Failed to load vehicle details</p>
+        <button onClick={() => dispatch(fetchVehicle(vehicleId))} className="btn-primary">
+          Try Again
+        </button>
+      </div>
+    )
+  }
+
+  if (!currentVehicle) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-slate-500">Vehicle not found</p>
+      </div>
+    )
+  }
 
   return (
     <div>
