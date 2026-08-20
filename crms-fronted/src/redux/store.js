@@ -3,7 +3,6 @@ import authReducer from './slices/authSlice'
 import vehicleReducer from './slices/vehicleSlice'
 import bookingReducer from './slices/bookingSlice'
 import paymentReducer from './slices/paymentSlice'
-import notificationReducer from './slices/notificationSlice'
 import userReducer from './slices/userSlice'
 
 const store = configureStore({
@@ -12,7 +11,6 @@ const store = configureStore({
     vehicles: vehicleReducer,
     bookings: bookingReducer,
     payments: paymentReducer,
-    notifications: notificationReducer,
     user: userReducer,
   },
 })
