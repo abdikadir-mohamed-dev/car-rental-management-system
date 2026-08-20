@@ -6,7 +6,9 @@ function StaffTripsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-slate-900">Trips</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-slate-900">Trips</h1>
+      </div>
       <div className="flex flex-wrap gap-2">
         {['all', 'assigned', 'in_progress', 'completed'].map((tab) => (
           <button
