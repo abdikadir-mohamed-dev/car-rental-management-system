@@ -9,6 +9,9 @@ import StaffProfilePage from '../pages/staff/StaffProfilePage'
 import StaffCheckoutPage from '../pages/staff/StaffCheckoutPage'
 import StaffCheckinPage from '../pages/staff/StaffCheckinPage'
 import StaffCustomersPage from '../pages/staff/StaffCustomersPage'
+import StaffReportsPage from '../pages/staff/StaffReportsPage'
+import StaffNotificationsPage from '../pages/staff/StaffNotificationsPage'
+import StaffProfilePage from '../pages/staff/StaffProfilePage'
 
 function StaffRoutes() {
   return (
@@ -23,6 +26,8 @@ function StaffRoutes() {
         <Route path="checkout" element={<StaffCheckoutPage />} />
         <Route path="checkin" element={<StaffCheckinPage />} />
         <Route path="customers" element={<StaffCustomersPage />} />
+        <Route path="reports" element={<StaffReportsPage />} />
+        <Route path="notifications" element={<StaffNotificationsPage />} />
       </Route>
     </Routes>
   )
