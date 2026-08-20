@@ -12,7 +12,7 @@ import { USER_ROLES } from '../utils/constants'
 function AppRoutes() {
   return (
     <Routes>
-      <Route path="/auth" element={<AuthRoutes />} />
+      <Route path="/auth/*" element={<AuthRoutes />} />
       <Route path="/customer/*" element={
         <ErrorBoundary>
           <CustomerRoutes />
