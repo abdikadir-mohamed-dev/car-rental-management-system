@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { fetchBookings } from '../../redux/slices/bookingSlice'
 import { Eye, Check, X, Search, XCircle } from 'lucide-react'
 import { BOOKING_STATUS } from '../../utils/constants'
+import { getMockBookings } from '../../utils/staffMockData'
 
 function BookingManagement({ onView }) {
   const [bookings, setBookings] = useState([])
@@ -14,7 +15,7 @@ function BookingManagement({ onView }) {
     setLoading(true)
     fetchBookings({})
       .then((res) => setBookings(res.data.bookings || res.data))
-      .catch(() => {})
+      .catch(() => setBookings(getMockBookings().data.bookings))
       .finally(() => setLoading(false))
   }
 
