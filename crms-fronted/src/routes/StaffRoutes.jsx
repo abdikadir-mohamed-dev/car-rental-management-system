@@ -8,6 +8,7 @@ import StaffCalendarPage from '../pages/staff/StaffCalendarPage'
 import StaffProfilePage from '../pages/staff/StaffProfilePage'
 import StaffCheckoutPage from '../pages/staff/StaffCheckoutPage'
 import StaffCheckinPage from '../pages/staff/StaffCheckinPage'
+import StaffCustomersPage from '../pages/staff/StaffCustomersPage'
 
 function StaffRoutes() {
   return (
@@ -21,6 +22,7 @@ function StaffRoutes() {
         <Route path="profile" element={<StaffProfilePage />} />
         <Route path="checkout" element={<StaffCheckoutPage />} />
         <Route path="checkin" element={<StaffCheckinPage />} />
+        <Route path="customers" element={<StaffCustomersPage />} />
       </Route>
     </Routes>
   )
