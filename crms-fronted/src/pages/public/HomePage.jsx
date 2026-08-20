@@ -20,7 +20,7 @@ function HomePage() {
   return (
     <div>
       <section className="relative bg-slate-900 text-white overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-slate-900/80 via-slate-900/60 to-slate-900/40 z-10" />
+        <div className="absolute inset-0 bg-gradient-to-r from-slate-900/60 via-slate-900/40 to-slate-900/20 z-10" />
         <img
           src="https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=1920&h=800&fit=crop"
           alt="Luxury car on city road"
@@ -28,10 +28,10 @@ function HomePage() {
         />
         <div className="relative z-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-32">
           <div className="max-w-3xl">
-            <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">
-              Find, Book & Drive Your <span className="text-blue-400">Dream Car</span>
+            <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight text-white">
+              Find, Book & Drive Your <span className="text-white">Dream Car</span>
             </h1>
-            <p className="text-xl text-slate-300 mb-10">
+            <p className="text-xl text-slate-100 mb-10">
               Choose from a wide range of reliable vehicles and book your perfect ride in just a few clicks.
             </p>
 

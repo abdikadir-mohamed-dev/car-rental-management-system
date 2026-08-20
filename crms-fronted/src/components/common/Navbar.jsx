@@ -1,17 +1,15 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Car, User, LogOut, Menu, X } from 'lucide-react'
-import { useDispatch, useSelector } from 'react-redux'
-import { logout } from '../../redux/slices/authSlice'
+
+const mockUser = null
 
 function Navbar() {
-  const { user, isAuthenticated } = useSelector((state) => state.auth)
-  const dispatch = useDispatch()
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
+  const user = mockUser
 
   const handleLogout = () => {
-    dispatch(logout())
     setDropdownOpen(false)
     setMobileOpen(false)
   }
@@ -37,7 +35,7 @@ function Navbar() {
           </div>
 
           <div className="hidden md:flex items-center gap-3">
-            {isAuthenticated ? (
+            {user ? (
               <div className="relative">
                 <button
                   onClick={() => setDropdownOpen(!dropdownOpen)}
@@ -52,13 +50,6 @@ function Navbar() {
                 </button>
                 {dropdownOpen && (
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-slate-200 py-1">
-                    <Link
-                      to="/customer"
-                      className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
-                      onClick={() => setDropdownOpen(false)}
-                    >
-                      Dashboard
-                    </Link>
                     <button
                       onClick={handleLogout}
                       className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-slate-50 flex items-center gap-2"
@@ -95,7 +86,7 @@ function Navbar() {
               <Link to="/about" className="text-slate-300 hover:text-white px-3 py-2 rounded-lg hover:bg-slate-800 text-sm font-medium" onClick={() => setMobileOpen(false)}>About Us</Link>
               <Link to="/contact" className="text-slate-300 hover:text-white px-3 py-2 rounded-lg hover:bg-slate-800 text-sm font-medium" onClick={() => setMobileOpen(false)}>Contact</Link>
               <div className="border-t border-slate-800 pt-2 mt-2">
-                {isAuthenticated ? (
+                {user ? (
                   <>
                     <Link to="/customer" className="text-slate-300 hover:text-white px-3 py-2 rounded-lg hover:bg-slate-800 text-sm font-medium block" onClick={() => setMobileOpen(false)}>Dashboard</Link>
                     <button onClick={handleLogout} className="text-red-400 hover:text-red-300 px-3 py-2 rounded-lg hover:bg-slate-800 text-sm font-medium w-full text-left">Logout</button>
