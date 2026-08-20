@@ -1,6 +1,22 @@
+import { useState, useEffect } from 'react'
 import { CalendarCheck, Car, ClipboardList, Activity } from 'lucide-react'
+import { getStaffDashboard } from '../../services/staffService'
+import { getMockDashboard } from '../../utils/staffMockData'
 
 function Dashboard() {
+  const [data, setData] = useState(getMockDashboard())
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    setLoading(true)
+    getStaffDashboard()
+      .then((res) => setData(res.data))
+      .catch(() => setData(getMockDashboard()))
+      .finally(() => setLoading(false))
+  }, [])
+
+  const { stats, todaySchedule, vehicleStatus, recentBookings } = data
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -10,7 +26,7 @@ function Dashboard() {
           </div>
           <div>
             <p className="text-sm text-slate-600">Today's Pickups</p>
-            <p className="text-2xl font-bold text-slate-900">12</p>
+            <p className="text-2xl font-bold text-slate-900">{stats?.todayPickups ?? '-'}</p>
           </div>
         </div>
         <div className="card p-6 flex items-center gap-4">
@@ -19,7 +35,7 @@ function Dashboard() {
           </div>
           <div>
             <p className="text-sm text-slate-600">Today's Returns</p>
-            <p className="text-2xl font-bold text-slate-900">8</p>
+            <p className="text-2xl font-bold text-slate-900">{stats?.todayReturns ?? '-'}</p>
           </div>
         </div>
         <div className="card p-6 flex items-center gap-4">
@@ -28,7 +44,7 @@ function Dashboard() {
           </div>
           <div>
             <p className="text-sm text-slate-600">Pending Tasks</p>
-            <p className="text-2xl font-bold text-slate-900">5</p>
+            <p className="text-2xl font-bold text-slate-900">{stats?.pendingTasks ?? '-'}</p>
           </div>
         </div>
         <div className="card p-6 flex items-center gap-4">
@@ -37,7 +53,7 @@ function Dashboard() {
           </div>
           <div>
             <p className="text-sm text-slate-600">Active Rentals</p>
-            <p className="text-2xl font-bold text-slate-900">24</p>
+            <p className="text-2xl font-bold text-slate-900">{stats?.activeRentals ?? '-'}</p>
           </div>
         </div>
       </div>
@@ -45,35 +61,36 @@ function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 card p-6">
           <h3 className="font-semibold text-slate-900 mb-4">Today's Schedule</h3>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-slate-200">
-                  <th className="text-left py-3 px-4 font-medium text-slate-600">Time</th>
-                  <th className="text-left py-3 px-4 font-medium text-slate-600">Customer</th>
-                  <th className="text-left py-3 px-4 font-medium text-slate-600">Vehicle</th>
-                  <th className="text-left py-3 px-4 font-medium text-slate-600">Action</th>
-                  <th className="text-left py-3 px-4 font-medium text-slate-600">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr className="border-b border-slate-100">
-                  <td className="py-3 px-4 text-slate-900">09:00 AM</td>
-                  <td className="py-3 px-4 text-slate-600">John Doe</td>
-                  <td className="py-3 px-4 text-slate-600">Toyota Camry</td>
-                  <td className="py-3 px-4 text-slate-600">Check-out</td>
-                  <td className="py-3 px-4"><span className="badge badge-warning">Pending</span></td>
-                </tr>
-                <tr className="border-b border-slate-100">
-                  <td className="py-3 px-4 text-slate-900">10:30 AM</td>
-                  <td className="py-3 px-4 text-slate-600">Jane Smith</td>
-                  <td className="py-3 px-4 text-slate-600">Honda CR-V</td>
-                  <td className="py-3 px-4 text-slate-600">Check-in</td>
-                  <td className="py-3 px-4"><span className="badge badge-info">In Progress</span></td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+          {loading ? (
+            <div className="flex items-center justify-center min-h-[200px]">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-slate-200">
+                    <th className="text-left py-3 px-4 font-medium text-slate-600">Time</th>
+                    <th className="text-left py-3 px-4 font-medium text-slate-600">Customer</th>
+                    <th className="text-left py-3 px-4 font-medium text-slate-600">Vehicle</th>
+                    <th className="text-left py-3 px-4 font-medium text-slate-600">Action</th>
+                    <th className="text-left py-3 px-4 font-medium text-slate-600">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(todaySchedule || []).map((item, idx) => (
+                    <tr key={idx} className="border-b border-slate-100">
+                      <td className="py-3 px-4 text-slate-900">{item.time}</td>
+                      <td className="py-3 px-4 text-slate-600">{item.customer}</td>
+                      <td className="py-3 px-4 text-slate-600">{item.vehicle}</td>
+                      <td className="py-3 px-4 text-slate-600">{item.action}</td>
+                      <td className="py-3 px-4"><span className={`badge ${item.status === 'in_progress' ? 'badge-info' : item.status === 'completed' ? 'badge-success' : 'badge-warning'}`}>{item.status.replace('_', ' ')}</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
         <div className="card p-6">
@@ -81,24 +98,24 @@ function Dashboard() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-sm text-slate-600">Available</span>
-              <span className="text-sm font-medium text-slate-900">18</span>
+              <span className="text-sm font-medium text-slate-900">{vehicleStatus?.available ?? '-'}</span>
             </div>
             <div className="w-full bg-slate-200 rounded-full h-2">
-              <div className="bg-success h-2 rounded-full" style={{ width: '60%' }}></div>
+              <div className="bg-success h-2 rounded-full" style={{ width: `${((vehicleStatus?.available || 0) / 45) * 100}%` }}></div>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm text-slate-600">Rented</span>
-              <span className="text-sm font-medium text-slate-900">24</span>
+              <span className="text-sm font-medium text-slate-900">{vehicleStatus?.rented ?? '-'}</span>
             </div>
             <div className="w-full bg-slate-200 rounded-full h-2">
-              <div className="bg-primary h-2 rounded-full" style={{ width: '30%' }}></div>
+              <div className="bg-primary h-2 rounded-full" style={{ width: `${((vehicleStatus?.rented || 0) / 45) * 100}%` }}></div>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm text-slate-600">Maintenance</span>
-              <span className="text-sm font-medium text-slate-900">3</span>
+              <span className="text-sm font-medium text-slate-900">{vehicleStatus?.maintenance ?? '-'}</span>
             </div>
             <div className="w-full bg-slate-200 rounded-full h-2">
-              <div className="bg-warning h-2 rounded-full" style={{ width: '10%' }}></div>
+              <div className="bg-warning h-2 rounded-full" style={{ width: `${((vehicleStatus?.maintenance || 0) / 45) * 100}%` }}></div>
             </div>
           </div>
         </div>
@@ -106,42 +123,36 @@ function Dashboard() {
 
       <div className="card p-6">
         <h3 className="font-semibold text-slate-900 mb-4">Recent Bookings</h3>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-slate-200">
-                <th className="text-left py-3 px-4 font-medium text-slate-600">ID</th>
-                <th className="text-left py-3 px-4 font-medium text-slate-600">Customer</th>
-                <th className="text-left py-3 px-4 font-medium text-slate-600">Vehicle</th>
-                <th className="text-left py-3 px-4 font-medium text-slate-600">Dates</th>
-                <th className="text-left py-3 px-4 font-medium text-slate-600">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr className="border-b border-slate-100">
-                <td className="py-3 px-4 text-slate-900">#BKG-1024</td>
-                <td className="py-3 px-4 text-slate-600">Alice Mwangi</td>
-                <td className="py-3 px-4 text-slate-600">Toyota RAV4</td>
-                <td className="py-3 px-4 text-slate-600">Aug 20 - Aug 25</td>
-                <td className="py-3 px-4"><span className="badge badge-success">Confirmed</span></td>
-              </tr>
-              <tr className="border-b border-slate-100">
-                <td className="py-3 px-4 text-slate-900">#BKG-1023</td>
-                <td className="py-3 px-4 text-slate-600">Brian Otieno</td>
-                <td className="py-3 px-4 text-slate-600">Mazda CX-5</td>
-                <td className="py-3 px-4 text-slate-600">Aug 21 - Aug 28</td>
-                <td className="py-3 px-4"><span className="badge badge-warning">Pending</span></td>
-              </tr>
-              <tr>
-                <td className="py-3 px-4 text-slate-900">#BKG-1022</td>
-                <td className="py-3 px-4 text-slate-600">Grace Njeri</td>
-                <td className="py-3 px-4 text-slate-600">Nissan X-Trail</td>
-                <td className="py-3 px-4 text-slate-600">Aug 19 - Aug 22</td>
-                <td className="py-3 px-4"><span className="badge badge-info">In Progress</span></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        {loading ? (
+          <div className="flex items-center justify-center min-h-[200px]">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-slate-200">
+                  <th className="text-left py-3 px-4 font-medium text-slate-600">ID</th>
+                  <th className="text-left py-3 px-4 font-medium text-slate-600">Customer</th>
+                  <th className="text-left py-3 px-4 font-medium text-slate-600">Vehicle</th>
+                  <th className="text-left py-3 px-4 font-medium text-slate-600">Dates</th>
+                  <th className="text-left py-3 px-4 font-medium text-slate-600">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(recentBookings || []).map((booking) => (
+                  <tr key={booking._id} className="border-b border-slate-100">
+                    <td className="py-3 px-4 text-slate-900">#{booking._id}</td>
+                    <td className="py-3 px-4 text-slate-600">{booking.user?.name || 'N/A'}</td>
+                    <td className="py-3 px-4 text-slate-600">{booking.vehicle?.name || 'N/A'}</td>
+                    <td className="py-3 px-4 text-slate-600">{booking.pickupDate} - {booking.dropoffDate}</td>
+                    <td className="py-3 px-4"><span className={`badge capitalize ${booking.status === 'confirmed' ? 'badge-success' : booking.status === 'pending' ? 'badge-warning' : 'badge-info'}`}>{booking.status}</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   )
