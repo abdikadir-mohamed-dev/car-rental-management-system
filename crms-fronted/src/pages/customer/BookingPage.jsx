@@ -5,6 +5,7 @@ import { fetchVehicle } from '../../redux/slices/vehicleSlice'
 import { createBooking } from '../../redux/slices/bookingSlice'
 import toast from 'react-hot-toast'
 import Loader from '../../components/common/Loader'
+import { formatCurrency } from '../../utils/formatCurrency'
 
 function BookingPage() {
   const { vehicleId } = useParams()
@@ -125,7 +126,7 @@ function BookingPage() {
                 <div className="border-t border-slate-200 pt-3 space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-600">Price per day</span>
-                    <span>${currentVehicle.pricePerDay}</span>
+                     <span>{formatCurrency(currentVehicle.pricePerDay)}</span>
                   </div>
                 </div>
               </div>

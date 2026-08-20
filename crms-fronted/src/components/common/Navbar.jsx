@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { Car, User, LogOut } from 'lucide-react'
+import { Car, User, LogOut, Menu, X } from 'lucide-react'
 import { useDispatch, useSelector } from 'react-redux'
 import { logout } from '../../redux/slices/authSlice'
 import { useState } from 'react'
@@ -8,10 +8,12 @@ function Navbar() {
   const { user, isAuthenticated } = useSelector((state) => state.auth)
   const dispatch = useDispatch()
   const [dropdownOpen, setDropdownOpen] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
 
   const handleLogout = () => {
     dispatch(logout())
     setDropdownOpen(false)
+    setMenuOpen(false)
   }
 
   return (
@@ -66,13 +68,34 @@ function Navbar() {
                 )}
               </div>
             ) : (
-              <div className="flex items-center gap-2">
+              <div className="hidden md:flex items-center gap-2">
                 <Link to="/auth/login" className="btn-secondary text-sm">Login</Link>
                 <Link to="/auth/register" className="btn-primary text-sm">Sign Up</Link>
               </div>
             )}
+            <button
+              onClick={() => setMenuOpen(!menuOpen)}
+              className="md:hidden p-2 rounded-lg hover:bg-slate-100"
+            >
+              {menuOpen ? <X className="w-6 h-6 text-slate-600" /> : <Menu className="w-6 h-6 text-slate-600" />}
+            </button>
           </div>
         </div>
+
+        {menuOpen && (
+          <div className="md:hidden border-t border-slate-200 py-4 space-y-3">
+            <Link to="/" className="block text-slate-600 hover:text-primary font-medium" onClick={() => setMenuOpen(false)}>Home</Link>
+            <Link to="/vehicles" className="block text-slate-600 hover:text-primary font-medium" onClick={() => setMenuOpen(false)}>Browse Cars</Link>
+            <Link to="/about" className="block text-slate-600 hover:text-primary font-medium" onClick={() => setMenuOpen(false)}>About Us</Link>
+            <Link to="/contact" className="block text-slate-600 hover:text-primary font-medium" onClick={() => setMenuOpen(false)}>Contact</Link>
+            {!isAuthenticated && (
+              <div className="flex flex-col gap-2 pt-2 border-t border-slate-200">
+                <Link to="/auth/login" className="btn-secondary text-sm text-center" onClick={() => setMenuOpen(false)}>Login</Link>
+                <Link to="/auth/register" className="btn-primary text-sm text-center" onClick={() => setMenuOpen(false)}>Sign Up</Link>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </nav>
   )
