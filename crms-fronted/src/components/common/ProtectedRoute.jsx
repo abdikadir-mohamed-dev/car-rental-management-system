@@ -6,7 +6,7 @@ function ProtectedRoute({ allowedRoles, children }) {
   const hasToken = typeof window !== 'undefined' && localStorage.getItem('token')
 
   if (!hasToken && !isAuthenticated) {
-    return <>{children}</>
+    return <Navigate to="/auth/login" replace />
   }
 
   if (!isAuthenticated) {
