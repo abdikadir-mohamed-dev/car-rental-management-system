@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { Mail, Phone, MapPin, Send } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { validateRequired, validateEmail } from '../../utils/validation'
 
 function ContactPage() {
   const [formData, setFormData] = useState({
@@ -22,9 +21,11 @@ function ContactPage() {
   const handleSubmit = (e) => {
     e.preventDefault()
     const newErrors = {}
-    if (!validateRequired(formData.name)) newErrors.name = 'Name is required'
-    if (!validateEmail(formData.email)) newErrors.email = 'Valid email is required'
-    if (!validateRequired(formData.message)) newErrors.message = 'Message is required'
+    if (!formData.name.trim()) newErrors.name = 'Name is required'
+    if (!formData.email.trim()) newErrors.email = 'Email is required'
+    else if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = 'Invalid email format'
+    if (!formData.phone.trim()) newErrors.phone = 'Phone is required'
+    if (!formData.message.trim()) newErrors.message = 'Message is required'
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors)
@@ -37,10 +38,10 @@ function ContactPage() {
 
   return (
     <div>
-      <section className="bg-primary text-white py-16">
+      <section className="bg-slate-900 text-white py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h1 className="text-4xl font-bold mb-4">Contact Us</h1>
-          <p className="text-xl text-blue-100">Get in touch with our team</p>
+          <p className="text-xl text-slate-300">Get in touch with our team</p>
         </div>
       </section>
 
@@ -51,47 +52,48 @@ function ContactPage() {
               <h2 className="text-3xl font-bold text-slate-900 mb-6">Send us a Message</h2>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <label className="label">Full Name</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Full Name</label>
                   <input
                     type="text"
                     name="name"
                     value={formData.name}
                     onChange={handleChange}
-                    className={`input ${errors.name ? 'border-danger' : ''}`}
+                    className={`input ${errors.name ? 'border-red-500' : ''}`}
                   />
-                  {errors.name && <p className="text-danger text-sm mt-1">{errors.name}</p>}
+                  {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
                 </div>
                 <div>
-                  <label className="label">Email</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
                   <input
                     type="email"
                     name="email"
                     value={formData.email}
                     onChange={handleChange}
-                    className={`input ${errors.email ? 'border-danger' : ''}`}
+                    className={`input ${errors.email ? 'border-red-500' : ''}`}
                   />
-                  {errors.email && <p className="text-danger text-sm mt-1">{errors.email}</p>}
+                  {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
                 </div>
                 <div>
-                  <label className="label">Phone</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Phone</label>
                   <input
                     type="tel"
                     name="phone"
                     value={formData.phone}
                     onChange={handleChange}
-                    className="input"
+                    className={`input ${errors.phone ? 'border-red-500' : ''}`}
                   />
+                  {errors.phone && <p className="text-red-500 text-sm mt-1">{errors.phone}</p>}
                 </div>
                 <div>
-                  <label className="label">Message</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Message</label>
                   <textarea
                     name="message"
                     rows="5"
                     value={formData.message}
                     onChange={handleChange}
-                    className={`input ${errors.message ? 'border-danger' : ''}`}
+                    className={`input ${errors.message ? 'border-red-500' : ''}`}
                   />
-                  {errors.message && <p className="text-danger text-sm mt-1">{errors.message}</p>}
+                  {errors.message && <p className="text-red-500 text-sm mt-1">{errors.message}</p>}
                 </div>
                 <button type="submit" className="btn-primary flex items-center gap-2">
                   <Send className="w-4 h-4" />
@@ -103,8 +105,8 @@ function ContactPage() {
               <h2 className="text-3xl font-bold text-slate-900 mb-6">Contact Info</h2>
               <div className="space-y-6">
                 <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 bg-primary-light rounded-lg flex items-center justify-center flex-shrink-0">
-                    <Mail className="w-6 h-6 text-primary" />
+                  <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <Mail className="w-6 h-6 text-blue-600" />
                   </div>
                   <div>
                     <h3 className="font-semibold text-slate-900">Email</h3>
@@ -112,21 +114,21 @@ function ContactPage() {
                   </div>
                 </div>
                 <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 bg-primary-light rounded-lg flex items-center justify-center flex-shrink-0">
-                    <Phone className="w-6 h-6 text-primary" />
+                  <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <Phone className="w-6 h-6 text-blue-600" />
                   </div>
                   <div>
                     <h3 className="font-semibold text-slate-900">Phone</h3>
-                    <p className="text-slate-600">+1 (555) 123-4567</p>
+                    <p className="text-slate-600">+254 700 000 000</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 bg-primary-light rounded-lg flex items-center justify-center flex-shrink-0">
-                    <MapPin className="w-6 h-6 text-primary" />
+                  <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <MapPin className="w-6 h-6 text-blue-600" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-slate-900">Address</h3>
-                    <p className="text-slate-600">123 Main Street<br />City, State 12345</p>
+                    <h3 className="font-semibold text-slate-900">Location</h3>
+                    <p className="text-slate-600">Westlands, Nairobi, Kenya</p>
                   </div>
                 </div>
               </div>
