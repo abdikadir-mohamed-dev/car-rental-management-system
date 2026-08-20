@@ -1,50 +1,136 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
-import PublicRoutes from './PublicRoutes'
-import AuthRoutes from './AuthRoutes'
-import CustomerRoutes from './CustomerRoutes'
-import AdminRoutes from './AdminRoutes'
-import StaffRoutes from './StaffRoutes'
-import DriverRoutes from './DriverRoutes'
+import PublicLayout from '../layouts/PublicLayout'
+import AdminLayout from '../layouts/AdminLayout'
+import CustomerLayout from '../layouts/CustomerLayout'
+import StaffLayout from '../layouts/StaffLayout'
+import DriverLayout from '../layouts/DriverLayout'
 import ProtectedRoute from '../components/common/ProtectedRoute'
 import { USER_ROLES } from '../utils/constants'
+
+import HomePage from '../pages/public/HomePage'
+import AboutPage from '../pages/public/AboutPage'
+import ContactPage from '../pages/public/ContactPage'
+import VehicleListingPage from '../pages/public/VehicleListingPage'
+import PublicVehicleDetailsPage from '../pages/public/VehicleDetailsPage'
+import LocationsPage from '../pages/public/LocationsPage'
+import DealsPage from '../pages/public/DealsPage'
+
+import LoginPage from '../pages/auth/LoginPage'
+import RegisterPage from '../pages/auth/RegisterPage'
+import ForgotPasswordPage from '../pages/auth/ForgotPasswordPage'
+import ResetPasswordPage from '../pages/auth/ResetPasswordPage'
+
+import AdminDashboard from '../pages/admin/AdminDashboard'
+import ManageUsersPage from '../pages/admin/ManageUsersPage'
+import ManageVehiclesPage from '../pages/admin/ManageVehiclesPage'
+import ManageBookingsPage from '../pages/admin/ManageBookingsPage'
+import ManagePaymentsPage from '../pages/admin/ManagePaymentsPage'
+import ReportsPage from '../pages/admin/ReportsPage'
+import SettingsPage from '../pages/admin/SettingsPage'
+import AdminProfilePage from '../pages/admin/AdminProfilePage'
+
+import CustomerDashboard from '../pages/customer/CustomerDashboard'
+import VehicleBrowsePage from '../pages/customer/VehicleBrowsePage'
+import CustomerVehicleDetailsPage from '../pages/customer/VehicleDetailsPage'
+import BookingPage from '../pages/customer/BookingPage'
+import MyBookingsPage from '../pages/customer/MyBookingsPage'
+import MyPaymentsPage from '../pages/customer/MyPaymentsPage'
+import ProfilePage from '../pages/customer/ProfilePage'
+
+import StaffDashboard from '../pages/staff/StaffDashboard'
+import StaffBookingsPage from '../pages/staff/StaffBookingsPage'
+import StaffVehiclesPage from '../pages/staff/StaffVehiclesPage'
+import StaffTripsPage from '../pages/staff/StaffTripsPage'
+import StaffCalendarPage from '../pages/staff/StaffCalendarPage'
+import StaffProfilePage from '../pages/staff/StaffProfilePage'
+
+import DriverDashboard from '../pages/driver/DriverDashboard'
+import DriverTripsPage from '../pages/driver/DriverTripsPage'
+import DriverEarningsPage from '../pages/driver/DriverEarningsPage'
+import DriverProfilePage from '../pages/driver/DriverProfilePage'
 
 function AppRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<PublicRoutes />} />
-      <Route path="/auth" element={<AuthRoutes />} />
-      <Route
-        path="/customer/*"
-        element={
-          <ProtectedRoute allowedRoles={[USER_ROLES.CUSTOMER]}>
-            <CustomerRoutes />
-          </ProtectedRoute>
-        }
-      />
+      <Route path="/" element={<PublicLayout />}>
+        <Route index element={<HomePage />} />
+        <Route path="about" element={<AboutPage />} />
+        <Route path="contact" element={<ContactPage />} />
+        <Route path="vehicles" element={<VehicleListingPage />} />
+        <Route path="vehicles/:id" element={<PublicVehicleDetailsPage />} />
+        <Route path="locations" element={<LocationsPage />} />
+        <Route path="deals" element={<DealsPage />} />
+        <Route path="auth/login" element={<LoginPage />} />
+        <Route path="auth/register" element={<RegisterPage />} />
+        <Route path="auth/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="auth/reset-password" element={<ResetPasswordPage />} />
+      </Route>
+
       <Route
         path="/admin/*"
         element={
           <ProtectedRoute allowedRoles={[USER_ROLES.ADMIN]}>
-            <AdminRoutes />
+            <AdminLayout />
           </ProtectedRoute>
         }
-      />
+      >
+        <Route index element={<AdminDashboard />} />
+        <Route path="users" element={<ManageUsersPage />} />
+        <Route path="vehicles" element={<ManageVehiclesPage />} />
+        <Route path="bookings" element={<ManageBookingsPage />} />
+        <Route path="payments" element={<ManagePaymentsPage />} />
+        <Route path="reports" element={<ReportsPage />} />
+        <Route path="settings" element={<SettingsPage />} />
+        <Route path="profile" element={<AdminProfilePage />} />
+      </Route>
+
+      <Route
+        path="/customer/*"
+        element={
+          <ProtectedRoute allowedRoles={[USER_ROLES.CUSTOMER]}>
+            <CustomerLayout />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<CustomerDashboard />} />
+        <Route path="browse" element={<VehicleBrowsePage />} />
+        <Route path="vehicles/:id" element={<CustomerVehicleDetailsPage />} />
+        <Route path="booking" element={<BookingPage />} />
+        <Route path="my-bookings" element={<MyBookingsPage />} />
+        <Route path="my-payments" element={<MyPaymentsPage />} />
+        <Route path="profile" element={<ProfilePage />} />
+      </Route>
+
       <Route
         path="/staff/*"
         element={
           <ProtectedRoute allowedRoles={[USER_ROLES.STAFF]}>
-            <StaffRoutes />
+            <StaffLayout />
           </ProtectedRoute>
         }
-      />
+      >
+        <Route index element={<StaffDashboard />} />
+        <Route path="bookings" element={<StaffBookingsPage />} />
+        <Route path="vehicles" element={<StaffVehiclesPage />} />
+        <Route path="trips" element={<StaffTripsPage />} />
+        <Route path="calendar" element={<StaffCalendarPage />} />
+        <Route path="profile" element={<StaffProfilePage />} />
+      </Route>
+
       <Route
         path="/driver/*"
         element={
           <ProtectedRoute allowedRoles={[USER_ROLES.DRIVER]}>
-            <DriverRoutes />
+            <DriverLayout />
           </ProtectedRoute>
         }
-      />
+      >
+        <Route index element={<DriverDashboard />} />
+        <Route path="trips" element={<DriverTripsPage />} />
+        <Route path="earnings" element={<DriverEarningsPage />} />
+        <Route path="profile" element={<DriverProfilePage />} />
+      </Route>
+
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
