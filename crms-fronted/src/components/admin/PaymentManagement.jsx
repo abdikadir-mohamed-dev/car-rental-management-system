@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
-import { fetchPayments, refundPayment } from '../../redux/slices/paymentSlice'
 import toast from 'react-hot-toast'
 import { Eye, RefreshCw, Search } from 'lucide-react'
 import { PAYMENT_STATUS } from '../../utils/constants'
+import ConfirmDialog from '../../components/common/ConfirmDialog'
 
 function PaymentManagement() {
   const [payments, setPayments] = useState([])
@@ -10,13 +10,22 @@ function PaymentManagement() {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [selectedPayment, setSelectedPayment] = useState(null)
+  const [refundId, setRefundId] = useState(null)
+  const [confirmOpen, setConfirmOpen] = useState(false)
 
   const loadPayments = () => {
     setLoading(true)
-    fetchPayments({})
-      .then((res) => setPayments(res.data.payments || res.data))
-      .catch(() => {})
-      .finally(() => setLoading(false))
+    const mockPayments = [
+      { _id: 'P001', amount: 275, method: 'card', status: PAYMENT_STATUS.COMPLETED, createdAt: '2025-05-20', user: { name: 'John Doe' } },
+      { _id: 'P002', amount: 510, method: 'mpesa', status: PAYMENT_STATUS.COMPLETED, createdAt: '2025-05-21', user: { name: 'Mary Wanjiku' } },
+      { _id: 'P003', amount: 340, method: 'card', status: PAYMENT_STATUS.PENDING, createdAt: '2025-05-22', user: { name: 'Peter Mwangi' } },
+      { _id: 'P004', amount: 420, method: 'paypal', status: PAYMENT_STATUS.COMPLETED, createdAt: '2025-05-22', user: { name: 'Ali Hassan' } },
+      { _id: 'P005', amount: 310, method: 'card', status: PAYMENT_STATUS.FAILED, createdAt: '2025-05-24', user: { name: 'James Kamau' } },
+    ]
+    setTimeout(() => {
+      setPayments(mockPayments)
+      setLoading(false)
+    }, 600)
   }
 
   useEffect(() => {
@@ -34,16 +43,23 @@ function PaymentManagement() {
     }
   }
 
-  const handleRefund = (id) => {
-    if (window.confirm('Are you sure you want to refund this payment?')) {
-      refundPayment(id)
-        .unwrap()
-        .then(() => {
-          toast.success('Payment refunded')
-          loadPayments()
-        })
-        .catch((err) => toast.error(err))
+  const handleRefundClick = (id) => {
+    setRefundId(id)
+    setConfirmOpen(true)
+  }
+
+  const handleRefundConfirm = () => {
+    setConfirmOpen(false)
+    if (refundId) {
+      setPayments(payments.map(p => p._id === refundId ? { ...p, status: PAYMENT_STATUS.REFUNDED } : p))
+      toast.success('Payment refunded')
+      setRefundId(null)
     }
+  }
+
+  const handleRefundCancel = () => {
+    setConfirmOpen(false)
+    setRefundId(null)
   }
 
   const filteredPayments = payments.filter(payment => {
@@ -94,7 +110,7 @@ function PaymentManagement() {
                 <tr key={payment._id} className="border-b border-slate-100 hover:bg-slate-50">
                   <td className="py-3 px-4 text-slate-900">#{payment._id?.slice(-8)}</td>
                   <td className="py-3 px-4 text-slate-600">{payment.user?.name || 'N/A'}</td>
-                  <td className="py-3 px-4 font-medium text-slate-900">${payment.amount}</td>
+                  <td className="py-3 px-4 font-medium text-slate-900">KES {payment.amount.toLocaleString()}</td>
                   <td className="py-3 px-4 capitalize text-slate-600">{payment.method || 'Card'}</td>
                   <td className="py-3 px-4">
                     <span className={`badge capitalize ${getStatusColor(payment.status)}`}>
@@ -107,7 +123,7 @@ function PaymentManagement() {
                         <Eye className="w-4 h-4" />
                       </button>
                       {payment.status === PAYMENT_STATUS.COMPLETED && (
-                        <button onClick={() => handleRefund(payment._id)} className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg">
+                        <button onClick={() => handleRefundClick(payment._id)} className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg">
                           <RefreshCw className="w-4 h-4" />
                         </button>
                       )}
@@ -130,7 +146,7 @@ function PaymentManagement() {
             </div>
             <div className="p-6 space-y-3">
               <div><span className="text-slate-600">Payment ID:</span> <span className="font-medium text-slate-900">{selectedPayment._id}</span></div>
-              <div><span className="text-slate-600">Amount:</span> <span className="font-medium text-slate-900">${selectedPayment.amount}</span></div>
+               <div><span className="text-slate-600">Amount:</span> <span className="font-medium text-slate-900">KES {selectedPayment.amount.toLocaleString()}</span></div>
               <div><span className="text-slate-600">Method:</span> <span className="font-medium text-slate-900 capitalize">{selectedPayment.method}</span></div>
               <div><span className="text-slate-600">Status:</span> <span className="font-medium text-slate-900 capitalize">{selectedPayment.status}</span></div>
               <div><span className="text-slate-600">Date:</span> <span className="font-medium text-slate-900">{selectedPayment.createdAt}</span></div>
@@ -141,6 +157,14 @@ function PaymentManagement() {
           </div>
         </div>
       )}
+      <ConfirmDialog
+        isOpen={confirmOpen}
+        title="Refund Payment"
+        message="Are you sure you want to refund this payment? This action cannot be undone."
+        onConfirm={handleRefundConfirm}
+        onCancel={handleRefundCancel}
+        confirmText="Yes, Refund"
+      />
     </div>
   )
 }
