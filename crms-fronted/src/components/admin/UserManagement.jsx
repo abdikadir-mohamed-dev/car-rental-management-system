@@ -1,27 +1,45 @@
 import { useState, useEffect } from 'react'
-import { getUsers, updateUser, deleteUser } from '../../services/adminService'
 import toast from 'react-hot-toast'
 import { Edit, Trash2, Search } from 'lucide-react'
+import ConfirmDialog from '../../components/common/ConfirmDialog'
 
-function UserManagement({ onEdit }) {
-  const [users, setUsers] = useState([])
+function UserManagement({ users: externalUsers, setUsers: externalSetUsers, onEdit }) {
+  const [internalUsers, setInternalUsers] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [editingUser, setEditingUser] = useState(null)
   const [formData, setFormData] = useState({ name: '', email: '', role: 'customer' })
+  const [deleteId, setDeleteId] = useState(null)
+  const [confirmOpen, setConfirmOpen] = useState(false)
+
+  const mockUsers = [
+    { _id: 'U001', name: 'John Doe', email: 'john@example.com', role: 'customer' },
+    { _id: 'U002', name: 'Mary Wanjiku', email: 'mary@example.com', role: 'customer' },
+    { _id: 'U003', name: 'Peter Mwangi', email: 'peter@example.com', role: 'driver' },
+    { _id: 'U004', name: 'Ali Hassan', email: 'ali@example.com', role: 'customer' },
+    { _id: 'U005', name: 'James Kamau', email: 'james@example.com', role: 'staff' },
+    { _id: 'U006', name: 'Admin User', email: 'admin@drivego.com', role: 'admin' },
+  ]
+
+  const users = externalUsers || internalUsers
+  const setUsers = externalSetUsers || setInternalUsers
 
   const loadUsers = () => {
     setLoading(true)
-    getUsers()
-      .then((res) => setUsers(res.data.users || res.data))
-      .catch(() => {})
-      .finally(() => setLoading(false))
+    setTimeout(() => {
+      setUsers(mockUsers)
+      setLoading(false)
+    }, 600)
   }
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    loadUsers()
-  }, [])
+    if (!externalUsers) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      loadUsers()
+    } else {
+      setLoading(false)
+    }
+  }, [externalUsers])
 
   const handleEdit = (user) => {
     setEditingUser(user)
@@ -31,24 +49,28 @@ function UserManagement({ onEdit }) {
 
   const handleUpdate = (e) => {
     e.preventDefault()
-    updateUser(editingUser._id, formData)
-      .then(() => {
-        toast.success('User updated')
-        loadUsers()
-        setEditingUser(null)
-      })
-      .catch(() => toast.error('Failed to update user'))
+    setUsers(users.map(u => u._id === editingUser._id ? { ...u, ...formData } : u))
+    toast.success('User updated')
+    setEditingUser(null)
   }
 
-  const handleDelete = (id) => {
-    if (window.confirm('Are you sure you want to delete this user?')) {
-      deleteUser(id)
-        .then(() => {
-          toast.success('User deleted')
-          loadUsers()
-        })
-        .catch(() => toast.error('Failed to delete user'))
+  const handleDeleteClick = (id) => {
+    setDeleteId(id)
+    setConfirmOpen(true)
+  }
+
+  const handleDeleteConfirm = () => {
+    setConfirmOpen(false)
+    if (deleteId) {
+      setUsers(users.filter(u => u._id !== deleteId))
+      toast.success('User deleted')
+      setDeleteId(null)
     }
+  }
+
+  const handleDeleteCancel = () => {
+    setConfirmOpen(false)
+    setDeleteId(null)
   }
 
   const filteredUsers = users.filter(user =>
@@ -81,6 +103,7 @@ function UserManagement({ onEdit }) {
               <tr className="border-b border-slate-200">
                 <th className="text-left py-3 px-4 font-medium text-slate-600">Name</th>
                 <th className="text-left py-3 px-4 font-medium text-slate-600">Email</th>
+                <th className="text-left py-3 px-4 font-medium text-slate-600">Phone</th>
                 <th className="text-left py-3 px-4 font-medium text-slate-600">Role</th>
                 <th className="text-left py-3 px-4 font-medium text-slate-600">Actions</th>
               </tr>
@@ -90,13 +113,14 @@ function UserManagement({ onEdit }) {
                 <tr key={user._id} className="border-b border-slate-100 hover:bg-slate-50">
                   <td className="py-3 px-4 text-slate-900">{user.name}</td>
                   <td className="py-3 px-4 text-slate-600">{user.email}</td>
+                  <td className="py-3 px-4 text-slate-600">{user.phone || 'N/A'}</td>
                   <td className="py-3 px-4 capitalize text-slate-600">{user.role}</td>
                   <td className="py-3 px-4">
                     <div className="flex gap-2">
                       <button onClick={() => handleEdit(user)} className="p-2 text-primary hover:bg-primary-light rounded-lg">
                         <Edit className="w-4 h-4" />
                       </button>
-                      <button onClick={() => handleDelete(user._id)} className="p-2 text-danger hover:bg-red-50 rounded-lg">
+                      <button onClick={() => handleDeleteClick(user._id)} className="p-2 text-danger hover:bg-red-50 rounded-lg">
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
@@ -142,6 +166,14 @@ function UserManagement({ onEdit }) {
           </div>
         </div>
       )}
+      <ConfirmDialog
+        isOpen={confirmOpen}
+        title="Delete User"
+        message="Are you sure you want to delete this user? This action cannot be undone."
+        onConfirm={handleDeleteConfirm}
+        onCancel={handleDeleteCancel}
+        confirmText="Yes, Delete"
+      />
     </div>
   )
 }
