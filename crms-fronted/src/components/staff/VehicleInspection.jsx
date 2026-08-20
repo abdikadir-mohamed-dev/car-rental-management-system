@@ -5,11 +5,17 @@ function VehicleInspection() {
   const [vehicles, setVehicles] = useState([
     { id: 1, name: 'Toyota Camry', plate: 'ABC 123', status: 'pending', condition: '', mileage: '', fuelLevel: '', notes: '', type: 'check-out' },
     { id: 2, name: 'Honda CR-V', plate: 'XYZ 789', status: 'pending', condition: '', mileage: '', fuelLevel: '', notes: '', type: 'check-out' },
+    { id: 3, name: 'Toyota RAV4', plate: 'DEF 456', status: 'pending', condition: '', mileage: '', fuelLevel: '', notes: '', type: 'check-in' },
+    { id: 4, name: 'Mazda CX-5', plate: 'GHI 789', status: 'pending', condition: '', mileage: '', fuelLevel: '', notes: '', type: 'check-in' },
+    { id: 5, name: 'Subaru Forester', plate: 'JKL 012', status: 'pending', condition: '', mileage: '', fuelLevel: '', notes: '', type: 'check-out' },
   ])
   const [search, setSearch] = useState('')
   const [history] = useState([
     { id: 101, vehicle: 'Toyota Camry', plate: 'ABC 123', type: 'Check-in', date: '2026-08-18', inspector: 'Staff A', status: 'passed', notes: 'Minor scratch on rear bumper' },
     { id: 102, vehicle: 'Honda CR-V', plate: 'XYZ 789', type: 'Check-out', date: '2026-08-17', inspector: 'Staff B', status: 'passed', notes: 'Good condition' },
+    { id: 103, vehicle: 'Toyota RAV4', plate: 'DEF 456', type: 'Check-in', date: '2026-08-16', inspector: 'Staff A', status: 'failed', notes: 'Flat tire, dent on left door' },
+    { id: 104, vehicle: 'Mazda CX-5', plate: 'GHI 789', type: 'Check-out', date: '2026-08-15', inspector: 'Staff C', status: 'passed', notes: 'Clean, full tank' },
+    { id: 105, vehicle: 'Subaru Forester', plate: 'JKL 012', type: 'Check-in', date: '2026-08-14', inspector: 'Staff B', status: 'passed', notes: 'Small chip on windshield' },
   ])
 
   const filteredVehicles = vehicles.filter(v =>
