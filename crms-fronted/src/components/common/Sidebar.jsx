@@ -70,7 +70,7 @@ function Sidebar({ isOpen, onClose, role }) {
         onClick={onClose}
       />
       <aside
-        className={`fixed top-0 left-0 z-50 h-full w-64 bg-sidebar text-white transform transition-transform lg:translate-x-0 lg:static lg:z-auto ${
+        className={`fixed top-0 left-0 z-50 h-full w-64 bg-sidebar text-white transform transition-transform ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
