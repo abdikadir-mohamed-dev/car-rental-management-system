@@ -13,7 +13,11 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/auth" element={<AuthRoutes />} />
-      <Route path="/customer/*" element={<CustomerRoutes />} />
+      <Route path="/customer/*" element={
+        <ErrorBoundary>
+          <CustomerRoutes />
+        </ErrorBoundary>
+      } />
       <Route path="/admin/*" element={
         <ProtectedRoute allowedRoles={[USER_ROLES.ADMIN]}>
           <AdminRoutes />

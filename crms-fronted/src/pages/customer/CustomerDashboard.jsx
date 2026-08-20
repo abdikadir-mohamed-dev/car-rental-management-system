@@ -8,13 +8,13 @@ import { formatCurrency } from '../../utils/formatCurrency'
 
 function CustomerDashboard() {
   const dispatch = useDispatch()
-  const { profile } = useSelector((state) => state.user)
-  const { bookings } = useSelector((state) => state.bookings)
+  const { profile } = useSelector((state) => state.user || {})
+  const { bookings = [] } = useSelector((state) => state.bookings || {})
 
   const stats = {
-    totalBookings: bookings.length,
-    activeBookings: bookings.filter(b => b.status === 'confirmed').length,
-    totalSpent: bookings.reduce((sum, b) => sum + (b.totalAmount || 0), 0),
+    totalBookings: Array.isArray(bookings) ? bookings.length : 0,
+    activeBookings: Array.isArray(bookings) ? bookings.filter(b => b.status === 'confirmed').length : 0,
+    totalSpent: Array.isArray(bookings) ? bookings.reduce((sum, b) => sum + (b.totalAmount || 0), 0) : 0,
   }
 
   useEffect(() => {
@@ -65,7 +65,7 @@ function CustomerDashboard() {
             View All
           </Link>
         </div>
-        {bookings.length === 0 ? (
+        {!Array.isArray(bookings) || bookings.length === 0 ? (
           <p className="text-slate-500 text-center py-8">No bookings yet.</p>
         ) : (
           <div className="space-y-4">
