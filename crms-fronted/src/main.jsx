@@ -6,15 +6,12 @@ import { Toaster } from 'react-hot-toast'
 import store from './redux/store'
 import './index.css'
 import App from './App.jsx'
-import ErrorBoundary from './components/common/ErrorBoundary'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <Provider store={store}>
-      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-        <ErrorBoundary>
-          <App />
-        </ErrorBoundary>
+      <BrowserRouter>
+        <App />
         <Toaster position="top-right" />
       </BrowserRouter>
     </Provider>

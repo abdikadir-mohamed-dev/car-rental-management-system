@@ -6,10 +6,9 @@ import ForgotPasswordPage from '../pages/auth/ForgotPasswordPage'
 function AuthRoutes() {
   return (
     <Routes>
-      <Route index element={<LoginPage />} />
-      <Route path="login" element={<LoginPage />} />
-      <Route path="register" element={<RegisterPage />} />
-      <Route path="forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
     </Routes>
   )
 }

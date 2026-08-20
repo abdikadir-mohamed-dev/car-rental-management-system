@@ -4,7 +4,6 @@ import { register } from '../../redux/slices/authSlice'
 import toast from 'react-hot-toast'
 import { Link, useNavigate } from 'react-router-dom'
 import { validateRequired, validateEmail, validatePhone } from '../../utils/validation'
-import { Eye, EyeOff } from 'lucide-react'
 
 function Register() {
   const [formData, setFormData] = useState({
@@ -15,8 +14,6 @@ function Register() {
     confirmPassword: '',
   })
   const [errors, setErrors] = useState({})
-  const [showPassword, setShowPassword] = useState(false)
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const { loading, error } = useSelector((state) => state.auth)
   const dispatch = useDispatch()
   const navigate = useNavigate()
@@ -90,42 +87,24 @@ function Register() {
       </div>
       <div>
         <label className="label">Password</label>
-        <div className="relative">
-          <input
-            type={showPassword ? 'text' : 'password'}
-            name="password"
-            value={formData.password}
-            onChange={handleChange}
-            className={`input pr-10 ${errors.password ? 'border-red-500' : ''}`}
-          />
-          <button
-            type="button"
-            onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-          >
-            {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-          </button>
-        </div>
+        <input
+          type="password"
+          name="password"
+          value={formData.password}
+          onChange={handleChange}
+          className={`input ${errors.password ? 'border-red-500' : ''}`}
+        />
         {errors.password && <p className="text-red-500 text-sm mt-1">{errors.password}</p>}
       </div>
       <div>
         <label className="label">Confirm Password</label>
-        <div className="relative">
-          <input
-            type={showConfirmPassword ? 'text' : 'password'}
-            name="confirmPassword"
-            value={formData.confirmPassword}
-            onChange={handleChange}
-            className={`input pr-10 ${errors.confirmPassword ? 'border-red-500' : ''}`}
-          />
-          <button
-            type="button"
-            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-          >
-            {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-          </button>
-        </div>
+        <input
+          type="password"
+          name="confirmPassword"
+          value={formData.confirmPassword}
+          onChange={handleChange}
+          className={`input ${errors.confirmPassword ? 'border-red-500' : ''}`}
+        />
         {errors.confirmPassword && <p className="text-red-500 text-sm mt-1">{errors.confirmPassword}</p>}
       </div>
       {error && <p className="text-red-500 text-sm">{error}</p>}

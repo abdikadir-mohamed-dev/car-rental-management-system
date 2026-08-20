@@ -88,17 +88,8 @@ const vehicleSlice = createSlice({
         state.loading = false
         state.error = action.payload
       })
-      .addCase(fetchVehicle.pending, (state) => {
-        state.loading = true
-        state.error = null
-      })
       .addCase(fetchVehicle.fulfilled, (state, action) => {
-        state.loading = false
         state.currentVehicle = action.payload.vehicle || action.payload
-      })
-      .addCase(fetchVehicle.rejected, (state, action) => {
-        state.loading = false
-        state.error = action.payload
       })
       .addCase(createVehicle.fulfilled, (state, action) => {
         state.vehicles.push(action.payload.vehicle || action.payload)

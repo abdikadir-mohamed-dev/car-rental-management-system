@@ -3,12 +3,10 @@ import { useDispatch, useSelector } from 'react-redux'
 import { login } from '../../redux/slices/authSlice'
 import toast from 'react-hot-toast'
 import { Link, useNavigate } from 'react-router-dom'
-import { Eye, EyeOff } from 'lucide-react'
 
 function Login() {
   const [formData, setFormData] = useState({ email: '', password: '' })
   const [errors, setErrors] = useState({})
-  const [showPassword, setShowPassword] = useState(false)
   const { loading, error } = useSelector((state) => state.auth)
   const dispatch = useDispatch()
   const navigate = useNavigate()
@@ -57,22 +55,13 @@ function Login() {
       </div>
       <div>
         <label className="label">Password</label>
-        <div className="relative">
-          <input
-            type={showPassword ? 'text' : 'password'}
-            name="password"
-            value={formData.password}
-            onChange={handleChange}
-            className={`input pr-10 ${errors.password ? 'border-red-500' : ''}`}
-          />
-          <button
-            type="button"
-            onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-          >
-            {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-          </button>
-        </div>
+        <input
+          type="password"
+          name="password"
+          value={formData.password}
+          onChange={handleChange}
+          className={`input ${errors.password ? 'border-red-500' : ''}`}
+        />
         {errors.password && <p className="text-red-500 text-sm mt-1">{errors.password}</p>}
       </div>
       {error && <p className="text-red-500 text-sm">{error}</p>}
