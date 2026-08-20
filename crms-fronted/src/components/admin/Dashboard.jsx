@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
-import { getDashboardStats } from '../../services/adminService'
 import { Users, Car, Calendar, DollarSign, TrendingUp, Clock } from 'lucide-react'
-import { formatCurrency } from '../../utils/formatCurrency'
+import { formatCurrencyKES } from '../../utils/formatCurrency'
+import { BOOKING_STATUS } from '../../utils/constants'
 
 function Dashboard() {
   const [stats, setStats] = useState({
@@ -15,10 +15,31 @@ function Dashboard() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    getDashboardStats()
-      .then((res) => setStats(res.data))
-      .catch(() => {})
-      .finally(() => setLoading(false))
+    const mockStats = {
+      totalUsers: 1240,
+      totalVehicles: 85,
+      totalBookings: 342,
+      totalRevenue: 45250,
+      recentBookings: [
+        { _id: 'BK001', vehicle: { name: 'Toyota RAV4' }, user: { name: 'John Doe' }, totalAmount: 275 },
+        { _id: 'BK002', vehicle: { name: 'Honda Accord' }, user: { name: 'Mary Wanjiku' }, totalAmount: 510 },
+        { _id: 'BK003', vehicle: { name: 'BMW 3 Series' }, user: { name: 'Peter Mwangi' }, totalAmount: 340 },
+        { _id: 'BK004', vehicle: { name: 'Mercedes C-Class' }, user: { name: 'Ali Hassan' }, totalAmount: 420 },
+        { _id: 'BK005', vehicle: { name: 'Toyota RAV4' }, user: { name: 'James Kamau' }, totalAmount: 310 },
+      ],
+      recentUsers: [
+        { _id: 'U001', name: 'John Doe', role: 'customer' },
+        { _id: 'U002', name: 'Mary Wanjiku', role: 'customer' },
+        { _id: 'U003', name: 'Peter Mwangi', role: 'driver' },
+        { _id: 'U004', name: 'Ali Hassan', role: 'customer' },
+        { _id: 'U005', name: 'James Kamau', role: 'staff' },
+      ],
+    }
+
+    setTimeout(() => {
+      setStats(mockStats)
+      setLoading(false)
+    }, 800)
   }, [])
 
   if (loading) {
@@ -65,7 +86,7 @@ function Dashboard() {
           </div>
           <div>
             <p className="text-sm text-slate-600">Total Revenue</p>
-            <p className="text-2xl font-bold text-slate-900">{formatCurrency(stats.totalRevenue || 0)}</p>
+            <p className="text-2xl font-bold text-slate-900">{formatCurrencyKES(stats.totalRevenue || 0)}</p>
           </div>
         </div>
       </div>
@@ -84,7 +105,7 @@ function Dashboard() {
                     <p className="font-medium text-sm text-slate-900">{booking.vehicle?.name || 'Vehicle'}</p>
                     <p className="text-xs text-slate-500">{booking.user?.name || 'Customer'}</p>
                   </div>
-                  <span className="text-sm font-medium text-primary">{formatCurrency(booking.totalAmount)}</span>
+                  <span className="text-sm font-medium text-primary">{formatCurrencyKES(booking.totalAmount)}</span>
                 </div>
               ))
             ) : (
