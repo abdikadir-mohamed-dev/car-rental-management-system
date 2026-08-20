@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react'
 import { getTrips, updateTripStatus } from '../../services/staffService'
 import toast from 'react-hot-toast'
-import { Search } from 'lucide-react'
+import { Search, XCircle, AlertTriangle } from 'lucide-react'
 
 function TripManagement() {
   const [trips, setTrips] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const [selectedTrip, setSelectedTrip] = useState(null)
+  const [issueNote, setIssueNote] = useState('')
 
   const loadTrips = () => {
     setLoading(true)
@@ -28,6 +30,16 @@ function TripManagement() {
         loadTrips()
       })
       .catch(() => toast.error('Failed to update status'))
+  }
+
+  const handleReportIssue = (id) => {
+    if (!issueNote.trim()) {
+      toast.error('Please enter an issue description')
+      return
+    }
+    toast.success('Issue reported successfully')
+    setIssueNote('')
+    setSelectedTrip(null)
   }
 
   const filteredTrips = trips.filter(trip =>
@@ -77,16 +89,21 @@ function TripManagement() {
                     </span>
                   </td>
                   <td className="py-3 px-4">
-                    {trip.status === 'assigned' && (
-                      <button onClick={() => handleStatusUpdate(trip._id, 'in_progress')} className="btn-primary text-sm px-3 py-1">
-                        Start
+                    <div className="flex gap-2">
+                      <button onClick={() => setSelectedTrip(trip)} className="p-2 text-primary hover:bg-primary-light rounded-lg">
+                        <Search className="w-4 h-4" />
                       </button>
-                    )}
-                    {trip.status === 'in_progress' && (
-                      <button onClick={() => handleStatusUpdate(trip._id, 'completed')} className="btn-success text-sm px-3 py-1">
-                        Complete
-                      </button>
-                    )}
+                      {trip.status === 'assigned' && (
+                        <button onClick={() => handleStatusUpdate(trip._id, 'in_progress')} className="btn-primary text-sm px-3 py-1">
+                          Accept
+                        </button>
+                      )}
+                      {trip.status === 'in_progress' && (
+                        <button onClick={() => handleStatusUpdate(trip._id, 'completed')} className="btn-success text-sm px-3 py-1">
+                          Complete
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -95,6 +112,73 @@ function TripManagement() {
           {filteredTrips.length === 0 && (
             <p className="text-center text-slate-500 py-8">No trips found.</p>
           )}
+        </div>
+      )}
+
+      {selectedTrip && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-slate-200 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-slate-900">Trip Details</h3>
+              <button onClick={() => setSelectedTrip(null)} className="text-slate-400 hover:text-slate-600">
+                <XCircle className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-slate-500">Customer</p>
+                  <p className="font-medium text-slate-900">{selectedTrip.customer?.name || 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-slate-500">Vehicle</p>
+                  <p className="font-medium text-slate-900">{selectedTrip.vehicle?.name || 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-slate-500">Pickup Location</p>
+                  <p className="font-medium text-slate-900">{selectedTrip.pickupLocation || 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-slate-500">Dropoff Location</p>
+                  <p className="font-medium text-slate-900">{selectedTrip.dropoffLocation || 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-slate-500">Pickup Time</p>
+                  <p className="font-medium text-slate-900">{selectedTrip.pickupTime || 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-slate-500">Status</p>
+                  <span className={`badge capitalize ${selectedTrip.status === 'in_progress' ? 'badge-info' : selectedTrip.status === 'completed' ? 'badge-success' : 'badge-warning'}`}>
+                    {selectedTrip.status?.replace('_', ' ')}
+                  </span>
+                </div>
+              </div>
+              <div>
+                <label className="label">Report an Issue</label>
+                <textarea
+                  placeholder="Describe the issue..."
+                  value={issueNote}
+                  onChange={(e) => setIssueNote(e.target.value)}
+                  className="input"
+                  rows="3"
+                ></textarea>
+              </div>
+            </div>
+            <div className="p-6 border-t border-slate-200 flex justify-end gap-3">
+              <button onClick={() => setSelectedTrip(null)} className="btn-secondary">
+                Close
+              </button>
+              <button onClick={() => handleReportIssue(selectedTrip._id)} className="btn-secondary flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4" />
+                Report Issue
+              </button>
+              {selectedTrip.status === 'assigned' && (
+                <button onClick={() => { handleStatusUpdate(selectedTrip._id, 'in_progress'); setSelectedTrip(null); }} className="btn-primary">
+                  Accept Assignment
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>
