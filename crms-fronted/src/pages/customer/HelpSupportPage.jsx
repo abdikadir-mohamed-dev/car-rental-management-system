@@ -8,6 +8,10 @@ import {
   FileQuestion,
   Send,
   ChevronRight,
+  CreditCard,
+  FileText,
+  Shield,
+  Car,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 

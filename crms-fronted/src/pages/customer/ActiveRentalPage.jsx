@@ -3,10 +3,12 @@ import { useDispatch, useSelector } from 'react-redux'
 import { fetchBookings } from '../../redux/slices/bookingSlice'
 import { fetchVehicles } from '../../redux/slices/vehicleSlice'
 import { Link } from 'react-router-dom'
-import { Car, MapPin, Phone, AlertTriangle, RefreshCw } from 'lucide-react'
+import { Car, MapPin, Phone, AlertTriangle, RefreshCw, Clock } from 'lucide-react'
 import { BOOKING_STATUS } from '../../utils/constants'
 import StatusBadge from '../../components/common/StatusBadge'
 import Loader from '../../components/common/Loader'
+import { formatCurrency } from '../../utils/formatCurrency'
+import { formatDate as formatDateUtil } from '../../utils/formatDate'
 
 function ActiveRentalPage() {
   const dispatch = useDispatch()
