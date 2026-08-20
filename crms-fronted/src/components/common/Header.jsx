@@ -1,8 +1,37 @@
 import { Bell, Search, Menu } from 'lucide-react'
 import { useSelector } from 'react-redux'
+import { useLocation } from 'react-router-dom'
 
 function Header({ onMenuClick }) {
   const { user } = useSelector((state) => state.auth)
+  const location = useLocation()
+  const isAdmin = location.pathname.startsWith('/admin')
+  const isStaff = location.pathname.startsWith('/staff')
+  const isDriver = location.pathname.startsWith('/driver')
+
+  const getRole = () => {
+    if (user?.role) return user.role
+    if (isAdmin) return 'Admin'
+    if (isStaff) return 'Staff'
+    if (isDriver) return 'Driver'
+    return 'User'
+  }
+
+  const getName = () => {
+    if (user?.name) return user.name
+    if (isAdmin) return 'Admin User'
+    if (isStaff) return 'Staff User'
+    if (isDriver) return 'Driver User'
+    return 'User'
+  }
+
+  const getInitial = () => {
+    if (user?.name) return user.name.charAt(0).toUpperCase()
+    if (isAdmin) return 'A'
+    if (isStaff) return 'S'
+    if (isDriver) return 'D'
+    return 'U'
+  }
 
   return (
     <header className="bg-white border-b border-slate-200 h-16 flex items-center justify-between px-6 sticky top-0 z-30">
@@ -33,13 +62,11 @@ function Header({ onMenuClick }) {
         
         <div className="flex items-center gap-3 pl-4 border-l border-slate-200">
           <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
-            <span className="text-white text-sm font-medium">
-              {user?.name?.charAt(0).toUpperCase() || 'U'}
-            </span>
+            <span className="text-white text-sm font-medium">{getInitial()}</span>
           </div>
           <div className="hidden sm:block">
-            <p className="text-sm font-medium text-slate-900">{user?.name || 'User'}</p>
-            <p className="text-xs text-slate-500 capitalize">{user?.role || 'User'}</p>
+            <p className="text-sm font-medium text-slate-900">{getName()}</p>
+            <p className="text-xs text-slate-500 capitalize">{getRole()}</p>
           </div>
         </div>
       </div>
