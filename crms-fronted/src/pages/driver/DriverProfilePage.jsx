@@ -1,66 +1,42 @@
-import { useState, useEffect } from 'react'
-import { useDispatch, useSelector } from 'react-redux'
-import { fetchUser, updateProfile } from '../../redux/slices/userSlice'
+import { useState } from 'react'
+import { User, Mail, Phone, Car, Shield, Calendar, Save } from 'lucide-react'
 import toast from 'react-hot-toast'
-import Loader from '../../components/common/Loader'
+
+const MOCK_DRIVER_PROFILE = {
+  name: 'James Kariuki',
+  email: 'james.kariuki@drivego.com',
+  phone: '+254 712 345 678',
+  role: 'Driver',
+  licenseNumber: 'DLN-2020-7894',
+  licenseExpiry: '2027-05-15',
+  experience: '5 years',
+  rating: 4.9,
+  totalTrips: 1240,
+  status: 'Active',
+}
 
 function DriverProfilePage() {
-  const dispatch = useDispatch()
-  const { profile, loading, error } = useSelector((state) => state.user)
   const [isEditing, setIsEditing] = useState(false)
-  const [editingFormData, setEditingFormData] = useState(null)
-  const [submitting, setSubmitting] = useState(false)
-
-  const startEditing = () => {
-    setEditingFormData({
-      name: profile?.name || '',
-      email: profile?.email || '',
-      phone: profile?.phone || '',
-    })
-    setIsEditing(true)
-  }
-
-  const cancelEditing = () => {
-    setEditingFormData(null)
-    setIsEditing(false)
-  }
-
-  useEffect(() => {
-    dispatch(fetchUser())
-  }, [dispatch])
-
-  useEffect(() => {
-    if (error) {
-      toast.error(error)
-    }
-  }, [error])
+  const [profile, setProfile] = useState(MOCK_DRIVER_PROFILE)
+  const [formData, setFormData] = useState({ ...MOCK_DRIVER_PROFILE })
 
   const handleChange = (e) => {
-    setEditingFormData({ ...editingFormData, [e.target.name]: e.target.value })
+    setFormData({ ...formData, [e.target.name]: e.target.value })
   }
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault()
-    setSubmitting(true)
-    try {
-      await dispatch(updateProfile(editingFormData)).unwrap()
-      toast.success('Profile updated successfully')
-      setIsEditing(false)
-    } catch (error) {
-      toast.error(error || 'Failed to update profile')
-    } finally {
-      setSubmitting(false)
-    }
+    setProfile(formData)
+    setIsEditing(false)
+    toast.success('Profile updated successfully')
   }
-
-  if (loading && !profile) return <Loader />
 
   return (
     <div className="space-y-6 max-w-2xl">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-slate-900">Profile</h1>
         {!isEditing && (
-          <button onClick={startEditing} className="btn-primary">
+          <button onClick={() => setIsEditing(true)} className="btn-primary">
             Edit Profile
           </button>
         )}
@@ -71,47 +47,85 @@ function DriverProfilePage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="label">Full Name</label>
-              <input
-                type="text"
-                name="name"
-                value={editingFormData.name}
-                onChange={handleChange}
-                className="input"
-                required
-              />
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input
+                  type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  className="input pl-9"
+                  required
+                />
+              </div>
             </div>
             <div>
               <label className="label">Email</label>
-              <input
-                type="email"
-                name="email"
-                value={editingFormData.email}
-                onChange={handleChange}
-                className="input"
-                required
-              />
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  className="input pl-9"
+                  required
+                />
+              </div>
             </div>
             <div>
               <label className="label">Phone</label>
-              <input
-                type="tel"
-                name="phone"
-                value={editingFormData.phone}
-                onChange={handleChange}
-                className="input"
-              />
+              <div className="relative">
+                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input
+                  type="tel"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  className="input pl-9"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="label">License Number</label>
+              <div className="relative">
+                <Shield className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input
+                  type="text"
+                  name="licenseNumber"
+                  value={formData.licenseNumber}
+                  onChange={handleChange}
+                  className="input pl-9"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="label">License Expiry</label>
+              <div className="relative">
+                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input
+                  type="date"
+                  name="licenseExpiry"
+                  value={formData.licenseExpiry}
+                  onChange={handleChange}
+                  className="input pl-9"
+                />
+              </div>
             </div>
             <div className="flex justify-end gap-3 pt-4">
               <button
                 type="button"
-                onClick={cancelEditing}
+                onClick={() => {
+                  setIsEditing(false)
+                  setFormData({ ...profile })
+                }}
                 className="btn-secondary"
-                disabled={submitting}
               >
                 Cancel
               </button>
-              <button type="submit" className="btn-primary" disabled={submitting}>
-                {submitting ? 'Saving...' : 'Save Changes'}
+              <button type="submit" className="btn-primary">
+                <Save className="w-4 h-4" />
+                Save Changes
               </button>
             </div>
           </form>
@@ -120,19 +134,43 @@ function DriverProfilePage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <p className="text-sm text-slate-500">Full Name</p>
-                <p className="font-medium text-slate-900">{profile?.name || 'N/A'}</p>
+                <p className="font-medium text-slate-900">{profile.name}</p>
               </div>
               <div>
                 <p className="text-sm text-slate-500">Email</p>
-                <p className="font-medium text-slate-900">{profile?.email || 'N/A'}</p>
+                <p className="font-medium text-slate-900">{profile.email}</p>
               </div>
               <div>
                 <p className="text-sm text-slate-500">Phone</p>
-                <p className="font-medium text-slate-900">{profile?.phone || 'N/A'}</p>
+                <p className="font-medium text-slate-900">{profile.phone}</p>
               </div>
               <div>
                 <p className="text-sm text-slate-500">Role</p>
-                <p className="font-medium text-slate-900 capitalize">{profile?.role || 'N/A'}</p>
+                <p className="font-medium text-slate-900 capitalize">{profile.role}</p>
+              </div>
+              <div>
+                <p className="text-sm text-slate-500">License Number</p>
+                <p className="font-medium text-slate-900">{profile.licenseNumber}</p>
+              </div>
+              <div>
+                <p className="text-sm text-slate-500">License Expiry</p>
+                <p className="font-medium text-slate-900">{profile.licenseExpiry}</p>
+              </div>
+              <div>
+                <p className="text-sm text-slate-500">Experience</p>
+                <p className="font-medium text-slate-900">{profile.experience}</p>
+              </div>
+              <div>
+                <p className="text-sm text-slate-500">Rating</p>
+                <p className="font-medium text-slate-900">⭐ {profile.rating}</p>
+              </div>
+              <div>
+                <p className="text-sm text-slate-500">Total Trips</p>
+                <p className="font-medium text-slate-900">{profile.totalTrips.toLocaleString()}</p>
+              </div>
+              <div>
+                <p className="text-sm text-slate-500">Status</p>
+                <span className="badge badge-success">{profile.status}</span>
               </div>
             </div>
           </div>

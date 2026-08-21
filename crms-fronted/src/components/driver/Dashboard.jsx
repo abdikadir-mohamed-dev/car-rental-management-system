@@ -1,4 +1,5 @@
 import { MapPin, Clock, DollarSign } from 'lucide-react'
+import { formatCurrency } from '../../utils/formatCurrency'
 
 function Dashboard() {
   return (
@@ -28,7 +29,7 @@ function Dashboard() {
           </div>
           <div>
             <p className="text-sm text-slate-600">Total Earnings</p>
-            <p className="text-2xl font-bold text-slate-900">$450</p>
+            <p className="text-2xl font-bold text-slate-900">{formatCurrency(450)}</p>
           </div>
         </div>
       </div>
