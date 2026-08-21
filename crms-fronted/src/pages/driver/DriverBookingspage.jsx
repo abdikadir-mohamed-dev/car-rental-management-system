@@ -18,10 +18,10 @@ const bookings = [
 const tabs = ['All', 'Confirmed', 'Pending', 'Completed', 'Cancelled'];
 
 const statusStyle = {
-  Confirmed: 'bg-emerald-100 text-emerald-700',
-  Pending: 'bg-amber-100 text-amber-700',
-  Completed: 'bg-blue-100 text-blue-700',
-  Cancelled: 'bg-rose-100 text-rose-700',
+  Confirmed: 'badge-success',
+  Pending: 'badge-warning',
+  Completed: 'badge-info',
+  Cancelled: 'badge-danger',
 };
 
 export default function DriverBookingsPage() {
@@ -55,7 +55,7 @@ export default function DriverBookingsPage() {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search bookings..."
-                className="pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg bg-white w-64 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg bg-white w-64 focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
           </div>
@@ -66,7 +66,7 @@ export default function DriverBookingsPage() {
                 key={t}
                 onClick={() => setTab(t)}
                 className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
-                  tab === t ? 'border-emerald-600 text-emerald-600' : 'border-transparent text-slate-500 hover:text-slate-800'
+                  tab === t ? 'border-primary text-primary' : 'border-transparent text-slate-500 hover:text-slate-800'
                 }`}
               >
                 {t}

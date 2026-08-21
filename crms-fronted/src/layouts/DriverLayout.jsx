@@ -1,9 +1,8 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { toast } from 'react-hot-toast'
 import {
-  LayoutGrid, ClipboardList, Calendar, LogOut, LogIn,
-  Car, Users, Wrench, BarChart2, Bell, User, Power,
-  ShipWheel, ChevronDown, DollarSign, Route, Search, Fuel, Gauge
+  LayoutGrid, ClipboardList, Route, DollarSign,
+  Calendar, Car, Users, Wrench, BarChart2, Bell, User, LogOut, ShipWheel
 } from 'lucide-react'
 
 const navItems = [
@@ -30,23 +29,31 @@ export default function DriverLayout() {
 
   return (
     <div className="flex h-screen bg-slate-50">
-      {/* Sidebar */}
-      <aside className="w-64 bg-white border-r border-slate-200 flex flex-col">
-        <div className="h-16 flex items-center gap-2 px-6 border-b border-slate-100">
-          <ShipWheel className="text-emerald-600" size={24} />
-          <span className="text-lg font-bold text-slate-800">DriveGo</span>
+      <aside className="fixed top-0 left-0 z-50 h-full w-64 bg-sidebar text-white transform transition-transform lg:translate-x-0 flex flex-col">
+        <div className="flex items-center justify-between p-4 lg:hidden">
+          <NavLink to="/" className="flex items-center gap-2" onClick={() => {}}>
+            <ShipWheel className="w-6 h-6 text-primary" />
+            <span className="text-lg font-bold">DriveGo</span>
+          </NavLink>
         </div>
 
-        <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
+        <div className="hidden lg:flex items-center gap-2 px-6 py-4">
+          <NavLink to="/" className="flex items-center gap-2">
+            <ShipWheel className="w-7 h-7 text-primary" />
+            <span className="text-xl font-bold text-white">DriveGo</span>
+          </NavLink>
+        </div>
+
+        <nav className="flex-1 overflow-y-auto py-4 px-4 space-y-1">
           {navItems.map((item) => (
             <NavLink
               key={item.label}
               to={item.to}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                `flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
                   isActive
-                    ? 'bg-emerald-50 text-emerald-700'
-                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                    ? 'bg-sidebar-active text-white'
+                    : 'text-slate-300 hover:bg-sidebar-hover hover:text-white'
                 }`
               }
             >
@@ -56,10 +63,10 @@ export default function DriverLayout() {
           ))}
         </nav>
 
-        <div className="p-3 border-t border-slate-100">
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-sidebar-hover">
           <button
             onClick={handleLogout}
-            className="flex items-center gap-3 px-3 py-2 w-full rounded-lg text-sm font-medium text-rose-600 hover:bg-rose-50 transition-colors"
+            className="flex items-center gap-3 px-4 py-3 text-slate-300 hover:bg-sidebar-hover hover:text-white rounded-lg transition-colors text-sm font-medium w-full"
           >
             <LogOut size={18} />
             Logout
@@ -67,10 +74,9 @@ export default function DriverLayout() {
         </div>
       </aside>
 
-      {/* Main content */}
-      <main className="flex-1 overflow-y-auto">
+      <div className="flex-1 lg:ml-64 overflow-y-auto">
         <Outlet />
-      </main>
+      </div>
     </div>
   )
 }

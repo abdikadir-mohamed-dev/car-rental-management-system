@@ -12,15 +12,15 @@ const initialRequests = [
 ];
 
 const priorityStyle = {
-  High: 'bg-rose-100 text-rose-700',
-  Medium: 'bg-amber-100 text-amber-700',
-  Low: 'bg-slate-100 text-slate-600',
+  High: 'badge-danger',
+  Medium: 'badge-warning',
+  Low: 'badge-info',
 };
 
 const statusStyle = {
-  Open: 'bg-blue-100 text-blue-700',
-  'In Progress': 'bg-amber-100 text-amber-700',
-  Resolved: 'bg-emerald-100 text-emerald-700',
+  Open: 'badge-info',
+  'In Progress': 'badge-warning',
+  Resolved: 'badge-success',
 };
 
 export default function DriverMaintenancePage() {
@@ -58,7 +58,7 @@ export default function DriverMaintenancePage() {
         </div>
         <button
           onClick={() => setShowForm((v) => !v)}
-          className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+          className="flex items-center gap-2 text-primary hover:bg-primary-hover text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
         >
           {showForm ? <X size={16} /> : <Plus size={16} />}
           {showForm ? 'Cancel' : 'New Request'}
@@ -76,7 +76,7 @@ export default function DriverMaintenancePage() {
                     value={vehicle}
                     onChange={(e) => setVehicle(e.target.value)}
                     placeholder="e.g. Toyota Prado — KDA 221B"
-                    className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                     required
                   />
                 </div>
@@ -85,7 +85,7 @@ export default function DriverMaintenancePage() {
                   <select
                     value={priority}
                     onChange={(e) => setPriority(e.target.value)}
-                    className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   >
                     {['Low', 'Medium', 'High'].map((p) => (
                       <option key={p} value={p}>{p}</option>
@@ -100,13 +100,13 @@ export default function DriverMaintenancePage() {
                   onChange={(e) => setIssue(e.target.value)}
                   rows={3}
                   placeholder="Describe the issue..."
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   required
                 />
               </div>
               <button
                 type="submit"
-                className="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+                className="text-primary hover:bg-primary-hover text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
               >
                 Submit Request
               </button>

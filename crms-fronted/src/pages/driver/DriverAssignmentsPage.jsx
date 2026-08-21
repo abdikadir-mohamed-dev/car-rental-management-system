@@ -81,10 +81,10 @@ const assignments = [
 ];
 
 const statusStyle = {
-  Assigned: 'bg-emerald-100 text-emerald-700',
-  Upcoming: 'bg-amber-100 text-amber-700',
-  Completed: 'bg-blue-100 text-blue-700',
-  Cancelled: 'bg-rose-100 text-rose-700',
+  Assigned: 'badge-success',
+  Upcoming: 'badge-warning',
+  Completed: 'badge-info',
+  Cancelled: 'badge-danger',
 };
 
 export default function DriverAssignmentsPage() {
@@ -115,7 +115,7 @@ export default function DriverAssignmentsPage() {
               onClick={() => setFilter(status)}
               className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                 filter === status
-                  ? 'bg-emerald-600 text-white'
+                  ? 'bg-primary text-white'
                   : 'bg-white border border-slate-200 text-slate-600 hover:text-slate-900'
               }`}
             >
@@ -131,10 +131,10 @@ export default function DriverAssignmentsPage() {
             <div className="flex items-start justify-between">
               <div className="flex items-start gap-4">
                 <div className={`w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                  assignment.status === 'Assigned' ? 'bg-emerald-100 text-emerald-600' :
+                  assignment.status === 'Assigned' ? 'bg-blue-100 text-primary' :
                   assignment.status === 'Upcoming' ? 'bg-amber-100 text-amber-600' :
-                  assignment.status === 'Completed' ? 'bg-blue-100 text-blue-600' :
-                  'bg-rose-100 text-rose-600'
+                  assignment.status === 'Completed' ? 'bg-blue-100 text-primary' :
+                  'bg-red-100 text-danger'
                 }`}>
                   <ClipboardList size={20} />
                 </div>
@@ -202,7 +202,7 @@ export default function DriverAssignmentsPage() {
                   <>
                     <button
                       onClick={() => handleCall(assignment.phone)}
-                      className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-3 py-2 rounded-lg transition-colors"
+                      className="flex items-center gap-1.5 bg-primary hover:bg-primary-hover text-white text-xs font-medium px-3 py-2 rounded-lg transition-colors"
                     >
                       <Phone size={14} />
                       Call
@@ -216,7 +216,7 @@ export default function DriverAssignmentsPage() {
                     </button>
                     <button
                       onClick={() => handleAction(assignment, 'rejected')}
-                      className="flex items-center gap-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-medium px-3 py-2 rounded-lg transition-colors"
+                      className="flex items-center gap-1.5 bg-danger hover:bg-red-700 text-white text-xs font-medium px-3 py-2 rounded-lg transition-colors"
                     >
                       <XCircle size={14} />
                       Decline
@@ -227,7 +227,7 @@ export default function DriverAssignmentsPage() {
                   <>
                     <button
                       onClick={() => handleCall(assignment.phone)}
-                      className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-3 py-2 rounded-lg transition-colors"
+                      className="flex items-center gap-1.5 bg-primary hover:bg-primary-hover text-white text-xs font-medium px-3 py-2 rounded-lg transition-colors"
                     >
                       <Phone size={14} />
                       Call

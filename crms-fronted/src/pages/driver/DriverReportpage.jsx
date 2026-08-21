@@ -9,7 +9,7 @@ const reportData = {
   '7d': {
     metrics: [
       { label: 'Trips Completed', value: 15, icon: Route, bg: 'bg-blue-500' },
-      { label: 'On-time Rate', value: '96%', icon: Clock, bg: 'bg-emerald-500' },
+      { label: 'On-time Rate', value: '96%', icon: Clock, bg: 'bg-blue-500' },
       { label: 'Avg Rating', value: '4.9', icon: Star, bg: 'bg-amber-500' },
       { label: 'Growth', value: '+8%', icon: TrendingUp, bg: 'bg-violet-500' },
     ],
@@ -17,7 +17,7 @@ const reportData = {
   '30d': {
     metrics: [
       { label: 'Trips Completed', value: 56, icon: Route, bg: 'bg-blue-500' },
-      { label: 'On-time Rate', value: '94%', icon: Clock, bg: 'bg-emerald-500' },
+      { label: 'On-time Rate', value: '94%', icon: Clock, bg: 'bg-blue-500' },
       { label: 'Avg Rating', value: '4.8', icon: Star, bg: 'bg-amber-500' },
       { label: 'Growth', value: '+12%', icon: TrendingUp, bg: 'bg-violet-500' },
     ],
@@ -25,7 +25,7 @@ const reportData = {
   '90d': {
     metrics: [
       { label: 'Trips Completed', value: 178, icon: Route, bg: 'bg-blue-500' },
-      { label: 'On-time Rate', value: '93%', icon: Clock, bg: 'bg-emerald-500' },
+      { label: 'On-time Rate', value: '93%', icon: Clock, bg: 'bg-blue-500' },
       { label: 'Avg Rating', value: '4.8', icon: Star, bg: 'bg-amber-500' },
       { label: 'Growth', value: '+19%', icon: TrendingUp, bg: 'bg-violet-500' },
     ],
@@ -61,7 +61,7 @@ export default function DriverReportsPage() {
               key={p.key}
               onClick={() => setPeriod(p.key)}
               className={`px-3 py-1.5 rounded-md transition-colors ${
-                period === p.key ? 'bg-emerald-600 text-white' : 'text-slate-500 hover:text-slate-800'
+                period === p.key ? 'text-primary text-white' : 'text-slate-500 hover:text-slate-800'
               }`}
             >
               {p.label}

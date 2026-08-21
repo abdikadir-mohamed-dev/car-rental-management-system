@@ -15,10 +15,10 @@ const initialNotifications = [
 ];
 
 const iconByType = {
-  assignment: { icon: CalendarCheck, bg: 'bg-blue-100 text-blue-600' },
+  assignment: { icon: CalendarCheck, bg: 'bg-blue-100 text-primary' },
   payment: { icon: Wallet, bg: 'bg-emerald-100 text-emerald-600' },
   maintenance: { icon: WrenchIcon, bg: 'bg-amber-100 text-amber-600' },
-  alert: { icon: AlertTriangle, bg: 'bg-rose-100 text-rose-600' },
+  alert: { icon: AlertTriangle, bg: 'bg-red-100 text-danger' },
 };
 
 export default function DriverNotificationsPage() {
@@ -45,7 +45,7 @@ export default function DriverNotificationsPage() {
         {unreadCount > 0 && (
           <button
             onClick={markAllRead}
-            className="flex items-center gap-1.5 text-sm font-medium text-emerald-600 hover:text-emerald-700"
+            className="flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary"
           >
             <CheckCheck size={16} />
             Mark all as read
@@ -61,7 +61,7 @@ export default function DriverNotificationsPage() {
                   key={n.id}
                   onClick={() => markRead(n.id)}
                   className={`w-full text-left flex items-start gap-4 p-4 rounded-xl transition-colors ${
-                    n.read ? 'bg-white' : 'bg-emerald-50/60 hover:bg-emerald-50'
+                    n.read ? 'bg-white' : 'bg-blue-50/60 hover:bg-blue-50'
                   }`}
                 >
                   <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${bg}`}>
@@ -72,7 +72,7 @@ export default function DriverNotificationsPage() {
                       <p className={`text-sm ${n.read ? 'text-slate-700 font-medium' : 'text-slate-900 font-semibold'}`}>
                         {n.title}
                       </p>
-                      {!n.read && <span className="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0" />}
+                      {!n.read && <span className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0" />}
                     </div>
                     <p className="text-sm text-slate-500 mt-0.5">{n.body}</p>
                     <p className="text-xs text-slate-400 mt-1">{n.time}</p>
