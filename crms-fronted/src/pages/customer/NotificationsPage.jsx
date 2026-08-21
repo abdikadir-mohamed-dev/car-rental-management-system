@@ -1,89 +1,81 @@
-import { useState, useEffect } from 'react'
-import { useDispatch, useSelector } from 'react-redux'
-import { Bell, Check, CheckCheck, Trash2, Calendar, CreditCard, FileText, AlertTriangle, RefreshCw } from 'lucide-react'
-import { formatDate as formatDateUtil } from '../../utils/formatDate'
-import StatusBadge from '../../components/common/StatusBadge'
-import Loader from '../../components/common/Loader'
-import toast from 'react-hot-toast'
+import { useState } from 'react'
+import { Bell, Check, Trash2 } from 'lucide-react'
+import { mockNotifications } from '../../data/mockNotifications'
 
 function NotificationsPage() {
-  const [filter, setFilter] = useState('all')
-  const [notifications, setNotifications] = useState([])
-
-  useEffect(() => {
-    setNotifications([
-      { id: 1, title: 'Booking Confirmed', message: 'Your booking for Toyota Camry has been confirmed.', type: 'booking', read: false, date: new Date().toISOString() },
-      { id: 2, title: 'Payment Successful', message: 'Payment of KES 15,000 received.', type: 'payment', read: false, date: new Date(Date.now() - 86400000).toISOString() },
-      { id: 3, title: 'Return Reminder', message: 'Your rental ends tomorrow.', type: 'reminder', read: true, date: new Date(Date.now() - 172800000).toISOString() },
-    ])
-  }, [])
+  const [notifications, setNotifications] = useState(mockNotifications)
 
   const markAsRead = (id) => {
-    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)))
-    toast.success('Marked as read')
+    setNotifications(notifications.map(n => n.id === id ? { ...n, read: true } : n))
   }
 
   const deleteNotification = (id) => {
-    setNotifications((prev) => prev.filter((n) => n.id !== id))
-    toast.success('Notification removed')
+    setNotifications(notifications.filter(n => n.id !== id))
   }
 
-  const filteredNotifications = notifications.filter((n) => {
-    if (filter === 'all') return true
-    if (filter === 'unread') return !n.read
-    return n.type === filter
-  })
-
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-slate-900">Notifications</h1>
-        <p className="text-slate-600 mt-1">Stay updated with your bookings and payments</p>
-      </div>
-
-      <div className="card p-2">
-        <div className="flex gap-2">
-          {['all', 'unread', 'booking', 'payment', 'reminder'].map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium capitalize transition-colors ${
-                filter === f ? 'bg-primary text-white' : 'text-slate-600 hover:bg-slate-100'
-              }`}
-            >
-              {f}
-            </button>
-          ))}
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900">Notifications</h1>
+          <p className="text-slate-600 mt-1">Stay updated with your bookings</p>
         </div>
+        <button
+          onClick={() => setNotifications(notifications.map(n => ({ ...n, read: true })))}
+          className="btn-secondary flex items-center gap-2"
+        >
+          <Check className="w-4 h-4" />
+          Mark all as read
+        </button>
       </div>
 
-      {filteredNotifications.length === 0 ? (
+      {notifications.length === 0 ? (
         <div className="card p-12 text-center">
-          <Bell className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-          <p className="text-slate-500">No notifications found</p>
+          <Bell className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-slate-900 mb-2">You're all caught up</h3>
+          <p className="text-slate-600">No new notifications</p>
         </div>
       ) : (
         <div className="space-y-3">
-          {filteredNotifications.map((notification) => (
-            <div key={notification.id} className={`card p-4 flex items-start gap-4 ${notification.read ? 'opacity-75' : ''}`}>
-              <div className="w-10 h-10 bg-primary-light rounded-lg flex items-center justify-center flex-shrink-0">
-                <Bell className="w-5 h-5 text-primary" />
+          {notifications.map((notification) => (
+            <div
+              key={notification.id}
+              className={`card p-4 flex items-start gap-4 ${!notification.read ? 'border-blue-200 bg-blue-50/50' : ''}`}
+            >
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                notification.type === 'success' ? 'bg-emerald-100' :
+                notification.type === 'promo' ? 'bg-blue-100' : 'bg-slate-100'
+              }`}>
+                <Bell className={`w-5 h-5 ${
+                  notification.type === 'success' ? 'text-success' :
+                  notification.type === 'promo' ? 'text-primary' : 'text-slate-600'
+                }`} />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between gap-4">
-                  <h3 className="font-medium text-slate-900">{notification.title}</h3>
-                  <span className="text-xs text-slate-500 whitespace-nowrap">{formatDateUtil(notification.date)}</span>
-                </div>
-                <p className="text-sm text-slate-600 mt-1">{notification.message}</p>
-                <div className="flex items-center gap-2 mt-3">
-                  {!notification.read && (
-                    <button onClick={() => markAsRead(notification.id)} className="text-xs text-primary hover:underline flex items-center gap-1">
-                      <CheckCheck className="w-3 h-3" /> Mark as read
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <h3 className="font-medium text-slate-900">{notification.title}</h3>
+                    <p className="text-sm text-slate-600 mt-1">{notification.message}</p>
+                    <p className="text-xs text-slate-500 mt-2">{notification.time}</p>
+                  </div>
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    {!notification.read && (
+                      <button
+                        onClick={() => markAsRead(notification.id)}
+                        className="p-1.5 hover:bg-slate-200 rounded-lg"
+                        title="Mark as read"
+                      >
+                        <Check className="w-4 h-4 text-slate-600" />
+                      </button>
+                    )}
+                    <button
+                      onClick={() => deleteNotification(notification.id)}
+                      className="p-1.5 hover:bg-red-100 rounded-lg"
+                      title="Delete"
+                    >
+                      <Trash2 className="w-4 h-4 text-red-600" />
                     </button>
-                  )}
-                  <button onClick={() => deleteNotification(notification.id)} className="text-xs text-danger hover:underline flex items-center gap-1">
-                    <Trash2 className="w-3 h-3" /> Remove
-                  </button>
+                  </div>
                 </div>
               </div>
             </div>

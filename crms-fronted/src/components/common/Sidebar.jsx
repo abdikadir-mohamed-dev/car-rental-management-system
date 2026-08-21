@@ -1,5 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import { X, Car } from 'lucide-react'
+import { useDispatch } from 'react-redux'
+import { logout } from '../../redux/slices/authSlice'
 
 const adminLinks = [
   { to: '/admin', icon: 'LayoutDashboard', label: 'Dashboard', end: true },
@@ -40,6 +42,11 @@ const driverLinks = [
 
 function Sidebar({ isOpen, onClose, role }) {
   const links = role === 'admin' ? adminLinks : role === 'staff' ? staffLinks : driverLinks
+  const dispatch = useDispatch()
+
+  const handleLogout = () => {
+    dispatch(logout())
+  }
 
   const getIcon = (iconName) => {
     const icons = {
@@ -69,23 +76,25 @@ function Sidebar({ isOpen, onClose, role }) {
         onClick={onClose}
       />
       <aside
-        className={`fixed top-0 left-0 z-50 h-full w-64 bg-sidebar text-white transform transition-transform lg:translate-x-0 lg:sticky lg:top-0 lg:z-auto ${
+        className={`fixed top-0 left-0 z-50 h-full w-64 bg-sidebar text-white transform transition-transform lg:translate-x-0 ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         <div className="flex items-center justify-between p-4 lg:hidden">
-          <div className="flex items-center gap-2">
+          <NavLink to="/" className="flex items-center gap-2" onClick={onClose}>
             <Car className="w-6 h-6 text-primary" />
             <span className="text-lg font-bold">DriveGo</span>
-          </div>
+          </NavLink>
           <button onClick={onClose} className="p-2 hover:bg-sidebar-hover rounded-lg">
             <X className="w-5 h-5" />
           </button>
         </div>
         
         <div className="hidden lg:flex items-center gap-2 px-6 py-4">
-          <Car className="w-7 h-7 text-primary" />
-          <span className="text-xl font-bold">DriveGo</span>
+          <NavLink to="/" className="flex items-center gap-2">
+            <Car className="w-7 h-7 text-primary" />
+            <span className="text-xl font-bold">DriveGo</span>
+          </NavLink>
         </div>
         
         <nav className="p-4 space-y-1 overflow-y-auto h-[calc(100vh-80px)]">
@@ -111,7 +120,9 @@ function Sidebar({ isOpen, onClose, role }) {
             className={({ isActive }) =>
               `sidebar-link ${isActive ? 'sidebar-link-active' : ''}`
             }
-            onClick={onClose}
+            onClick={(e) => {
+              handleLogout()
+            }}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
             Logout

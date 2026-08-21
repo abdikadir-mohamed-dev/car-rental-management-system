@@ -2,11 +2,12 @@ import { useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { Car, Users, Gauge, Fuel, Star, Heart } from 'lucide-react'
 
-function VehicleCard({ vehicle }) {
+function VehicleCard({ vehicle, to }) {
   const [liked, setLiked] = useState(false)
+  const linkTo = to || `/vehicles/${vehicle.id}`
 
   return (
-    <Link to={`/vehicles/${vehicle.id}`} className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow group">
+    <Link to={linkTo} className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow group">
       <div className="aspect-video bg-slate-100 relative overflow-hidden">
         <img src={vehicle.image} alt={vehicle.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
         <button
