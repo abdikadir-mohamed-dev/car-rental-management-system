@@ -152,7 +152,10 @@ function AppRoutes() {
         }
       >
         <Route index element={<DriverDashboard />} />
+        <Route path="dashboard" element={<DriverDashboard />} />
         <Route path="assignments" element={<DriverAssignmentsPage />} />
+        <Route path="trips" element={<DriverTripsPage />} />
+        <Route path="earnings" element={<DriverEarningsPage />} />
         <Route path="bookings" element={<DriverBookingsPage />} />
         <Route path="checkout" element={<DriverCheckoutPage />} />
         <Route path="checkin" element={<DriverCheckinPage />} />
@@ -160,7 +163,6 @@ function AppRoutes() {
         <Route path="customers" element={<DriverCustomersPage />} />
         <Route path="maintenance" element={<DriverMaintenancePage />} />
         <Route path="reports" element={<DriverReportsPage />} />
-        <Route path="earnings" element={<DriverEarningsPage />} />
         <Route path="notifications" element={<DriverNotificationsPage />} />
         <Route path="profile" element={<DriverProfilePage />} />
       </Route>
