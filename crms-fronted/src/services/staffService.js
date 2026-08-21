@@ -1,6 +1,5 @@
 import axios from 'axios'
 import { setAuthToken } from './authService'
-import { getMockDashboard, getMockTrips, getMockVehiclesForInspection } from '../utils/staffMockData'
 
 const API_URL = import.meta.env.VITE_API_URL
 
@@ -14,19 +13,11 @@ const staffService = axios.create({
 setAuthToken(localStorage.getItem('token'))
 
 export const getStaffDashboard = async () => {
-  try {
-    return await staffService.get('/dashboard')
-  } catch {
-    return { data: getMockDashboard() }
-  }
+  return await staffService.get('/dashboard')
 }
 
 export const getPendingBookings = async () => {
-  try {
-    return await staffService.get('/bookings/pending')
-  } catch {
-    return { data: { bookings: [] } }
-  }
+  return await staffService.get('/bookings/pending')
 }
 
 export const approveBooking = async (id, data) => {
@@ -38,11 +29,7 @@ export const rejectBooking = async (id, data) => {
 }
 
 export const getTrips = async (params) => {
-  try {
-    return await staffService.get('/trips', { params })
-  } catch {
-    return getMockTrips()
-  }
+  return await staffService.get('/trips', { params })
 }
 
 export const updateTripStatus = async (id, status) => {
@@ -50,11 +37,7 @@ export const updateTripStatus = async (id, status) => {
 }
 
 export const getVehiclesForInspection = async () => {
-  try {
-    return await staffService.get('/vehicles/inspection')
-  } catch {
-    return { data: getMockVehiclesForInspection() }
-  }
+  return await staffService.get('/vehicles/inspection')
 }
 
 export const updateVehicleInspection = async (id, data) => {

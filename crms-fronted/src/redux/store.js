@@ -13,7 +13,7 @@ const store = configureStore({
     bookings: bookingReducer,
     payments: paymentReducer,
     notifications: notificationReducer,
-    users: userReducer,
+    user: userReducer,
   },
 })
 
