@@ -1,23 +1,24 @@
 import { useState, useEffect } from 'react'
-import { getEarnings } from '../../services/driverService'
 import { DollarSign, TrendingUp } from 'lucide-react'
 import { formatCurrency } from '../../utils/formatCurrency'
 
+const MOCK_EARNINGS = {
+  total: 12450,
+  trips: [
+    { _id: 'TRP-501', date: '2026-08-20', customer: { name: 'Alice Mwangi' }, vehicle: { name: 'Toyota RAV4' }, earnings: 3200 },
+    { _id: 'TRP-502', date: '2026-08-19', customer: { name: 'Brian Otieno' }, vehicle: { name: 'Honda Accord' }, earnings: 2800 },
+    { _id: 'TRP-503', date: '2026-08-18', customer: { name: 'Grace Njeri' }, vehicle: { name: 'BMW 3 Series' }, earnings: 3500 },
+    { _id: 'TRP-504', date: '2026-08-17', customer: { name: 'John Doe' }, vehicle: { name: 'Toyota Camry' }, earnings: 2950 },
+    { _id: 'TRP-505', date: '2026-08-16', customer: { name: 'Mary Wanjiku' }, vehicle: { name: 'Mazda CX-5' }, earnings: 2100 },
+  ],
+}
+
 function Earnings() {
-  const [earnings, setEarnings] = useState({
-    total: 0,
-    trips: [],
-    period: 'this_month',
-  })
+  const [earnings, setEarnings] = useState(MOCK_EARNINGS)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setLoading(true)
-    getEarnings({ period: 'this_month' })
-      .then((res) => setEarnings(res.data))
-      .catch(() => {})
-      .finally(() => setLoading(false))
+    setTimeout(() => setLoading(false), 400)
   }, [])
 
   return (

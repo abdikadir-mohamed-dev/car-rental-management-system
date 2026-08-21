@@ -1,23 +1,24 @@
 import { useState, useEffect } from 'react'
-import { getTrips } from '../../services/driverService'
 import { Check, X, MapPin, User, Car } from 'lucide-react'
+
+const MOCK_TRIPS = [
+  { _id: 'TRP-501', customer: { name: 'Alice Mwangi' }, vehicle: { name: 'Toyota RAV4' }, pickupLocation: 'Nairobi CBD', status: 'assigned' },
+  { _id: 'TRP-502', customer: { name: 'Brian Otieno' }, vehicle: { name: 'Honda Accord' }, pickupLocation: 'Westlands', status: 'in_progress' },
+  { _id: 'TRP-503', customer: { name: 'Grace Njeri' }, vehicle: { name: 'BMW 3 Series' }, pickupLocation: 'Kilimani', status: 'completed' },
+  { _id: 'TRP-504', customer: { name: 'John Doe' }, vehicle: { name: 'Toyota Camry' }, pickupLocation: 'Karen', status: 'assigned' },
+  { _id: 'TRP-505', customer: { name: 'Mary Wanjiku' }, vehicle: { name: 'Mazda CX-5' }, pickupLocation: 'JKIA', status: 'completed' },
+]
 
 function TripAssignments() {
   const [trips, setTrips] = useState([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('upcoming')
 
-  const loadTrips = () => {
-    setLoading(true)
-    getTrips({})
-      .then((res) => setTrips(res.data.trips || res.data))
-      .catch(() => {})
-      .finally(() => setLoading(false))
-  }
-
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    loadTrips()
+    setTimeout(() => {
+      setTrips(MOCK_TRIPS)
+      setLoading(false)
+    }, 400)
   }, [])
 
   const filteredTrips = trips.filter(trip => {
