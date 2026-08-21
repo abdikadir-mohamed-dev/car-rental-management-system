@@ -47,6 +47,11 @@ import StaffVehiclesPage from '../pages/staff/StaffVehiclesPage'
 import StaffTripsPage from '../pages/staff/StaffTripsPage'
 import StaffCalendarPage from '../pages/staff/StaffCalendarPage'
 import StaffProfilePage from '../pages/staff/StaffProfilePage'
+import StaffCheckinPage from '../pages/staff/StaffCheckinPage'
+import StaffCheckoutPage from '../pages/staff/StaffCheckoutPage'
+import StaffCustomersPage from '../pages/staff/StaffCustomersPage'
+import StaffReportsPage from '../pages/staff/StaffReportsPage'
+import StaffNotificationsPage from '../pages/staff/StaffNotificationsPage'
 
 import DriverDashboard from '../pages/driver/DriverDashboard'
 import DriverTripsPage from '../pages/driver/DriverTripsPage'
@@ -120,9 +125,12 @@ function AppRoutes() {
       >
         <Route index element={<StaffDashboard />} />
         <Route path="bookings" element={<StaffBookingsPage />} />
+        <Route path="checkout" element={<StaffCheckoutPage />} />
+        <Route path="checkin" element={<StaffCheckinPage />} />
         <Route path="vehicles" element={<StaffVehiclesPage />} />
-        <Route path="trips" element={<StaffTripsPage />} />
-        <Route path="calendar" element={<StaffCalendarPage />} />
+        <Route path="customers" element={<StaffCustomersPage />} />
+        <Route path="reports" element={<StaffReportsPage />} />
+        <Route path="notifications" element={<StaffNotificationsPage />} />
         <Route path="profile" element={<StaffProfilePage />} />
       </Route>
 
