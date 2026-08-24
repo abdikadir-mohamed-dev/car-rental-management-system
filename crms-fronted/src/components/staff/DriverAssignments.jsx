@@ -13,7 +13,6 @@ const MOCK_AVAILABLE_DRIVERS = [
 ]
 
 function DriverAssignments() {
-  console.log('DriverAssignments rendering')
   const [requests, setRequests] = useState(MOCK_DRIVER_REQUESTS)
   const [drivers] = useState(MOCK_AVAILABLE_DRIVERS)
   const [search, setSearch] = useState('')

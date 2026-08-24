@@ -52,6 +52,8 @@ import StaffCheckoutPage from '../pages/staff/StaffCheckoutPage'
 import StaffCustomersPage from '../pages/staff/StaffCustomersPage'
 import StaffReportsPage from '../pages/staff/StaffReportsPage'
 import StaffNotificationsPage from '../pages/staff/StaffNotificationsPage'
+import StaffTripsPage from '../pages/staff/StaffTripsPage'
+import StaffDriverAssignmentsPage from '../pages/staff/StaffDriverAssignmentsPage'
 
 import DriverDashboard from '../pages/driver/DriverDashboard'
 import DriverTripsPage from '../pages/driver/DriverTripsPage'
@@ -141,6 +143,9 @@ function AppRoutes() {
         <Route path="reports" element={<StaffReportsPage />} />
         <Route path="notifications" element={<StaffNotificationsPage />} />
         <Route path="profile" element={<StaffProfilePage />} />
+        <Route path="trips" element={<StaffTripsPage />} />
+        <Route path="calendar" element={<StaffCalendarPage />} />
+        <Route path="driver-assignments" element={<StaffDriverAssignmentsPage />} />
       </Route>
 
       <Route
