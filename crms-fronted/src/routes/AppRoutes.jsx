@@ -52,7 +52,6 @@ import StaffCheckoutPage from '../pages/staff/StaffCheckoutPage'
 import StaffCustomersPage from '../pages/staff/StaffCustomersPage'
 import StaffReportsPage from '../pages/staff/StaffReportsPage'
 import StaffNotificationsPage from '../pages/staff/StaffNotificationsPage'
-import StaffTripsPage from '../pages/staff/StaffTripsPage'
 import StaffDriverAssignmentsPage from '../pages/staff/StaffDriverAssignmentsPage'
 
 import DriverDashboard from '../pages/driver/DriverDashboard'
