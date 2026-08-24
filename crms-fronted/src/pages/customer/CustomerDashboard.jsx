@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Car, Calendar, CreditCard, Heart, MapPin, Search, Star, Users, User } from 'lucide-react'
+import { Car, Calendar, CreditCard, Heart, MapPin, Search, Star, Users, User, FileText, CheckCircle } from 'lucide-react'
 import { mockVehicles } from '../../data/mockData'
 import { mockBookings } from '../../data/mockBookings'
 
@@ -11,6 +11,7 @@ function CustomerDashboard() {
 
   const upcomingBooking = mockBookings.find(b => b.status === 'upcoming')
   const recentBookings = mockBookings.filter(b => b.status === 'completed' || b.status === 'cancelled').slice(0, 3)
+  const completedBookings = mockBookings.filter(b => b.status === 'completed')
   const recommendedVehicles = mockVehicles.slice(0, 4)
 
   const stats = {
@@ -170,7 +171,7 @@ function CustomerDashboard() {
                     <button className="px-4 py-2 border border-red-300 text-red-600 rounded-lg text-sm hover:bg-red-50">
                       Cancel Booking
                     </button>
-                    <Link to={`/customer/my-bookings/${upcomingBooking.id}`} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
+                    <Link to={`/customer/bookings/${upcomingBooking.id}`} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
                       View Booking
                     </Link>
                   </div>
@@ -182,7 +183,7 @@ function CustomerDashboard() {
           <div className="card p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-semibold text-slate-900">Recent Bookings</h2>
-              <Link to="/customer/my-bookings" className="text-blue-600 hover:text-blue-700 font-medium text-sm">
+              <Link to="/customer/bookings" className="text-blue-600 hover:text-blue-700 font-medium text-sm">
                 View All
               </Link>
             </div>
@@ -202,18 +203,62 @@ function CustomerDashboard() {
                       <p className="text-sm text-slate-500">{booking.pickupDate} - {booking.returnDate}</p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="font-bold text-blue-600">KES {booking.totalPrice.toLocaleString()}</p>
-                    <span className={`text-xs px-2 py-1 rounded-full font-medium capitalize ${
-                      booking.status === 'completed' ? 'bg-emerald-100 text-success' : 'bg-red-100 text-danger'
-                    }`}>
-                      {booking.status}
-                    </span>
+                  <div className="flex items-center gap-3">
+                    <div className="text-right">
+                      <p className="font-bold text-blue-600">KES {booking.totalPrice.toLocaleString()}</p>
+                      <span className={`text-xs px-2 py-1 rounded-full font-medium capitalize ${
+                        booking.status === 'completed' ? 'bg-emerald-100 text-success' : 'bg-red-100 text-danger'
+                      }`}>
+                        {booking.status}
+                      </span>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <Link to={`/customer/agreements/${booking.id}`} className="text-xs text-blue-600 hover:underline flex items-center gap-1">
+                        <FileText className="w-3 h-3" /> Agreement
+                      </Link>
+                      <Link to={`/customer/agreements/${booking.id}?confirmation=true`} className="text-xs text-slate-600 hover:underline flex items-center gap-1">
+                        <CheckCircle className="w-3 h-3" /> Confirmation
+                      </Link>
+                      {booking.status === 'completed' && (
+                        <Link to={`/customer/reviews?booking=${booking.id}`} className="text-xs text-amber-600 hover:underline flex items-center gap-1">
+                          <Star className="w-3 h-3" /> Add Review
+                        </Link>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
           </div>
+
+          {completedBookings.length > 0 && (
+            <div className="card p-6">
+              <h2 className="text-xl font-semibold text-slate-900 mb-4">Leave a Review</h2>
+              <p className="text-sm text-slate-500 mb-4">How was your recent rental? Share your experience.</p>
+              <div className="space-y-3">
+                {completedBookings.slice(0, 3).map((booking) => (
+                  <div key={booking.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <img
+                        src={mockVehicles.find(v => v.id === booking.vehicleId)?.image}
+                        alt="Vehicle"
+                        className="w-16 h-12 object-cover rounded-lg"
+                      />
+                      <div>
+                        <p className="font-medium text-slate-900">
+                          {mockVehicles.find(v => v.id === booking.vehicleId)?.name}
+                        </p>
+                        <p className="text-sm text-slate-500">{booking.pickupDate} - {booking.returnDate}</p>
+                      </div>
+                    </div>
+                    <Link to={`/customer/reviews?booking=${booking.id}`} className="btn-primary text-sm">
+                      Add Review
+                    </Link>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="space-y-6">

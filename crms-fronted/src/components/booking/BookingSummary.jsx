@@ -1,7 +1,9 @@
-import { Car, Calendar, MapPin, Users } from 'lucide-react'
+import { Car, Calendar, MapPin, Users, Star, FileText, CheckCircle } from 'lucide-react'
 import { formatCurrency } from '../../utils/formatCurrency'
 import { formatDate as formatDateUtil } from '../../utils/formatDate'
 import StatusBadge from '../common/StatusBadge'
+import { Link } from 'react-router-dom'
+import { BOOKING_STATUS } from '../../utils/constants'
 
 function BookingSummary({ booking, compact = false }) {
   if (!booking) return null
@@ -10,6 +12,7 @@ function BookingSummary({ booking, compact = false }) {
   const totalDays = booking.pickupDate && booking.dropoffDate
     ? Math.ceil((new Date(booking.dropoffDate) - new Date(booking.pickupDate)) / (1000 * 60 * 60 * 24))
     : 0
+  const isCompleted = booking.status === BOOKING_STATUS.COMPLETED
 
   if (compact) {
     return (
@@ -28,6 +31,16 @@ function BookingSummary({ booking, compact = false }) {
             <div className="flex items-center justify-between mt-2">
               <StatusBadge status={booking.status} type={booking.status === 'confirmed' ? 'success' : booking.status === 'pending' ? 'warning' : booking.status === 'cancelled' ? 'danger' : 'info'} />
               <p className="font-bold text-primary text-sm">{formatCurrency(booking.totalAmount || 0)}</p>
+            </div>
+            <div className="flex items-center gap-2 mt-2">
+              {isCompleted && (
+                <Link to={`/customer/reviews?booking=${booking._id}`} className="text-xs text-amber-600 hover:underline flex items-center gap-1">
+                  <Star className="w-3 h-3" /> Add Review
+                </Link>
+              )}
+              <Link to={`/customer/agreements/${booking._id}`} className="text-xs text-slate-600 hover:underline flex items-center gap-1">
+                <FileText className="w-3 h-3" /> Agreement
+              </Link>
             </div>
           </div>
         </div>
@@ -90,6 +103,20 @@ function BookingSummary({ booking, compact = false }) {
               <p className="text-xs text-slate-500">{totalDays} day{totalDays !== 1 ? 's' : ''} x {formatCurrency(vehicle.pricePerDay || 0)}/day</p>
             )}
           </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2 pt-2">
+          <Link to={`/customer/agreements/${booking._id}`} className="btn-secondary text-sm flex items-center gap-1">
+            <FileText className="w-4 h-4" /> View Agreement
+          </Link>
+          <Link to={`/customer/agreements/${booking._id}?confirmation=true`} className="btn-secondary text-sm flex items-center gap-1">
+            <CheckCircle className="w-4 h-4" /> View Confirmation
+          </Link>
+          {isCompleted && (
+            <Link to={`/customer/reviews?booking=${booking._id}`} className="btn-primary text-sm flex items-center gap-1">
+              <Star className="w-4 h-4" /> Add Review
+            </Link>
+          )}
         </div>
 
         <p className="text-xs text-slate-500">Ref: #{booking._id?.slice(-8)}</p>
