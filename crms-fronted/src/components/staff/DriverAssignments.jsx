@@ -17,7 +17,7 @@ function DriverAssignments() {
   const [drivers] = useState(MOCK_AVAILABLE_DRIVERS)
   const [search, setSearch] = useState('')
   const [selectedRequest, setSelectedRequest] = useState(null)
-  const [selectedDriver, setSelectedDriver] = useState('')
+  const [selectedDriverId, setSelectedDriverId] = useState('')
   const [assignments, setAssignments] = useState([])
 
   const filteredRequests = requests.filter(r =>
@@ -29,8 +29,8 @@ function DriverAssignments() {
   const availableDrivers = drivers.filter(d => d.status === 'available')
 
   const handleAssign = () => {
-    if (!selectedRequest || !selectedDriver) return
-    const driver = drivers.find(d => d._id === selectedDriver)
+    if (!selectedRequest || !selectedDriverId) return
+    const driver = drivers.find(d => d._id === selectedDriverId)
     const assignment = {
       _id: `ASN-${Date.now()}`,
       requestId: selectedRequest._id,
@@ -48,146 +48,111 @@ function DriverAssignments() {
     setAssignments([...assignments, assignment])
     setRequests(requests.filter(r => r._id !== selectedRequest._id))
     setSelectedRequest(null)
-    setSelectedDriver('')
+    setSelectedDriverId('')
   }
 
   const pendingRequests = filteredRequests.filter(r => r.status === 'pending')
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-          <div className="card p-6">
-            <h3 className="font-semibold text-slate-900 mb-4 flex items-center gap-2">
-              <Bell className="w-5 h-5 text-warning" />
-              Pending Driver Requests
-            </h3>
-            <div className="mb-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
-                <input
-                  type="text"
-                  placeholder="Search requests..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="input pl-10"
-                />
-              </div>
-            </div>
-            {pendingRequests.length === 0 ? (
-              <p className="text-center text-slate-500 py-8">No pending driver requests.</p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-slate-200">
-                      <th className="text-left py-3 px-4 font-medium text-slate-600">Request ID</th>
-                      <th className="text-left py-3 px-4 font-medium text-slate-600">Customer</th>
-                      <th className="text-left py-3 px-4 font-medium text-slate-600">Vehicle</th>
-                      <th className="text-left py-3 px-4 font-medium text-slate-600">Dates</th>
-                      <th className="text-left py-3 px-4 font-medium text-slate-600">Route</th>
-                      <th className="text-left py-3 px-4 font-medium text-slate-600">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {pendingRequests.map((request) => (
-                      <tr key={request._id} className="border-b border-slate-100 hover:bg-slate-50">
-                        <td className="py-3 px-4 text-slate-900">#{request._id}</td>
-                        <td className="py-3 px-4 text-slate-600 font-medium">{request.customer?.name || 'N/A'}</td>
-                        <td className="py-3 px-4 text-slate-600">{request.vehicle?.name || 'N/A'}</td>
-                        <td className="py-3 px-4 text-slate-600">{request.pickupDate} - {request.dropoffDate}</td>
-                        <td className="py-3 px-4 text-slate-600">{request.pickupLocation} → {request.dropoffLocation}</td>
-                        <td className="py-3 px-4">
-                          <button
-                            onClick={() => setSelectedRequest(request)}
-                            className="btn-primary text-sm px-3 py-1 flex items-center gap-2"
-                          >
-                            <UserCheck className="w-4 h-4" />
-                            Assign Driver
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-
-          {assignments.length > 0 && (
-            <div className="card p-6">
-              <h3 className="font-semibold text-slate-900 mb-4 flex items-center gap-2">
-                <UserCheck className="w-5 h-5 text-success" />
-                Recent Assignments
-              </h3>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-slate-200">
-                      <th className="text-left py-3 px-4 font-medium text-slate-600">Assignment ID</th>
-                      <th className="text-left py-3 px-4 font-medium text-slate-600">Customer</th>
-                      <th className="text-left py-3 px-4 font-medium text-slate-600">Driver</th>
-                      <th className="text-left py-3 px-4 font-medium text-slate-600">Vehicle</th>
-                      <th className="text-left py-3 px-4 font-medium text-slate-600">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {assignments.map((assignment) => (
-                      <tr key={assignment._id} className="border-b border-slate-100 hover:bg-slate-50">
-                        <td className="py-3 px-4 text-slate-900">#{assignment._id}</td>
-                        <td className="py-3 px-4 text-slate-600">{assignment.customer?.name || 'N/A'}</td>
-                        <td className="py-3 px-4 text-slate-600">{assignment.driver?.name || 'N/A'}</td>
-                        <td className="py-3 px-4 text-slate-600">{assignment.vehicle?.name || 'N/A'}</td>
-                        <td className="py-3 px-4">
-                          <span className="badge badge-success capitalize">{assignment.status}</span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="card p-6">
-          <h3 className="font-semibold text-slate-900 mb-4">Available Drivers</h3>
-          <div className="space-y-4">
-            {availableDrivers.length === 0 ? (
-              <p className="text-center text-slate-500 py-4">No available drivers.</p>
-            ) : (
-              availableDrivers.map((driver) => (
-                <div key={driver._id} className={`p-4 rounded-lg border ${selectedDriver === driver._id ? 'border-primary bg-primary-light' : 'border-slate-200'}`}>
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-medium text-slate-900">{driver.name}</h4>
-                    <span className="badge badge-success text-xs">Available</span>
-                  </div>
-                  <div className="text-sm text-slate-600 space-y-1">
-                    <p>License: {driver.licenseNumber}</p>
-                    <p>Experience: {driver.experience}</p>
-                    <p>Rating: {driver.rating}</p>
-                    <p>Phone: {driver.phone}</p>
-                  </div>
-                  <button
-                    onClick={() => setSelectedDriver(driver._id)}
-                    disabled={!selectedRequest}
-                    className="mt-3 w-full btn-primary text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Select Driver
-                  </button>
-                </div>
-              ))
-            )}
+      <div className="card p-6">
+        <h3 className="font-semibold text-slate-900 mb-4 flex items-center gap-2">
+          <Bell className="w-5 h-5 text-warning" />
+          Pending Driver Requests
+        </h3>
+        <div className="mb-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search requests..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="input pl-10"
+            />
           </div>
         </div>
+        {pendingRequests.length === 0 ? (
+          <p className="text-center text-slate-500 py-8">No pending driver requests.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-slate-200">
+                  <th className="text-left py-3 px-4 font-medium text-slate-600">Request ID</th>
+                  <th className="text-left py-3 px-4 font-medium text-slate-600">Customer</th>
+                  <th className="text-left py-3 px-4 font-medium text-slate-600">Vehicle</th>
+                  <th className="text-left py-3 px-4 font-medium text-slate-600">Dates</th>
+                  <th className="text-left py-3 px-4 font-medium text-slate-600">Route</th>
+                  <th className="text-left py-3 px-4 font-medium text-slate-600">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pendingRequests.map((request) => (
+                  <tr key={request._id} className="border-b border-slate-100 hover:bg-slate-50">
+                    <td className="py-3 px-4 text-slate-900">#{request._id}</td>
+                    <td className="py-3 px-4 text-slate-600 font-medium">{request.customer?.name || 'N/A'}</td>
+                    <td className="py-3 px-4 text-slate-600">{request.vehicle?.name || 'N/A'}</td>
+                    <td className="py-3 px-4 text-slate-600">{request.pickupDate} - {request.dropoffDate}</td>
+                    <td className="py-3 px-4 text-slate-600">{request.pickupLocation} → {request.dropoffLocation}</td>
+                    <td className="py-3 px-4">
+                      <button
+                        onClick={() => { setSelectedRequest(request); setSelectedDriverId(''); }}
+                        className="btn-primary text-sm px-3 py-1 flex items-center gap-2"
+                      >
+                        <UserCheck className="w-4 h-4" />
+                        Assign Driver
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
+
+      {assignments.length > 0 && (
+        <div className="card p-6">
+          <h3 className="font-semibold text-slate-900 mb-4 flex items-center gap-2">
+            <UserCheck className="w-5 h-5 text-success" />
+            Recent Assignments
+          </h3>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-slate-200">
+                  <th className="text-left py-3 px-4 font-medium text-slate-600">Assignment ID</th>
+                  <th className="text-left py-3 px-4 font-medium text-slate-600">Customer</th>
+                  <th className="text-left py-3 px-4 font-medium text-slate-600">Driver</th>
+                  <th className="text-left py-3 px-4 font-medium text-slate-600">Vehicle</th>
+                  <th className="text-left py-3 px-4 font-medium text-slate-600">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {assignments.map((assignment) => (
+                  <tr key={assignment._id} className="border-b border-slate-100 hover:bg-slate-50">
+                    <td className="py-3 px-4 text-slate-900">#{assignment._id}</td>
+                    <td className="py-3 px-4 text-slate-600">{assignment.customer?.name || 'N/A'}</td>
+                    <td className="py-3 px-4 text-slate-600">{assignment.driver?.name || 'N/A'}</td>
+                    <td className="py-3 px-4 text-slate-600">{assignment.vehicle?.name || 'N/A'}</td>
+                    <td className="py-3 px-4">
+                      <span className="badge badge-success capitalize">{assignment.status}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {selectedRequest && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-slate-200 flex items-center justify-between">
               <h3 className="text-lg font-semibold text-slate-900">Confirm Driver Assignment</h3>
-              <button onClick={() => { setSelectedRequest(null); setSelectedDriver(''); }} className="text-slate-400 hover:text-slate-600">
+              <button onClick={() => { setSelectedRequest(null); setSelectedDriverId(''); }} className="text-slate-400 hover:text-slate-600">
                 <UserX className="w-5 h-5" />
               </button>
             </div>
@@ -218,23 +183,30 @@ function DriverAssignments() {
                   <p className="font-medium text-slate-900">{selectedRequest.dropoffDate}</p>
                 </div>
               </div>
-              <div className="border-t border-slate-200 pt-4">
-                <p className="text-sm text-slate-500 mb-2">Selected Driver</p>
-                {selectedDriver ? (
-                  <div className="p-3 bg-slate-50 rounded-lg">
-                    <p className="font-medium text-slate-900">{drivers.find(d => d._id === selectedDriver)?.name}</p>
-                    <p className="text-sm text-slate-600">{drivers.find(d => d._id === selectedDriver)?.phone}</p>
-                  </div>
-                ) : (
-                  <p className="text-sm text-slate-500">Please select a driver from the list.</p>
+              <div>
+                <label className="label">Select Driver</label>
+                <select
+                  value={selectedDriverId}
+                  onChange={(e) => setSelectedDriverId(e.target.value)}
+                  className="input"
+                >
+                  <option value="">-- Choose a driver --</option>
+                  {availableDrivers.map((driver) => (
+                    <option key={driver._id} value={driver._id}>
+                      {driver.name} ({driver.licenseNumber}) - {driver.experience}
+                    </option>
+                  ))}
+                </select>
+                {availableDrivers.length === 0 && (
+                  <p className="text-sm text-slate-500 mt-1">No available drivers at the moment.</p>
                 )}
               </div>
             </div>
             <div className="p-6 border-t border-slate-200 flex justify-end gap-3">
-              <button onClick={() => { setSelectedRequest(null); setSelectedDriver(''); }} className="btn-secondary">
+              <button onClick={() => { setSelectedRequest(null); setSelectedDriverId(''); }} className="btn-secondary">
                 Cancel
               </button>
-              <button onClick={handleAssign} disabled={!selectedDriver} className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed">
+              <button onClick={handleAssign} disabled={!selectedDriverId} className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed">
                 Confirm Assignment
               </button>
             </div>
