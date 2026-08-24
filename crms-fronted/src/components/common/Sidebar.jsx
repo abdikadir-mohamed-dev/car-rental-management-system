@@ -21,6 +21,7 @@ const staffLinks = [
   { to: '/staff/checkin', icon: 'LogIn', label: 'Check-in' },
   { to: '/staff/vehicles', icon: 'Car', label: 'Vehicles' },
   { to: '/staff/customers', icon: 'Users', label: 'Customers' },
+  { to: '/staff/driver-assignments', icon: 'UserCheck', label: 'Driver Assignments' },
   { to: '/staff/reports', icon: 'BarChart3', label: 'Reports' },
   { to: '/staff/notifications', icon: 'Bell', label: 'Notifications' },
   { to: '/staff/profile', icon: 'User', label: 'Profile' },
