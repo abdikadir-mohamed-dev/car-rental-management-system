@@ -11,6 +11,7 @@ import StaffCustomersPage from '../pages/staff/StaffCustomersPage'
 import StaffReportsPage from '../pages/staff/StaffReportsPage'
 import StaffNotificationsPage from '../pages/staff/StaffNotificationsPage'
 import StaffProfilePage from '../pages/staff/StaffProfilePage'
+import StaffDriverAssignmentsPage from '../pages/staff/StaffDriverAssignmentsPage'
 
 function StaffRoutes() {
   return (
@@ -27,6 +28,7 @@ function StaffRoutes() {
         <Route path="customers" element={<StaffCustomersPage />} />
         <Route path="reports" element={<StaffReportsPage />} />
         <Route path="notifications" element={<StaffNotificationsPage />} />
+        <Route path="driver-assignments" element={<StaffDriverAssignmentsPage />} />
       </Route>
     </Routes>
   )
