@@ -81,6 +81,21 @@ def get_bookings():
     } for b in bookings]
     return jsonify(result), 200
 
+@bp.route('/bookings/pending', methods=['GET'])
+def get_pending_bookings():
+    bookings = Booking.query.filter_by(status='pending').all()
+    result = [{
+        '_id': f'BKG-{b.id:04d}',
+        'user': {'name': b.user.name},
+        'vehicle': {'name': b.vehicle.name},
+        'pickupDate': str(b.pickup_date),
+        'dropoffDate': str(b.dropoff_date),
+        'status': b.status,
+        'pickupLocation': b.pickup_location,
+        'dropoffLocation': b.dropoff_location
+    } for b in bookings]
+    return jsonify(result), 200
+
 @bp.route('/bookings/<int:booking_id>', methods=['GET'])
 def get_booking(booking_id):
     b = Booking.query.get_or_404(booking_id)
