@@ -10,6 +10,14 @@ const paymentService = axios.create({
   },
 })
 
+paymentService.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token')
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`
+  }
+  return config
+})
+
 setAuthToken(localStorage.getItem('token'))
 
 export const getPayments = async (params) => {

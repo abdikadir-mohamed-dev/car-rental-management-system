@@ -1,5 +1,8 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { useDispatch } from 'react-redux'
+import { login as loginUser } from '../../redux/slices/authSlice'
+import { setAuthToken } from '../../services/authService'
 import toast from 'react-hot-toast'
 import { login } from '../../services/authService'
 
@@ -7,6 +10,7 @@ function Login() {
   const [formData, setFormData] = useState({ email: '', password: '' })
   const [errors, setErrors] = useState({})
   const [loading, setLoading] = useState(false)
+  const dispatch = useDispatch()
   const navigate = useNavigate()
 
   const handleChange = (e) => {
@@ -29,6 +33,18 @@ function Login() {
 
     setLoading(true)
     try {
+      const result = await dispatch(loginUser({ email: formData.email, password: formData.password })).unwrap()
+      if (result.token) {
+        setAuthToken(result.token)
+        toast.success('Login successful!')
+        if (result.user?.role === 'admin') {
+          navigate('/admin')
+        } else {
+          navigate('/customer')
+        }
+      }
+    } catch (err) {
+      toast.error(err || 'Invalid email or password')
       const response = await login(formData)
       const user = response.data
       localStorage.setItem('user', JSON.stringify(user))
