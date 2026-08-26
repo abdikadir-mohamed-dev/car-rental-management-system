@@ -14,6 +14,7 @@ class Report(db.Model):
     def to_dict(self):
         return {
             'id': self.id,
+            '_id': str(self.id),
             'reportType': self.report_type,
             'period': self.period,
             'data': self.data,

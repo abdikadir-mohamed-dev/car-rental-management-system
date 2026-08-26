@@ -16,6 +16,7 @@ class Shift(db.Model):
     def to_dict(self):
         return {
             'id': self.id,
+            '_id': str(self.id),
             'staffId': self.staff_id,
             'startTime': self.start_time.isoformat() if self.start_time else None,
             'endTime': self.end_time.isoformat() if self.end_time else None,

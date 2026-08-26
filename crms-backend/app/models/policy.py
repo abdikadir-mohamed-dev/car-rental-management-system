@@ -13,6 +13,7 @@ class RentalPolicy(db.Model):
     def to_dict(self):
         return {
             'id': self.id,
+            '_id': str(self.id),
             'key': self.key,
             'value': self.value,
             'updatedAt': self.updated_at.isoformat() if self.updated_at else None,

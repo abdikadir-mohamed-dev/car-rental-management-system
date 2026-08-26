@@ -29,6 +29,7 @@ class Vehicle(db.Model):
     def to_dict(self):
         return {
             'id': self.id,
+            '_id': str(self.id),
             'make': self.make,
             'model': self.model,
             'year': self.year,
