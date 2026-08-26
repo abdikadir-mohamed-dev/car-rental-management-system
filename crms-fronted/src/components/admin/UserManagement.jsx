@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import toast from 'react-hot-toast'
 import { Edit, Trash2, Search } from 'lucide-react'
 import ConfirmDialog from '../../components/common/ConfirmDialog'
+import { getUsers, updateUser, deleteUser } from '../../services/adminService'
 
 function UserManagement({ users: externalUsers, setUsers: externalSetUsers, onEdit }) {
   const [internalUsers, setInternalUsers] = useState([])
@@ -12,29 +13,24 @@ function UserManagement({ users: externalUsers, setUsers: externalSetUsers, onEd
   const [deleteId, setDeleteId] = useState(null)
   const [confirmOpen, setConfirmOpen] = useState(false)
 
-  const mockUsers = [
-    { _id: 'U001', name: 'John Doe', email: 'john@example.com', role: 'customer' },
-    { _id: 'U002', name: 'Mary Wanjiku', email: 'mary@example.com', role: 'customer' },
-    { _id: 'U003', name: 'Peter Mwangi', email: 'peter@example.com', role: 'driver' },
-    { _id: 'U004', name: 'Ali Hassan', email: 'ali@example.com', role: 'customer' },
-    { _id: 'U005', name: 'James Kamau', email: 'james@example.com', role: 'staff' },
-    { _id: 'U006', name: 'Admin User', email: 'admin@drivego.com', role: 'admin' },
-  ]
-
   const users = externalUsers || internalUsers
   const setUsers = externalSetUsers || setInternalUsers
 
-  const loadUsers = () => {
+  const loadUsers = async () => {
     setLoading(true)
-    setTimeout(() => {
-      setUsers(mockUsers)
+    try {
+      const response = await getUsers()
+      setUsers(response.data)
+    } catch {
+      toast.error('Failed to load users')
+    } finally {
       setLoading(false)
-    }, 600)
+    }
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!externalUsers) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       loadUsers()
     } else {
       setLoading(false)
@@ -47,11 +43,16 @@ function UserManagement({ users: externalUsers, setUsers: externalSetUsers, onEd
     onEdit?.(user)
   }
 
-  const handleUpdate = (e) => {
+  const handleUpdate = async (e) => {
     e.preventDefault()
-    setUsers(users.map(u => u._id === editingUser._id ? { ...u, ...formData } : u))
-    toast.success('User updated')
-    setEditingUser(null)
+    try {
+      const response = await updateUser(editingUser.id, formData)
+      setUsers(users.map(u => u.id === editingUser.id ? response.data : u))
+      toast.success('User updated')
+      setEditingUser(null)
+    } catch {
+      toast.error('Failed to update user')
+    }
   }
 
   const handleDeleteClick = (id) => {
@@ -59,11 +60,16 @@ function UserManagement({ users: externalUsers, setUsers: externalSetUsers, onEd
     setConfirmOpen(true)
   }
 
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = async () => {
     setConfirmOpen(false)
     if (deleteId) {
-      setUsers(users.filter(u => u._id !== deleteId))
-      toast.success('User deleted')
+      try {
+        await deleteUser(deleteId)
+        setUsers(users.filter(u => u.id !== deleteId))
+        toast.success('User deleted')
+      } catch {
+        toast.error('Failed to delete user')
+      }
       setDeleteId(null)
     }
   }
@@ -110,7 +116,7 @@ function UserManagement({ users: externalUsers, setUsers: externalSetUsers, onEd
             </thead>
             <tbody>
               {filteredUsers.map((user) => (
-                <tr key={user._id} className="border-b border-slate-100 hover:bg-slate-50">
+                <tr key={user.id || user._id} className="border-b border-slate-100 hover:bg-slate-50">
                   <td className="py-3 px-4 text-slate-900">{user.name}</td>
                   <td className="py-3 px-4 text-slate-600">{user.email}</td>
                   <td className="py-3 px-4 text-slate-600">{user.phone || 'N/A'}</td>
@@ -120,7 +126,7 @@ function UserManagement({ users: externalUsers, setUsers: externalSetUsers, onEd
                       <button onClick={() => handleEdit(user)} className="p-2 text-primary hover:bg-primary-light rounded-lg">
                         <Edit className="w-4 h-4" />
                       </button>
-                      <button onClick={() => handleDeleteClick(user._id)} className="p-2 text-danger hover:bg-red-50 rounded-lg">
+                      <button onClick={() => handleDeleteClick(user.id || user._id)} className="p-2 text-danger hover:bg-red-50 rounded-lg">
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>

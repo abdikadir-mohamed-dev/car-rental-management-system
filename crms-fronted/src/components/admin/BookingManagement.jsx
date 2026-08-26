@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Eye, Search } from 'lucide-react'
 import { BOOKING_STATUS } from '../../utils/constants'
+import { getBookings } from '../../services/adminService'
 
 function BookingManagement({ onView }) {
   const [bookings, setBookings] = useState([])
@@ -8,71 +9,20 @@ function BookingManagement({ onView }) {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
 
-  // Temporary frontend mock data
-  const mockBookings = [
-    {
-      _id: 'BK001',
-      customer: { name: 'John Doe' },
-      user: { name: 'John Doe' },
-      vehicle: { name: 'Toyota RAV4' },
-      pickupDate: 'May 20, 2025',
-      dropoffDate: 'May 24, 2025',
-      totalAmount: 275,
-      status: BOOKING_STATUS.CONFIRMED
-    },
-    {
-      _id: 'BK002',
-      customer: { name: 'Mary Wanjiku' },
-      user: { name: 'Mary Wanjiku' },
-      vehicle: { name: 'Honda Accord' },
-      pickupDate: 'May 21, 2025',
-      dropoffDate: 'May 27, 2025',
-      totalAmount: 510,
-      status: BOOKING_STATUS.CONFIRMED
-    },
-    {
-      _id: 'BK003',
-      customer: { name: 'Peter Mwangi' },
-      user: { name: 'Peter Mwangi' },
-      vehicle: { name: 'BMW 3 Series' },
-      pickupDate: 'May 22, 2025',
-      dropoffDate: 'May 25, 2025',
-      totalAmount: 340,
-      status: BOOKING_STATUS.PENDING
-    },
-    {
-      _id: 'BK004',
-      customer: { name: 'Ali Hassan' },
-      user: { name: 'Ali Hassan' },
-      vehicle: { name: 'Mercedes C-Class' },
-      pickupDate: 'May 22, 2025',
-      dropoffDate: 'May 29, 2025',
-      totalAmount: 420,
-      status: BOOKING_STATUS.CONFIRMED
-    },
-    {
-      _id: 'BK005',
-      customer: { name: 'James Kamau' },
-      user: { name: 'James Kamau' },
-      vehicle: { name: 'Toyota RAV4' },
-      pickupDate: 'May 24, 2025',
-      dropoffDate: 'May 28, 2025',
-      totalAmount: 310,
-      status: BOOKING_STATUS.CANCELLED
-    }
-  ]
-
-  const loadBookings = () => {
+  const loadBookings = async () => {
     setLoading(true)
-
-    // Simulate loading from a server
-    setTimeout(() => {
-      setBookings(mockBookings)
+    try {
+      const response = await getBookings()
+      setBookings(response.data.bookings || response.data)
+    } catch (error) {
+      console.error('Failed to load bookings:', error)
+    } finally {
       setLoading(false)
-    }, 500)
+    }
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadBookings()
   }, [])
 
@@ -99,9 +49,11 @@ function BookingManagement({ onView }) {
     const searchText = search.toLowerCase()
 
     const matchesSearch =
-      booking._id?.toLowerCase().includes(searchText) ||
-      booking.vehicle?.name?.toLowerCase().includes(searchText) ||
-      booking.customer?.name?.toLowerCase().includes(searchText)
+      (booking.id && booking.id.toString().toLowerCase().includes(searchText)) ||
+      (booking._id && booking._id.toString().toLowerCase().includes(searchText)) ||
+      (booking.vehicle && booking.vehicle.name && booking.vehicle.name.toLowerCase().includes(searchText)) ||
+      (booking.customer && booking.customer.name && booking.customer.name.toLowerCase().includes(searchText)) ||
+      (booking.user && booking.user.name && booking.user.name.toLowerCase().includes(searchText))
 
     const matchesStatus =
       !statusFilter || booking.status === statusFilter
@@ -195,16 +147,16 @@ function BookingManagement({ onView }) {
               {filteredBookings.map((booking) => (
 
                 <tr
-                  key={booking._id}
+                  key={booking.id || booking._id}
                   className="border-b border-slate-100 hover:bg-slate-50"
                 >
 
                   <td className="py-3 px-4 text-slate-900">
-                    #{booking._id}
+                    #{booking.id || booking._id}
                   </td>
 
                   <td className="py-3 px-4 text-slate-600">
-                    {booking.customer?.name || 'N/A'}
+                    {booking.customer?.name || booking.user?.name || 'N/A'}
                   </td>
 
                   <td className="py-3 px-4 text-slate-600">
@@ -212,11 +164,11 @@ function BookingManagement({ onView }) {
                   </td>
 
                   <td className="py-3 px-4 text-slate-600">
-                    {booking.pickupDate} - {booking.dropoffDate}
+                    {booking.pickupDate} - {booking.returnDate}
                   </td>
 
                    <td className="py-3 px-4 font-medium text-slate-900">
-                     KES {booking.totalAmount.toLocaleString()}
+                     KES {booking.totalAmount?.toLocaleString()}
                    </td>
 
                   <td className="py-3 px-4">
