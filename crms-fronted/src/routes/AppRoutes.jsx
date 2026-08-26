@@ -28,6 +28,7 @@ import ManagePaymentsPage from '../pages/admin/ManagePaymentsPage'
 import ReportsPage from '../pages/admin/ReportsPage'
 import AdminSettingsPage from '../pages/admin/SettingsPage'
 import AdminProfilePage from '../pages/admin/AdminProfilePage'
+import RentalPoliciesPage from '../pages/admin/RentalPoliciesPage'
 
 import CustomerDashboard from '../pages/customer/CustomerDashboard'
 import VehicleBrowsePage from '../pages/customer/VehicleBrowsePage'
@@ -97,6 +98,7 @@ function AppRoutes() {
         <Route path="users" element={<ManageUsersPage />} />
         <Route path="vehicles" element={<ManageVehiclesPage />} />
         <Route path="bookings" element={<ManageBookingsPage />} />
+        <Route path="rental-policies" element={<RentalPoliciesPage />} />
         <Route path="payments" element={<ManagePaymentsPage />} />
         <Route path="reports" element={<ReportsPage />} />
         <Route path="settings" element={<AdminSettingsPage />} />
