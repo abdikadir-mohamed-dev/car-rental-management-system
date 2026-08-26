@@ -4,7 +4,7 @@ import { setAuthToken } from './authService'
 const API_URL = import.meta.env.VITE_API_URL
 
 const vehicleService = axios.create({
-  baseURL: `${API_URL}/vehicles`,
+  baseURL: `${API_URL}/api/vehicles`,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -25,11 +25,7 @@ export const createVehicle = async (vehicleData) => {
 }
 
 export const updateVehicle = async (id, vehicleData) => {
-  return await vehicleService.put(`/${id}`, vehicleData)
-}
-
-export const deleteVehicle = async (id) => {
-  return await vehicleService.delete(`/${id}`)
+  return await vehicleService.patch(`/${id}`, vehicleData)
 }
 
 export default vehicleService
