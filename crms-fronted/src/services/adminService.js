@@ -64,6 +64,14 @@ export const updateDriver = async (id, driverData) => {
   return await adminService.put(`/drivers/${id}`, driverData)
 }
 
+export const createStaff = async (staffData) => {
+  return await adminService.post('/staff', staffData)
+}
+
+export const createDriver = async (driverData) => {
+  return await adminService.post('/drivers', driverData)
+}
+
 export const seedData = async (data) => {
   return await adminService.post('/seed', data)
 }

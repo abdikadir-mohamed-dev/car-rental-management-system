@@ -1,17 +1,12 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import toast from 'react-hot-toast'
 import UserManagement from '../../components/admin/UserManagement'
+import { getUsers, createStaff, createDriver } from '../../services/adminService'
 
 function ManageUsersPage() {
   const [showModal, setShowModal] = useState(false)
-  const [users, setUsers] = useState([
-    { _id: 'U001', name: 'John Doe', email: 'john@example.com', role: 'customer', phone: '0711000000' },
-    { _id: 'U002', name: 'Mary Wanjiku', email: 'mary@example.com', role: 'customer', phone: '0722000000' },
-    { _id: 'U003', name: 'Peter Mwangi', email: 'peter@example.com', role: 'driver', phone: '0733000000' },
-    { _id: 'U004', name: 'Ali Hassan', email: 'ali@example.com', role: 'customer', phone: '0744000000' },
-    { _id: 'U005', name: 'James Kamau', email: 'james@example.com', role: 'staff', phone: '0755000000' },
-    { _id: 'U006', name: 'Admin User', email: 'admin@drivego.com', role: 'admin', phone: '0766000000' },
-  ])
+  const [users, setUsers] = useState([])
+  const [loading, setLoading] = useState(true)
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -23,6 +18,22 @@ function ManageUsersPage() {
   const [errors, setErrors] = useState({})
   const [submitting, setSubmitting] = useState(false)
 
+  useEffect(() => {
+    loadUsers()
+  }, [])
+
+  const loadUsers = async () => {
+    setLoading(true)
+    try {
+      const response = await getUsers()
+      setUsers(response.data)
+    } catch (error) {
+      toast.error('Failed to load users')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
     if (errors[e.target.name]) {
@@ -30,15 +41,17 @@ function ManageUsersPage() {
     }
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     const newErrors = {}
 
     if (!formData.name.trim()) newErrors.name = 'Name is required'
     if (!formData.email.trim()) newErrors.email = 'Email is required'
     else if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = 'Invalid email format'
-    if (!formData.phone.trim()) newErrors.phone = 'Phone is required'
-    else if (!/^\d{10}$/.test(formData.phone.trim())) newErrors.phone = 'Phone must be exactly 10 digits'
+    if (formData.role === 'staff' || formData.role === 'driver') {
+      if (!formData.phone.trim()) newErrors.phone = 'Phone is required'
+      else if (!/^\d{10}$/.test(formData.phone.trim())) newErrors.phone = 'Phone must be exactly 10 digits'
+    }
     if (!formData.password) newErrors.password = 'Password is required'
     else if (formData.password.length < 6) newErrors.password = 'Password must be at least 6 characters'
     if (formData.password !== formData.confirmPassword) newErrors.confirmPassword = 'Passwords do not match'
@@ -49,22 +62,40 @@ function ManageUsersPage() {
     }
 
     setSubmitting(true)
-
-    setTimeout(() => {
-      const newUser = {
-        _id: Date.now().toString(),
-        name: formData.name,
-        email: formData.email,
-        phone: formData.phone,
-        role: formData.role,
+    try {
+      let response
+      if (formData.role === 'staff') {
+        response = await createStaff({
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+        })
+      } else if (formData.role === 'driver') {
+        response = await createDriver({
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+        })
+      } else {
+        response = await createStaff({
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          role: formData.role,
+        })
       }
-      setUsers(prev => [newUser, ...prev])
-      toast.success(`Account created successfully. Credentials sent to ${formData.email}`)
+
+      const password = response.data.password || formData.password
+      toast.success(`Account created successfully. Credentials sent to ${formData.email}. Temporary password: ${password}`)
       setFormData({ name: '', email: '', phone: '', role: 'staff', password: '', confirmPassword: '' })
       setErrors({})
-      setSubmitting(false)
       setShowModal(false)
-    }, 800)
+      loadUsers()
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Failed to create user')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const handleClose = () => {
@@ -82,7 +113,13 @@ function ManageUsersPage() {
         </div>
         <button onClick={() => setShowModal(true)} className="btn-primary">Add User</button>
       </div>
-      <UserManagement users={users} setUsers={setUsers} />
+      {loading ? (
+        <div className="flex items-center justify-center min-h-[200px]">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        </div>
+      ) : (
+        <UserManagement users={users} setUsers={setUsers} onEdit={loadUsers} />
+      )}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">

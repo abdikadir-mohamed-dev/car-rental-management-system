@@ -1,11 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
-
-const mockUsers = [
-  { email: 'customer@drivego.com', password: 'password123', name: 'John Doe', role: 'customer' },
-  { email: 'admin@drivego.com', password: 'admin123', name: 'Admin User', role: 'admin' },
-]
+import { login } from '../../services/authService'
 
 function Login() {
   const [formData, setFormData] = useState({ email: '', password: '' })
@@ -20,7 +16,7 @@ function Login() {
     }
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     const newErrors = {}
     if (!formData.email) newErrors.email = 'Email is required'
@@ -32,21 +28,25 @@ function Login() {
     }
 
     setLoading(true)
-    setTimeout(() => {
-      const user = mockUsers.find(u => u.email === formData.email && u.password === formData.password)
-      if (user) {
-        localStorage.setItem('user', JSON.stringify(user))
-        toast.success('Login successful!')
-        if (user.role === 'admin') {
-          navigate('/admin')
-        } else {
-          navigate('/customer')
-        }
+    try {
+      const response = await login(formData)
+      const user = response.data
+      localStorage.setItem('user', JSON.stringify(user))
+      toast.success('Login successful!')
+      if (user.role === 'admin') {
+        navigate('/admin')
+      } else if (user.role === 'staff') {
+        navigate('/staff')
+      } else if (user.role === 'driver') {
+        navigate('/driver')
       } else {
-        toast.error('Invalid email or password')
+        navigate('/customer')
       }
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Invalid email or password')
+    } finally {
       setLoading(false)
-    }, 800)
+    }
   }
 
   return (
@@ -59,7 +59,7 @@ function Login() {
           value={formData.email}
           onChange={handleChange}
           className={`input ${errors.email ? 'border-red-500' : ''}`}
-          placeholder="customer@drivego.com"
+          placeholder="john@example.com"
         />
         {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
       </div>
@@ -71,7 +71,7 @@ function Login() {
           value={formData.password}
           onChange={handleChange}
           className={`input ${errors.password ? 'border-red-500' : ''}`}
-          placeholder="password123"
+          placeholder="Enter your password"
         />
         {errors.password && <p className="text-red-500 text-sm mt-1">{errors.password}</p>}
       </div>
@@ -84,11 +84,6 @@ function Login() {
       <p className="text-center text-sm text-slate-600">
         Don't have an account? <Link to="/auth/register" className="text-blue-600 hover:underline font-medium">Create Account</Link>
       </p>
-      <div className="bg-slate-50 rounded-lg p-3 text-xs text-slate-500">
-        <p className="font-medium mb-1">Demo credentials:</p>
-        <p>Customer: customer@drivego.com / password123</p>
-        <p>Admin: admin@drivego.com / admin123</p>
-      </div>
     </form>
   )
 }
