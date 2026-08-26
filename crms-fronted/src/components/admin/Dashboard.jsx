@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Users, Car, Calendar, DollarSign, TrendingUp, Clock } from 'lucide-react'
 import { formatCurrencyKES } from '../../utils/formatCurrency'
-import { BOOKING_STATUS } from '../../utils/constants'
+import { getDashboardStats } from '../../services/adminService'
 
 function Dashboard() {
   const [stats, setStats] = useState({
@@ -15,31 +15,17 @@ function Dashboard() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const mockStats = {
-      totalUsers: 1240,
-      totalVehicles: 85,
-      totalBookings: 342,
-      totalRevenue: 45250,
-      recentBookings: [
-        { _id: 'BK001', vehicle: { name: 'Toyota RAV4' }, user: { name: 'John Doe' }, totalAmount: 275 },
-        { _id: 'BK002', vehicle: { name: 'Honda Accord' }, user: { name: 'Mary Wanjiku' }, totalAmount: 510 },
-        { _id: 'BK003', vehicle: { name: 'BMW 3 Series' }, user: { name: 'Peter Mwangi' }, totalAmount: 340 },
-        { _id: 'BK004', vehicle: { name: 'Mercedes C-Class' }, user: { name: 'Ali Hassan' }, totalAmount: 420 },
-        { _id: 'BK005', vehicle: { name: 'Toyota RAV4' }, user: { name: 'James Kamau' }, totalAmount: 310 },
-      ],
-      recentUsers: [
-        { _id: 'U001', name: 'John Doe', role: 'customer' },
-        { _id: 'U002', name: 'Mary Wanjiku', role: 'customer' },
-        { _id: 'U003', name: 'Peter Mwangi', role: 'driver' },
-        { _id: 'U004', name: 'Ali Hassan', role: 'customer' },
-        { _id: 'U005', name: 'James Kamau', role: 'staff' },
-      ],
+    const loadStats = async () => {
+      try {
+        const response = await getDashboardStats()
+        setStats(response.data)
+      } catch (error) {
+        console.error('Failed to load dashboard stats:', error)
+      } finally {
+        setLoading(false)
+      }
     }
-
-    setTimeout(() => {
-      setStats(mockStats)
-      setLoading(false)
-    }, 800)
+    loadStats()
   }, [])
 
   if (loading) {

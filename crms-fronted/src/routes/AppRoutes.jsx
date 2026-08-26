@@ -28,6 +28,7 @@ import ManagePaymentsPage from '../pages/admin/ManagePaymentsPage'
 import ReportsPage from '../pages/admin/ReportsPage'
 import AdminSettingsPage from '../pages/admin/SettingsPage'
 import AdminProfilePage from '../pages/admin/AdminProfilePage'
+import RentalPoliciesPage from '../pages/admin/RentalPoliciesPage'
 
 import CustomerDashboard from '../pages/customer/CustomerDashboard'
 import VehicleBrowsePage from '../pages/customer/VehicleBrowsePage'
@@ -52,6 +53,7 @@ import StaffCheckoutPage from '../pages/staff/StaffCheckoutPage'
 import StaffCustomersPage from '../pages/staff/StaffCustomersPage'
 import StaffReportsPage from '../pages/staff/StaffReportsPage'
 import StaffNotificationsPage from '../pages/staff/StaffNotificationsPage'
+import StaffDriverAssignmentsPage from '../pages/staff/StaffDriverAssignmentsPage'
 
 import DriverDashboard from '../pages/driver/DriverDashboard'
 import DriverTripsPage from '../pages/driver/DriverTripsPage'
@@ -96,6 +98,7 @@ function AppRoutes() {
         <Route path="users" element={<ManageUsersPage />} />
         <Route path="vehicles" element={<ManageVehiclesPage />} />
         <Route path="bookings" element={<ManageBookingsPage />} />
+        <Route path="rental-policies" element={<RentalPoliciesPage />} />
         <Route path="payments" element={<ManagePaymentsPage />} />
         <Route path="reports" element={<ReportsPage />} />
         <Route path="settings" element={<AdminSettingsPage />} />
@@ -141,6 +144,9 @@ function AppRoutes() {
         <Route path="reports" element={<StaffReportsPage />} />
         <Route path="notifications" element={<StaffNotificationsPage />} />
         <Route path="profile" element={<StaffProfilePage />} />
+        <Route path="trips" element={<StaffTripsPage />} />
+        <Route path="calendar" element={<StaffCalendarPage />} />
+        <Route path="driver-assignments" element={<StaffDriverAssignmentsPage />} />
       </Route>
 
       <Route

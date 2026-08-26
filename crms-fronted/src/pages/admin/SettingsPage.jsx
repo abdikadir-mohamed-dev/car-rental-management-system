@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import toast from 'react-hot-toast'
+import { getPolicies, updatePolicies } from '../../services/adminService'
 
 function SettingsPage() {
   const [settings, setSettings] = useState({
@@ -8,9 +9,53 @@ function SettingsPage() {
     smsNotifications: false,
     autoApprove: false,
   })
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
 
-  const handleSave = () => {
-    toast.success('Settings saved successfully')
+  useEffect(() => {
+    const loadSettings = async () => {
+      setLoading(true)
+      try {
+        const response = await getPolicies()
+        const data = response.data
+        setSettings({
+          siteName: data.siteName || data.site_name || 'DriveGo',
+          emailNotifications: data.emailNotifications !== false,
+          smsNotifications: data.smsNotifications === true,
+          autoApprove: data.autoApprove === true,
+        })
+      } catch (error) {
+        console.error('Failed to load settings:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadSettings()
+  }, [])
+
+  const handleSave = async () => {
+    setSaving(true)
+    try {
+      await updatePolicies({
+        siteName: settings.siteName,
+        emailNotifications: settings.emailNotifications,
+        smsNotifications: settings.smsNotifications,
+        autoApprove: settings.autoApprove,
+      })
+      toast.success('Settings saved successfully')
+    } catch (error) {
+      toast.error('Failed to save settings')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[200px]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    )
   }
 
   return (
@@ -84,7 +129,9 @@ function SettingsPage() {
             </div>
           </div>
         </div>
-        <button onClick={handleSave} className="btn-primary">Save Settings</button>
+        <button onClick={handleSave} className="btn-primary" disabled={saving}>
+          {saving ? 'Saving...' : 'Save Settings'}
+        </button>
       </div>
     </div>
   )

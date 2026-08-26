@@ -7,3 +7,24 @@ uploads/*
 
 # SQLite database
 crms.db*
+venv/
+__pycache__/
+*.pyc
+instance/
+.env
+.idea/
+.vscode/
+dist/
+build/
+*.egg-info/
+.eggs/
+migrations/versions/*.pyc
+__pycache__/
+*.pyc
+.env
+*.db
+instance/
+*.sqlite3
+.pytest_cache/
+.coverage
+htmlcov/
