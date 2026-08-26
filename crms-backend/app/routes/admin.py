@@ -297,6 +297,76 @@ def report_fleet_utilization():
     })
 
 
+@bp.route('/bookings', methods=['GET'])
+def admin_get_bookings():
+    bookings = Booking.query.order_by(Booking.created_at.desc()).all()
+    return jsonify({'bookings': [b.to_dict() for b in bookings]})
+
+
+@bp.route('/bookings/<int:booking_id>', methods=['GET'])
+def admin_get_booking(booking_id):
+    booking = Booking.query.get_or_404(booking_id)
+    return jsonify(booking.to_dict())
+
+
+@bp.route('/bookings/<int:booking_id>', methods=['PUT'])
+def admin_update_booking(booking_id):
+    booking = Booking.query.get_or_404(booking_id)
+    data = request.get_json() or {}
+    if 'status' in data:
+        booking.status = data['status']
+    if 'pickupLocation' in data:
+        booking.pickup_location = data['pickupLocation']
+    if 'returnLocation' in data:
+        booking.return_location = data['returnLocation']
+    db.session.commit()
+    return jsonify({'booking': booking.to_dict()})
+
+
+@bp.route('/payments', methods=['GET'])
+def admin_get_payments():
+    payments = Payment.query.order_by(Payment.created_at.desc()).all()
+    return jsonify({'payments': [p.to_dict() for p in payments]})
+
+
+@bp.route('/payments/<int:payment_id>', methods=['GET'])
+def admin_get_payment(payment_id):
+    payment = Payment.query.get_or_404(payment_id)
+    return jsonify(payment.to_dict())
+
+
+@bp.route('/payments/<int:payment_id>/refund', methods=['POST'])
+def admin_refund_payment(payment_id):
+    payment = Payment.query.get_or_404(payment_id)
+    payment.status = 'refunded'
+    db.session.commit()
+    return jsonify({'payment': payment.to_dict()})
+
+
+@bp.route('/drivers', methods=['GET'])
+def admin_get_drivers():
+    drivers = User.query.filter_by(role='driver').all()
+    return jsonify([d.to_dict() for d in drivers])
+
+
+@bp.route('/drivers/<int:driver_id>', methods=['PUT'])
+def admin_update_driver(driver_id):
+    user = User.query.get_or_404(driver_id)
+    if user.role != 'driver':
+        return jsonify({'error': 'Not a driver account'}), 400
+    data = request.get_json() or {}
+    if 'name' in data:
+        user.name = data['name']
+    if 'email' in data:
+        user.email = data['email']
+    if 'phone' in data:
+        user.phone = data['phone']
+    if 'isActive' in data:
+        user.is_active = data['isActive']
+    db.session.commit()
+    return jsonify(user.to_dict())
+
+
 @bp.route('/seed', methods=['POST'])
 def seed_data():
     data = request.get_json() or {}
