@@ -1,0 +1,5 @@
+node_modules
+crms-backend/instance/
+crms-backend/venv/
+__pycache__/
+*.pyc
