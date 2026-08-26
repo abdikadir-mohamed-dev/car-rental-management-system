@@ -32,6 +32,10 @@ export const getVehicles = async (params) => {
   return await adminService.get('/vehicles', { params })
 }
 
+export const createVehicle = async (vehicleData) => {
+  return await adminService.post('/vehicles', vehicleData)
+}
+
 export const updateVehicle = async (id, vehicleData) => {
   return await adminService.put(`/vehicles/${id}`, vehicleData)
 }
@@ -78,6 +82,14 @@ export const seedData = async (data) => {
 
 export const getReports = async (params) => {
   return await adminService.get('/reports', { params })
+}
+
+export const getPolicies = async () => {
+  return await adminService.get('/rental-policies')
+}
+
+export const updatePolicies = async (policies) => {
+  return await adminService.put('/rental-policies', policies)
 }
 
 export default adminService

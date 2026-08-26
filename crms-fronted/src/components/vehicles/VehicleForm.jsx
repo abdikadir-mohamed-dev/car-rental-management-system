@@ -5,7 +5,7 @@ import toast from 'react-hot-toast'
 import { X } from 'lucide-react'
 import { VEHICLE_TYPES } from '../../utils/constants'
 
-function VehicleForm({ vehicle, onClose }) {
+function VehicleForm({ vehicle, onClose, onSubmit }) {
   const [formData, setFormData] = useState({
     name: '',
     type: 'sedan',
@@ -65,6 +65,30 @@ function VehicleForm({ vehicle, onClose }) {
     }
 
     const data = {
+      name: formData.name,
+      vehicleType: formData.type,
+      make: formData.brand,
+      model: formData.model,
+      year: Number(formData.year),
+      dailyRentalRate: Number(formData.pricePerDay),
+      seatingCapacity: Number(formData.seats),
+      transmission: formData.transmission,
+      fuel_type: formData.fuelType,
+      images: formData.image ? [formData.image] : [],
+      features: formData.features.split(',').map(f => f.trim()).filter(Boolean),
+      description: formData.description,
+      status: 'available',
+      available: true,
+      location: '',
+      mileage: 0,
+    }
+
+    if (onSubmit) {
+      onSubmit(data)
+      return
+    }
+
+    const reduxData = {
       ...formData,
       pricePerDay: Number(formData.pricePerDay),
       year: Number(formData.year),
@@ -73,7 +97,7 @@ function VehicleForm({ vehicle, onClose }) {
     }
 
     if (isEdit) {
-      dispatch(updateVehicle({ id: vehicle._id, vehicleData: data }))
+      dispatch(updateVehicle({ id: vehicle._id, vehicleData: reduxData }))
         .unwrap()
         .then(() => {
           toast.success('Vehicle updated successfully')
@@ -81,7 +105,7 @@ function VehicleForm({ vehicle, onClose }) {
         })
         .catch((err) => toast.error(err))
     } else {
-      dispatch(createVehicle(data))
+      dispatch(createVehicle(reduxData))
         .unwrap()
         .then(() => {
           toast.success('Vehicle created successfully')
