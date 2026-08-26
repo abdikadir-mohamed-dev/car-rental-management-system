@@ -1,5 +1,8 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { useDispatch } from 'react-redux'
+import { register as registerUser } from '../../redux/slices/authSlice'
+import { setAuthToken } from '../../services/authService'
 import toast from 'react-hot-toast'
 
 function Register() {
@@ -13,6 +16,7 @@ function Register() {
   })
   const [errors, setErrors] = useState({})
   const [loading, setLoading] = useState(false)
+  const dispatch = useDispatch()
   const navigate = useNavigate()
 
   const handleChange = (e) => {
@@ -22,7 +26,7 @@ function Register() {
     }
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     const newErrors = {}
 
@@ -42,11 +46,24 @@ function Register() {
     }
 
     setLoading(true)
-    setTimeout(() => {
-      toast.success('Account created successfully!')
-      navigate('/customer')
+    try {
+      const result = await dispatch(registerUser({
+        name: `${formData.firstName} ${formData.lastName}`,
+        email: formData.email,
+        phone: formData.phone,
+        password: formData.password,
+      })).unwrap()
+
+      if (result.token) {
+        setAuthToken(result.token)
+        toast.success('Account created successfully!')
+        navigate('/customer')
+      }
+    } catch (err) {
+      toast.error(err || 'Registration failed')
+    } finally {
       setLoading(false)
-    }, 800)
+    }
   }
 
   return (

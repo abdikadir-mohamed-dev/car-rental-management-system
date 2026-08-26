@@ -1,6 +1,6 @@
 const express = require('express')
 const { body } = require('express-validator')
-const { register, login, logout, forgotPassword, resetPassword, getProfile, updateProfile } = require('../controllers/authController')
+const { register, login, logout, forgotPassword, resetPassword, getProfile, updateProfile, changePassword } = require('../controllers/authController')
 const { protect } = require('../middleware/auth')
 
 const router = express.Router()
@@ -24,5 +24,6 @@ router.post('/forgot-password', [
 router.post('/reset-password/:token', resetPassword)
 router.get('/profile', protect, getProfile)
 router.put('/profile', protect, updateProfile)
+router.put('/change-password', protect, changePassword)
 
 module.exports = router

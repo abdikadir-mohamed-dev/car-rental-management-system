@@ -2,8 +2,7 @@ const User = require('../models/User')
 
 const getUsers = async (req, res) => {
   try {
-    const users = await User.find({}).select('-password')
-    res.json({ users })
+    res.json({ users: User.list() })
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message })
   }
@@ -11,7 +10,7 @@ const getUsers = async (req, res) => {
 
 const getUser = async (req, res) => {
   try {
-    const user = await User.findById(req.params.id).select('-password')
+    const user = User.findById(req.params.id)
     if (!user) {
       return res.status(404).json({ message: 'User not found' })
     }
@@ -23,7 +22,7 @@ const getUser = async (req, res) => {
 
 const updateUser = async (req, res) => {
   try {
-    const user = await User.findByIdAndUpdate(req.params.id, req.body, { new: true }).select('-password')
+    const user = await User.update(req.params.id, req.body)
     if (!user) {
       return res.status(404).json({ message: 'User not found' })
     }
@@ -35,7 +34,7 @@ const updateUser = async (req, res) => {
 
 const deleteUser = async (req, res) => {
   try {
-    const user = await User.findByIdAndDelete(req.params.id)
+    const user = User.remove(req.params.id)
     if (!user) {
       return res.status(404).json({ message: 'User not found' })
     }

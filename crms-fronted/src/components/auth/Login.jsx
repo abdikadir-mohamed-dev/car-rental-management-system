@@ -1,16 +1,15 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { useDispatch } from 'react-redux'
+import { login as loginUser } from '../../redux/slices/authSlice'
+import { setAuthToken } from '../../services/authService'
 import toast from 'react-hot-toast'
-
-const mockUsers = [
-  { email: 'customer@drivego.com', password: 'password123', name: 'John Doe', role: 'customer' },
-  { email: 'admin@drivego.com', password: 'admin123', name: 'Admin User', role: 'admin' },
-]
 
 function Login() {
   const [formData, setFormData] = useState({ email: '', password: '' })
   const [errors, setErrors] = useState({})
   const [loading, setLoading] = useState(false)
+  const dispatch = useDispatch()
   const navigate = useNavigate()
 
   const handleChange = (e) => {
@@ -20,7 +19,7 @@ function Login() {
     }
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     const newErrors = {}
     if (!formData.email) newErrors.email = 'Email is required'
@@ -32,21 +31,22 @@ function Login() {
     }
 
     setLoading(true)
-    setTimeout(() => {
-      const user = mockUsers.find(u => u.email === formData.email && u.password === formData.password)
-      if (user) {
-        localStorage.setItem('user', JSON.stringify(user))
+    try {
+      const result = await dispatch(loginUser({ email: formData.email, password: formData.password })).unwrap()
+      if (result.token) {
+        setAuthToken(result.token)
         toast.success('Login successful!')
-        if (user.role === 'admin') {
+        if (result.user?.role === 'admin') {
           navigate('/admin')
         } else {
           navigate('/customer')
         }
-      } else {
-        toast.error('Invalid email or password')
       }
+    } catch (err) {
+      toast.error(err || 'Invalid email or password')
+    } finally {
       setLoading(false)
-    }, 800)
+    }
   }
 
   return (

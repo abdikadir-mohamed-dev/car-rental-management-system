@@ -1,15 +1,17 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
+import { resetPassword } from '../../services/authService'
 import toast from 'react-hot-toast'
 
 function ResetPasswordPage() {
+  const { token } = useParams()
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [errors, setErrors] = useState({})
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     const newErrors = {}
     if (!password) newErrors.password = 'Password is required'
@@ -22,11 +24,15 @@ function ResetPasswordPage() {
     }
 
     setLoading(true)
-    setTimeout(() => {
+    try {
+      await resetPassword(token, password)
       setSuccess(true)
       toast.success('Password reset successfully!')
+    } catch (err) {
+      toast.error(err || 'Failed to reset password')
+    } finally {
       setLoading(false)
-    }, 800)
+    }
   }
 
   return (

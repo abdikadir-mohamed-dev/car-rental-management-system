@@ -4,25 +4,18 @@ const getVehicles = async (req, res) => {
   try {
     const { type, minPrice, maxPrice, search, page = 1, limit = 20 } = req.query
 
-    const query = { isAvailable: true }
+    const vehicles = Vehicle.findAll({
+      isAvailable: true,
+      type: type || undefined,
+      minPrice: minPrice ? Number(minPrice) : undefined,
+      maxPrice: maxPrice ? Number(maxPrice) : undefined,
+      search: search || undefined,
+    })
 
-    if (type) query.type = type
-    if (minPrice || maxPrice) query.pricePerDay = {}
-    if (minPrice) query.pricePerDay.$gte = Number(minPrice)
-    if (maxPrice) query.pricePerDay.$lte = Number(maxPrice)
-    if (search) {
-      query.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { brand: { $regex: search, $options: 'i' } },
-        { model: { $regex: search, $options: 'i' } },
-      ]
-    }
+    const start = (Number(page) - 1) * Number(limit)
+    const paged = vehicles.slice(start, start + Number(limit))
 
-    const vehicles = await Vehicle.find(query)
-      .skip((page - 1) * limit)
-      .limit(Number(limit))
-
-    res.json({ vehicles })
+    res.json({ vehicles: paged })
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message })
   }
@@ -30,11 +23,11 @@ const getVehicles = async (req, res) => {
 
 const getVehicle = async (req, res) => {
   try {
-    const vehicle = await Vehicle.findById(req.params.id)
+    const vehicle = Vehicle.findById(req.params.id)
     if (!vehicle) {
       return res.status(404).json({ message: 'Vehicle not found' })
     }
-    res.json({ vehicle })
+    res.json({ vehicle: Vehicle.toClient(vehicle) })
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message })
   }
@@ -42,8 +35,8 @@ const getVehicle = async (req, res) => {
 
 const createVehicle = async (req, res) => {
   try {
-    const vehicle = await Vehicle.create(req.body)
-    res.status(201).json({ vehicle })
+    const vehicle = Vehicle.create(req.body)
+    res.status(201).json({ vehicle: Vehicle.toClient(vehicle) })
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message })
   }
@@ -51,11 +44,11 @@ const createVehicle = async (req, res) => {
 
 const updateVehicle = async (req, res) => {
   try {
-    const vehicle = await Vehicle.findByIdAndUpdate(req.params.id, req.body, { new: true })
+    const vehicle = Vehicle.update(req.params.id, req.body)
     if (!vehicle) {
       return res.status(404).json({ message: 'Vehicle not found' })
     }
-    res.json({ vehicle })
+    res.json({ vehicle: Vehicle.toClient(vehicle) })
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message })
   }
@@ -63,7 +56,7 @@ const updateVehicle = async (req, res) => {
 
 const deleteVehicle = async (req, res) => {
   try {
-    const vehicle = await Vehicle.findByIdAndDelete(req.params.id)
+    const vehicle = Vehicle.remove(req.params.id)
     if (!vehicle) {
       return res.status(404).json({ message: 'Vehicle not found' })
     }

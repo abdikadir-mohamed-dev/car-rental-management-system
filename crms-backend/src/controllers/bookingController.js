@@ -5,22 +5,19 @@ const Payment = require('../models/Payment')
 const getBookings = async (req, res) => {
   try {
     const { status, customer, page = 1, limit = 20 } = req.query
-    const query = {}
-
-    if (status) query.status = status
-    if (customer) query.customer = customer
+    let customerFilter = customer
     if (req.user.role === 'customer') {
-      query.customer = req.user._id
+      customerFilter = req.user._id
     }
 
-    const bookings = await Booking.find(query)
-      .populate('customer', 'name email phone')
-      .populate('vehicle', 'name brand model type pricePerDay image')
-      .skip((page - 1) * limit)
-      .limit(Number(limit))
-      .sort({ createdAt: -1 })
+    const bookings = Booking.findMany({
+      status,
+      customer: customerFilter,
+      limit: Number(limit),
+      offset: (Number(page) - 1) * Number(limit),
+    })
 
-    res.json({ bookings })
+    res.json({ bookings: bookings.map((b) => Booking.toClient(b)) })
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message })
   }
@@ -28,19 +25,17 @@ const getBookings = async (req, res) => {
 
 const getBooking = async (req, res) => {
   try {
-    const booking = await Booking.findById(req.params.id)
-      .populate('customer', 'name email phone driversLicense licenseExpiry')
-      .populate('vehicle')
-
+    let booking = Booking.findById(req.params.id)
     if (!booking) {
       return res.status(404).json({ message: 'Booking not found' })
     }
+    booking = Booking.populate(booking)
 
     if (req.user.role === 'customer' && booking.customer._id.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: 'Not authorized to access this booking' })
     }
 
-    res.json({ booking })
+    res.json({ booking: Booking.toClient(booking, true) })
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message })
   }
@@ -48,54 +43,53 @@ const getBooking = async (req, res) => {
 
 const createBooking = async (req, res) => {
   try {
-    const { vehicleId, pickupDate, dropoffDate, pickupLocation, dropoffLocation, specialRequests } = req.body
+    const {
+      vehicleId,
+      pickupDate, dropoffDate, returnDate,
+      pickupLocation, dropoffLocation, returnLocation,
+      specialRequests, drivingOption, driverId,
+    } = req.body
 
-    const vehicle = await Vehicle.findById(vehicleId)
+    const resolvedVehicleId = vehicleId
+    const resolvedDropoff = returnDate || dropoffDate
+    const resolvedDropoffLocation = returnLocation || dropoffLocation
+
+    const vehicle = Vehicle.findById(resolvedVehicleId)
     if (!vehicle || !vehicle.isAvailable) {
       return res.status(404).json({ message: 'Vehicle not available' })
     }
 
     const pickup = new Date(pickupDate)
-    const dropoff = new Date(dropoffDate)
+    const dropoff = new Date(resolvedDropoff)
     const now = new Date()
 
     if (pickup < now || dropoff <= pickup) {
       return res.status(400).json({ message: 'Invalid pickup or dropoff date' })
     }
 
-    const conflictingBookings = await Booking.find({
-      vehicle: vehicleId,
-      status: { $in: ['pending', 'confirmed', 'active'] },
-      $or: [
-        { pickupDate: { $lte: dropoff, $gte: pickup } },
-        { dropoffDate: { $lte: dropoff, $gte: pickup } },
-      ],
-    })
-
-    if (conflictingBookings.length > 0) {
+    const conflicting = Booking.findConflicts(resolvedVehicleId, pickup.toISOString(), dropoff.toISOString())
+    if (conflicting.length > 0) {
       return res.status(400).json({ message: 'Vehicle is already booked for the selected dates' })
     }
 
     const totalDays = Math.ceil((dropoff - pickup) / (1000 * 60 * 60 * 24))
     const totalAmount = totalDays * vehicle.pricePerDay
 
-    const booking = await Booking.create({
+    const booking = Booking.create({
       customer: req.user._id,
-      vehicle: vehicleId,
-      pickupDate: pickup,
-      dropoffDate: dropoff,
+      vehicle: resolvedVehicleId,
+      pickupDate: pickup.toISOString(),
+      dropoffDate: dropoff.toISOString(),
       pickupLocation,
-      dropoffLocation,
+      dropoffLocation: resolvedDropoffLocation,
       totalAmount,
       specialRequests,
+      drivingOption,
+      driverId,
       status: 'pending',
     })
 
-    const populatedBooking = await Booking.findById(booking._id)
-      .populate('customer', 'name email phone')
-      .populate('vehicle', 'name brand model type pricePerDay image')
-
-    res.status(201).json({ booking: populatedBooking })
+    res.status(201).json({ booking: Booking.toClient(Booking.populate(booking), true) })
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message })
   }
@@ -103,8 +97,7 @@ const createBooking = async (req, res) => {
 
 const updateBooking = async (req, res) => {
   try {
-    const booking = await Booking.findById(req.params.id)
-
+    let booking = Booking.findById(req.params.id)
     if (!booking) {
       return res.status(404).json({ message: 'Booking not found' })
     }
@@ -113,46 +106,36 @@ const updateBooking = async (req, res) => {
       return res.status(403).json({ message: 'Not authorized to modify this booking' })
     }
 
-    const { pickupDate, dropoffDate, pickupLocation, dropoffLocation } = req.body
+    const { pickupDate, dropoffDate, returnDate, pickupLocation, dropoffLocation, returnLocation } = req.body
+    const fields = {}
 
-    if (pickupDate || dropoffDate) {
-      const newPickup = pickupDate ? new Date(pickupDate) : booking.pickupDate
-      const newDropoff = dropoffDate ? new Date(dropoffDate) : booking.dropoffDate
-      const vehicle = await Vehicle.findById(booking.vehicle)
+    if (pickupLocation) fields.pickupLocation = pickupLocation
+    if (returnLocation) fields.dropoffLocation = returnLocation
+    else if (dropoffLocation) fields.dropoffLocation = dropoffLocation
+
+    const newPickup = pickupDate ? new Date(pickupDate) : new Date(booking.pickupDate)
+    const newDropoff = (returnDate || dropoffDate) ? new Date(returnDate || dropoffDate) : new Date(booking.dropoffDate)
+
+    if (pickupDate || dropoffDate || returnDate) {
+      const vehicle = Vehicle.findById(booking.vehicle)
 
       if (newPickup < new Date() || newDropoff <= newPickup) {
         return res.status(400).json({ message: 'Invalid pickup or dropoff date' })
       }
 
-      const conflictingBookings = await Booking.find({
-        _id: { $ne: booking._id },
-        vehicle: booking.vehicle,
-        status: { $in: ['pending', 'confirmed', 'active'] },
-        $or: [
-          { pickupDate: { $lte: newDropoff, $gte: newPickup } },
-          { dropoffDate: { $lte: newDropoff, $gte: newPickup } },
-        ],
-      })
-
-      if (conflictingBookings.length > 0) {
+      const conflicting = Booking.findConflicts(booking.vehicle, newPickup.toISOString(), newDropoff.toISOString(), booking._id)
+      if (conflicting.length > 0) {
         return res.status(400).json({ message: 'Vehicle is already booked for the selected dates' })
       }
 
       const totalDays = Math.ceil((newDropoff - newPickup) / (1000 * 60 * 60 * 24))
-      booking.totalAmount = totalDays * (vehicle?.pricePerDay || booking.totalAmount)
-      booking.pickupDate = newPickup
-      booking.dropoffDate = newDropoff
+      fields.totalAmount = totalDays * (vehicle ? vehicle.pricePerDay : booking.totalAmount)
+      fields.pickupDate = newPickup.toISOString()
+      fields.dropoffDate = newDropoff.toISOString()
     }
 
-    if (pickupLocation) booking.pickupLocation = pickupLocation
-    if (dropoffLocation) booking.dropoffLocation = dropoffLocation
-
-    await booking.save()
-    const updatedBooking = await Booking.findById(booking._id)
-      .populate('customer', 'name email phone')
-      .populate('vehicle', 'name brand model type pricePerDay image')
-
-    res.json({ booking: updatedBooking })
+    booking = Booking.update(booking._id, fields)
+    res.json({ booking: Booking.toClient(Booking.populate(booking), true) })
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message })
   }
@@ -160,7 +143,7 @@ const updateBooking = async (req, res) => {
 
 const cancelBooking = async (req, res) => {
   try {
-    const booking = await Booking.findById(req.params.id)
+    const booking = Booking.findById(req.params.id)
     if (!booking) {
       return res.status(404).json({ message: 'Booking not found' })
     }
@@ -182,14 +165,15 @@ const cancelBooking = async (req, res) => {
       cancellationFee = booking.totalAmount * 0.5
     }
 
-    booking.status = 'cancelled'
-    booking.cancellationFee = cancellationFee
-    booking.refundAmount = booking.totalAmount - cancellationFee
-    await booking.save()
+    Booking.update(booking._id, {
+      status: 'cancelled',
+      cancellationFee,
+      refundAmount: booking.totalAmount - cancellationFee,
+    })
 
     res.json({
       message: 'Booking cancelled successfully',
-      refundAmount: booking.refundAmount,
+      refundAmount: booking.totalAmount - cancellationFee,
       cancellationFee,
     })
   } catch (error) {
