@@ -3,6 +3,7 @@ import toast from 'react-hot-toast'
 import { Eye, RefreshCw, Search } from 'lucide-react'
 import { PAYMENT_STATUS } from '../../utils/constants'
 import ConfirmDialog from '../../components/common/ConfirmDialog'
+import { getPayments, refundPayment } from '../../services/adminService'
 
 function PaymentManagement() {
   const [payments, setPayments] = useState([])
@@ -13,19 +14,16 @@ function PaymentManagement() {
   const [refundId, setRefundId] = useState(null)
   const [confirmOpen, setConfirmOpen] = useState(false)
 
-  const loadPayments = () => {
+  const loadPayments = async () => {
     setLoading(true)
-    const mockPayments = [
-      { _id: 'P001', amount: 275, method: 'card', status: PAYMENT_STATUS.COMPLETED, createdAt: '2025-05-20', user: { name: 'John Doe' } },
-      { _id: 'P002', amount: 510, method: 'mpesa', status: PAYMENT_STATUS.COMPLETED, createdAt: '2025-05-21', user: { name: 'Mary Wanjiku' } },
-      { _id: 'P003', amount: 340, method: 'card', status: PAYMENT_STATUS.PENDING, createdAt: '2025-05-22', user: { name: 'Peter Mwangi' } },
-      { _id: 'P004', amount: 420, method: 'paypal', status: PAYMENT_STATUS.COMPLETED, createdAt: '2025-05-22', user: { name: 'Ali Hassan' } },
-      { _id: 'P005', amount: 310, method: 'card', status: PAYMENT_STATUS.FAILED, createdAt: '2025-05-24', user: { name: 'James Kamau' } },
-    ]
-    setTimeout(() => {
-      setPayments(mockPayments)
+    try {
+      const response = await getPayments()
+      setPayments(response.data.payments || response.data)
+    } catch {
+      toast.error('Failed to load payments')
+    } finally {
       setLoading(false)
-    }, 600)
+    }
   }
 
   useEffect(() => {
@@ -48,11 +46,16 @@ function PaymentManagement() {
     setConfirmOpen(true)
   }
 
-  const handleRefundConfirm = () => {
+  const handleRefundConfirm = async () => {
     setConfirmOpen(false)
     if (refundId) {
-      setPayments(payments.map(p => p._id === refundId ? { ...p, status: PAYMENT_STATUS.REFUNDED } : p))
-      toast.success('Payment refunded')
+      try {
+        await refundPayment(refundId)
+        setPayments(payments.map(p => (p.id || p._id) === refundId ? { ...p, status: PAYMENT_STATUS.REFUNDED } : p))
+        toast.success('Payment refunded')
+      } catch {
+        toast.error('Failed to refund payment')
+      }
       setRefundId(null)
     }
   }
@@ -63,7 +66,7 @@ function PaymentManagement() {
   }
 
   const filteredPayments = payments.filter(payment => {
-    const matchesSearch = payment._id?.toLowerCase().includes(search.toLowerCase()) || payment.user?.name?.toLowerCase().includes(search.toLowerCase())
+    const matchesSearch = (payment.id && payment.id.toString().toLowerCase().includes(search.toLowerCase())) || (payment._id && payment._id.toString().toLowerCase().includes(search.toLowerCase()))
     const matchesStatus = !statusFilter || payment.status === statusFilter
     return matchesSearch && matchesStatus
   })
@@ -98,7 +101,6 @@ function PaymentManagement() {
             <thead>
               <tr className="border-b border-slate-200">
                 <th className="text-left py-3 px-4 font-medium text-slate-600">ID</th>
-                <th className="text-left py-3 px-4 font-medium text-slate-600">Customer</th>
                 <th className="text-left py-3 px-4 font-medium text-slate-600">Amount</th>
                 <th className="text-left py-3 px-4 font-medium text-slate-600">Method</th>
                 <th className="text-left py-3 px-4 font-medium text-slate-600">Status</th>
@@ -107,10 +109,9 @@ function PaymentManagement() {
             </thead>
             <tbody>
               {filteredPayments.map((payment) => (
-                <tr key={payment._id} className="border-b border-slate-100 hover:bg-slate-50">
-                  <td className="py-3 px-4 text-slate-900">#{payment._id?.slice(-8)}</td>
-                  <td className="py-3 px-4 text-slate-600">{payment.user?.name || 'N/A'}</td>
-                  <td className="py-3 px-4 font-medium text-slate-900">KES {payment.amount.toLocaleString()}</td>
+                <tr key={payment.id || payment._id} className="border-b border-slate-100 hover:bg-slate-50">
+                  <td className="py-3 px-4 text-slate-900">#{payment.id || payment._id}</td>
+                  <td className="py-3 px-4 font-medium text-slate-900">KES {payment.amount?.toLocaleString()}</td>
                   <td className="py-3 px-4 capitalize text-slate-600">{payment.method || 'Card'}</td>
                   <td className="py-3 px-4">
                     <span className={`badge capitalize ${getStatusColor(payment.status)}`}>
@@ -123,7 +124,7 @@ function PaymentManagement() {
                         <Eye className="w-4 h-4" />
                       </button>
                       {payment.status === PAYMENT_STATUS.COMPLETED && (
-                        <button onClick={() => handleRefundClick(payment._id)} className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg">
+                        <button onClick={() => handleRefundClick(payment.id || payment._id)} className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg">
                           <RefreshCw className="w-4 h-4" />
                         </button>
                       )}
@@ -145,8 +146,8 @@ function PaymentManagement() {
               <h2 className="text-xl font-semibold text-slate-900">Payment Details</h2>
             </div>
             <div className="p-6 space-y-3">
-              <div><span className="text-slate-600">Payment ID:</span> <span className="font-medium text-slate-900">{selectedPayment._id}</span></div>
-               <div><span className="text-slate-600">Amount:</span> <span className="font-medium text-slate-900">KES {selectedPayment.amount.toLocaleString()}</span></div>
+              <div><span className="text-slate-600">Payment ID:</span> <span className="font-medium text-slate-900">{selectedPayment.id || selectedPayment._id}</span></div>
+               <div><span className="text-slate-600">Amount:</span> <span className="font-medium text-slate-900">KES {selectedPayment.amount?.toLocaleString()}</span></div>
               <div><span className="text-slate-600">Method:</span> <span className="font-medium text-slate-900 capitalize">{selectedPayment.method}</span></div>
               <div><span className="text-slate-600">Status:</span> <span className="font-medium text-slate-900 capitalize">{selectedPayment.status}</span></div>
               <div><span className="text-slate-600">Date:</span> <span className="font-medium text-slate-900">{selectedPayment.createdAt}</span></div>

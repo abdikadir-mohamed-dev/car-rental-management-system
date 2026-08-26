@@ -28,6 +28,46 @@ export const deleteUser = async (id) => {
   return await adminService.delete(`/users/${id}`)
 }
 
+export const getVehicles = async (params) => {
+  return await adminService.get('/vehicles', { params })
+}
+
+export const updateVehicle = async (id, vehicleData) => {
+  return await adminService.put(`/vehicles/${id}`, vehicleData)
+}
+
+export const deleteVehicle = async (id) => {
+  return await adminService.delete(`/vehicles/${id}`)
+}
+
+export const getBookings = async (params) => {
+  return await adminService.get('/bookings', { params })
+}
+
+export const updateBooking = async (id, bookingData) => {
+  return await adminService.put(`/bookings/${id}`, bookingData)
+}
+
+export const getPayments = async (params) => {
+  return await adminService.get('/payments', { params })
+}
+
+export const refundPayment = async (id) => {
+  return await adminService.post(`/payments/${id}/refund`)
+}
+
+export const getDrivers = async (params) => {
+  return await adminService.get('/drivers', { params })
+}
+
+export const updateDriver = async (id, driverData) => {
+  return await adminService.put(`/drivers/${id}`, driverData)
+}
+
+export const seedData = async (data) => {
+  return await adminService.post('/seed', data)
+}
+
 export const getReports = async (params) => {
   return await adminService.get('/reports', { params })
 }
