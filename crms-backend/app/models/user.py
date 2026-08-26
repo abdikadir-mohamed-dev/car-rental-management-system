@@ -11,6 +11,8 @@ class User(db.Model):
     phone = db.Column(db.String(20))
     role = db.Column(db.String(20), nullable=False, default='customer')
     is_active = db.Column(db.Boolean, default=True)
+    password_hash = db.Column(db.String(255), nullable=True)
+    must_change_password = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -22,6 +24,7 @@ class User(db.Model):
             'phone': self.phone,
             'role': self.role,
             'isActive': self.is_active,
+            'mustChangePassword': self.must_change_password,
             'createdAt': self.created_at.isoformat() if self.created_at else None,
             'updatedAt': self.updated_at.isoformat() if self.updated_at else None,
         }
