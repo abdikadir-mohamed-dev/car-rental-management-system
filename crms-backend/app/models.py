@@ -15,7 +15,6 @@ class User(db.Model):
     
     driver_profile = db.relationship('Driver', backref='user', uselist=False, cascade='all, delete-orphan')
     customer_profile = db.relationship('Customer', backref='user', uselist=False, cascade='all, delete-orphan')
-    staff_profile = db.relationship('Staff', backref='user', uselist=False, cascade='all, delete-orphan')
     
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -80,25 +79,6 @@ class Customer(db.Model):
             'email': self.user.email,
             'phone': self.user.phone,
             'total_bookings': self.total_bookings,
-            'joined_at': self.joined_at.isoformat()
-        }
-
-class Staff(db.Model):
-    __tablename__ = 'staff'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    department = db.Column(db.String(50))  # operations, maintenance, customer_support
-    joined_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'user_id': self.user_id,
-            'name': self.user.name,
-            'email': self.user.email,
-            'phone': self.user.phone,
-            'department': self.department,
             'joined_at': self.joined_at.isoformat()
         }
 

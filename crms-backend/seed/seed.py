@@ -3,7 +3,7 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app import create_app, db
-from app.models import User, Driver, Customer, Staff, Vehicle, Trip, Booking, Maintenance, Earning, Notification, Payment
+from app.models import User, Driver, Customer, Vehicle, Trip, Booking, Maintenance, Earning, Notification, Payment
 from datetime import datetime, date
 import random
 
@@ -22,7 +22,6 @@ with app.app_context():
     db.session.query(Vehicle).delete()
     db.session.query(Driver).delete()
     db.session.query(Customer).delete()
-    db.session.query(Staff).delete()
     db.session.query(User).delete()
     db.session.commit()
     
@@ -35,18 +34,6 @@ with app.app_context():
     )
     admin.set_password('admin123')
     db.session.add(admin)
-    
-    # Create Staff
-    staff = User(
-        name='Staff Member',
-        email='staff@drivego.com',
-        phone='+254 700 000 002',
-        role='staff'
-    )
-    staff.set_password('staff123')
-    db.session.add(staff)
-    staff_profile = Staff(user_id=1, department='operations')
-    db.session.add(staff_profile)
     
     # Create Customers
     customers = []
@@ -204,7 +191,7 @@ with app.app_context():
     print(f'Created {User.query.count()} users')
     print(f'Created {Driver.query.count()} drivers')
     print(f'Created {Customer.query.count()} customers')
-    print(f'Created {Staff.query.count()} staff')
+    print(f'Created {Driver.query.count()} drivers')
     print(f'Created {Vehicle.query.count()} vehicles')
     print(f'Created {Trip.query.count()} trips')
     print(f'Created {Booking.query.count()} bookings')
