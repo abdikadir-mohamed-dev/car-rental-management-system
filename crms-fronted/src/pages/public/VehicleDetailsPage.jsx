@@ -1,16 +1,59 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { Star, Users, Gauge, Fuel, MapPin, Calendar, Heart, ArrowLeft, Check } from 'lucide-react'
-import { mockVehicles } from '../../data/mockData'
+import { getVehicle } from '../../services/vehicleService'
 import toast from 'react-hot-toast'
 
 function VehicleDetailsPage() {
   const { id } = useParams()
-  const vehicle = mockVehicles.find(v => v.id === Number(id))
+  const [vehicle, setVehicle] = useState(null)
+  const [loading, setLoading] = useState(true)
   const [selectedImage, setSelectedImage] = useState(0)
   const [pickupDate, setPickupDate] = useState('')
   const [returnDate, setReturnDate] = useState('')
   const [liked, setLiked] = useState(false)
+
+  useEffect(() => {
+    const loadVehicle = async () => {
+      setLoading(true)
+      try {
+        const response = await getVehicle(id)
+        const v = response.data
+        setVehicle({
+          id: v.id,
+          name: `${v.make} ${v.model}`,
+          brand: v.make,
+          category: v.vehicleType,
+          pricePerDay: v.dailyRentalRate,
+          rating: 4.5,
+          seats: v.seatingCapacity || 5,
+          doors: 4,
+          transmission: v.transmission,
+          fuelType: v.fuelType,
+          luggage: 2,
+          location: v.location,
+          image: v.images?.[0] || '/placeholder-car.jpg',
+          images: v.images || [],
+          features: v.features || [],
+          description: v.description || '',
+          available: v.available,
+        })
+      } catch (error) {
+        toast.error('Failed to load vehicle details')
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadVehicle()
+  }, [id])
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    )
+  }
 
   if (!vehicle) {
     return (

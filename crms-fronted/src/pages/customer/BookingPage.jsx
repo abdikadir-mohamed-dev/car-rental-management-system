@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { ArrowLeft, CreditCard, Wallet, Banknote } from 'lucide-react'
-import { mockVehicles } from '../../data/mockData'
+import { getVehicle } from '../../services/vehicleService'
 import { mockDrivers } from '../../data/mockDrivers'
 import toast from 'react-hot-toast'
 
 function BookingPage() {
   const { vehicleId } = useParams()
-  const vehicle = mockVehicles.find(v => v.id === Number(vehicleId))
+  const [vehicle, setVehicle] = useState(null)
+  const [loading, setLoading] = useState(true)
   const [pickupDate, setPickupDate] = useState('')
   const [returnDate, setReturnDate] = useState('')
   const [drivingOption, setDrivingOption] = useState('self')
@@ -16,6 +17,40 @@ function BookingPage() {
   const [processing, setProcessing] = useState(false)
   const [confirmed, setConfirmed] = useState(false)
   const [bookingId, setBookingId] = useState('')
+
+  useEffect(() => {
+    const loadVehicle = async () => {
+      setLoading(true)
+      try {
+        const response = await getVehicle(vehicleId)
+        const v = response.data
+        setVehicle({
+          id: v.id,
+          name: `${v.make} ${v.model}`,
+          brand: v.make,
+          category: v.vehicleType,
+          pricePerDay: v.dailyRentalRate,
+          rating: 4.5,
+          seats: v.seatingCapacity || 5,
+          doors: 4,
+          transmission: v.transmission,
+          fuelType: v.fuelType,
+          luggage: 2,
+          location: v.location,
+          image: v.images?.[0] || '/placeholder-car.jpg',
+          images: v.images || [],
+          features: v.features || [],
+          description: v.description || '',
+          available: v.available,
+        })
+      } catch (error) {
+        toast.error('Failed to load vehicle details')
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadVehicle()
+  }, [vehicleId])
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
