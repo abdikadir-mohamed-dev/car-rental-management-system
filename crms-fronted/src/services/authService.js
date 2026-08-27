@@ -1,7 +1,6 @@
 import axios from 'axios'
-import { VITE_API_URL } from '../utils/constants'
 
-const API_URL = import.meta.env.VITE_API_URL || VITE_API_URL
+const API_URL = import.meta.env.VITE_API_URL
 
 const authService = axios.create({
   baseURL: `${API_URL}/auth`,

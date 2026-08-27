@@ -1,45 +1,45 @@
 import React from 'react'
+import { useSelector, useDispatch } from 'react-redux'
 import {
   LayoutGrid, ClipboardList, Calendar, LogOut, LogIn,
   Car, Users, Wrench, BarChart2, Bell, User, Power,
   ShipWheel, ChevronDown, DollarSign, Route, Search, MapPin
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-
-const bookings = [
-  { id: '#BK001', customer: 'John Doe', vehicle: 'Toyota RAV4', pickup: 'Nairobi CBD', date: '20 Aug', amount: 'KSH 300', status: 'Confirmed' },
-  { id: '#BK002', customer: 'Mary Wanjiku', vehicle: 'Honda Accord', pickup: 'JKIA Airport', date: '21 Aug', amount: 'KSH 280', status: 'Confirmed' },
-  { id: '#BK003', customer: 'Peter Mwangi', vehicle: 'BMW 3 Series', pickup: 'Westlands', date: '22 Aug', amount: 'KSH 350', status: 'Pending' },
-  { id: '#BK004', customer: 'Ali Hassan', vehicle: 'Mercedes C-Class', pickup: 'Karen', date: '23 Aug', amount: 'KSH 420', status: 'Pending' },
-  { id: '#BK005', customer: 'Grace Achieng', vehicle: 'Toyota Prado', pickup: 'Kilimani', date: '18 Aug', amount: 'KSH 310', status: 'Completed' },
-  { id: '#BK006', customer: 'Kevin Njoroge', vehicle: 'Subaru Forester', pickup: 'Sarit Centre', date: '16 Aug', amount: 'KSH 260', status: 'Cancelled' },
-];
+import { useEffect } from 'react'
+import { fetchBookings } from '../../redux/slices/driverSlice'
 
 const tabs = ['All', 'Confirmed', 'Pending', 'Completed', 'Cancelled'];
 
 const statusStyle = {
-  Confirmed: 'badge-success',
-  Pending: 'badge-warning',
-  Completed: 'badge-info',
-  Cancelled: 'badge-danger',
+  Confirmed: 'bg-emerald-100 text-emerald-700',
+  Pending: 'bg-amber-100 text-amber-700',
+  Completed: 'bg-blue-100 text-blue-700',
+  Cancelled: 'bg-rose-100 text-rose-700',
 };
 
 export default function DriverBookingsPage() {
-  const [active, setActive] = React.useState('Bookings');
+  const dispatch = useDispatch()
+  const { bookings, loading } = useSelector((state) => state.driver)
   const [tab, setTab] = React.useState('All');
   const [query, setQuery] = React.useState('');
 
-  const filtered = bookings.filter((b) => {
+  useEffect(() => {
+    dispatch(fetchBookings())
+  }, [dispatch])
+
+  const displayBookings = bookings.length > 0 ? bookings : []
+  const filtered = displayBookings.filter((b) => {
     const matchesTab = tab === 'All' || b.status === tab;
     const matchesQuery =
-      b.customer.toLowerCase().includes(query.toLowerCase()) ||
-      b.id.toLowerCase().includes(query.toLowerCase()) ||
-      b.vehicle.toLowerCase().includes(query.toLowerCase());
+      (b.customer || '').toLowerCase().includes(query.toLowerCase()) ||
+      (b.id || '').toLowerCase().includes(query.toLowerCase()) ||
+      (b.vehicle || '').toLowerCase().includes(query.toLowerCase());
     return matchesTab && matchesQuery;
   });
 
   const handleBookingAction = (booking, action) => {
-    toast.success(`Booking ${booking.id} ${action}`)
+    toast.success(`Booking ${booking.id || ''} ${action}`)
   }
 
   return (

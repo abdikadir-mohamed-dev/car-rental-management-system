@@ -4,7 +4,7 @@ import { setAuthToken } from './authService'
 const API_URL = import.meta.env.VITE_API_URL
 
 const bookingService = axios.create({
-  baseURL: `${API_URL}/bookings`,
+  baseURL: `${API_URL}/api/bookings`,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -32,12 +32,8 @@ export const createBooking = async (bookingData) => {
   return await bookingService.post('/', bookingData)
 }
 
-export const updateBooking = async (id, bookingData) => {
-  return await bookingService.put(`/${id}`, bookingData)
-}
-
-export const cancelBooking = async (id) => {
-  return await bookingService.delete(`/${id}`)
+export const updateBookingStatus = async (id, status) => {
+  return await bookingService.patch(`/${id}/status`, { status })
 }
 
 export default bookingService

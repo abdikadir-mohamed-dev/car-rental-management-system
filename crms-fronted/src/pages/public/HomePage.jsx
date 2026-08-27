@@ -1,12 +1,49 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Search, ArrowRight, Shield, Clock, DollarSign, Car, Star, MapPin, Calendar, Users, Fuel, Gauge } from 'lucide-react'
-import { mockVehicles, mockLocations } from '../../data/mockData'
+import { mockLocations } from '../../data/mockData'
+import { getVehicles } from '../../services/vehicleService'
 
 function HomePage() {
   const [pickupLocation, setPickupLocation] = useState('')
   const [pickupDate, setPickupDate] = useState('')
   const [returnDate, setReturnDate] = useState('')
+  const [featuredVehicles, setFeaturedVehicles] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const loadVehicles = async () => {
+      setLoading(true)
+      try {
+        const response = await getVehicles()
+        const mapped = (response.data || []).map((v) => ({
+          id: v.id,
+          name: `${v.make} ${v.model}`,
+          brand: v.make,
+          category: v.vehicleType,
+          pricePerDay: v.dailyRentalRate,
+          rating: 4.5,
+          seats: v.seatingCapacity || 5,
+          doors: 4,
+          transmission: v.transmission,
+          fuelType: v.fuelType,
+          luggage: 2,
+          location: v.location,
+          image: v.images?.[0] || '/placeholder-car.jpg',
+          images: v.images || [],
+          features: v.features || [],
+          description: v.description || '',
+          available: v.available,
+        }))
+        setFeaturedVehicles(mapped.slice(0, 8))
+      } catch (error) {
+        console.error('Failed to load vehicles:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadVehicles()
+  }, [])
 
   const handleSearch = (e) => {
     e.preventDefault()
@@ -98,7 +135,11 @@ function HomePage() {
             </Link>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {mockVehicles.slice(0, 8).map((vehicle) => (
+            {loading ? (
+              <div className="col-span-full flex items-center justify-center min-h-[200px]">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+              </div>
+            ) : featuredVehicles.map((vehicle) => (
               <VehicleCard key={vehicle.id} vehicle={vehicle} />
             ))}
           </div>

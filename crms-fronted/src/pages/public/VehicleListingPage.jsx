@@ -1,9 +1,9 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { SlidersHorizontal } from 'lucide-react'
 import VehicleCard from '../../components/vehicles/VehicleCard'
 import VehicleFilter from '../../components/vehicles/VehicleFilter'
-import { mockVehicles } from '../../data/mockData'
+import { getVehicles } from '../../services/vehicleService'
 
 function VehicleListingPage() {
   const [searchParams] = useSearchParams()
@@ -18,9 +18,45 @@ function VehicleListingPage() {
     transmission: '',
     fuelType: '',
   })
+  const [vehicles, setVehicles] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const loadVehicles = async () => {
+      setLoading(true)
+      try {
+        const response = await getVehicles()
+        const mapped = (response.data || []).map((v) => ({
+          id: v.id,
+          name: `${v.make} ${v.model}`,
+          brand: v.make,
+          category: v.vehicleType,
+          pricePerDay: v.dailyRentalRate,
+          rating: 4.5,
+          seats: v.seatingCapacity || 5,
+          doors: 4,
+          transmission: v.transmission,
+          fuelType: v.fuelType,
+          luggage: 2,
+          location: v.location,
+          image: v.images?.[0] || '/placeholder-car.jpg',
+          images: v.images || [],
+          features: v.features || [],
+          description: v.description || '',
+          available: v.available,
+        }))
+        setVehicles(mapped)
+      } catch (error) {
+        console.error('Failed to load vehicles:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadVehicles()
+  }, [])
 
   const filteredVehicles = useMemo(() => {
-    let result = [...mockVehicles]
+    let result = [...vehicles]
 
     if (search.trim()) {
       const term = search.toLowerCase()
@@ -70,7 +106,7 @@ function VehicleListingPage() {
     }
 
     return result
-  }, [search, filters, sortBy])
+  }, [search, filters, sortBy, vehicles])
 
   const handleFilterChange = (newFilters) => {
     setFilters(newFilters)
@@ -105,7 +141,7 @@ function VehicleListingPage() {
       <section className="py-8 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-            <p className="text-slate-600">{filteredVehicles.length} vehicles available</p>
+            <p className="text-slate-600">{loading ? 'Loading...' : `${filteredVehicles.length} vehicles available`}</p>
             <div className="flex items-center gap-3 w-full sm:w-auto">
               <div className="relative flex-1 sm:flex-none">
                 <SlidersHorizontal className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -134,7 +170,11 @@ function VehicleListingPage() {
               />
             </div>
             <div className="flex-1">
-              {filteredVehicles.length > 0 ? (
+              {loading ? (
+                <div className="flex items-center justify-center min-h-[200px]">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                </div>
+              ) : filteredVehicles.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                   {filteredVehicles.map((vehicle) => (
                     <VehicleCard key={vehicle.id} vehicle={vehicle} />
