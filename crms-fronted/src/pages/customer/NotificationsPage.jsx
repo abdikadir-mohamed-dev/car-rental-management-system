@@ -1,16 +1,67 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Bell, Check, Trash2 } from 'lucide-react'
-import { mockNotifications } from '../../data/mockNotifications'
+import { getNotifications, markAsRead, markAllAsRead } from '../../services/notificationService'
+import { useSelector } from 'react-redux'
 
 function NotificationsPage() {
-  const [notifications, setNotifications] = useState(mockNotifications)
+  const [notifications, setNotifications] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const { user } = useSelector((state) => state.auth)
 
-  const markAsRead = (id) => {
-    setNotifications(notifications.map(n => n.id === id ? { ...n, read: true } : n))
+  useEffect(() => {
+    const loadNotifications = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        const data = await getNotifications(user?.id)
+        const list = (data && data.notifications) ? data.notifications : (Array.isArray(data) ? data : [])
+        setNotifications(list.map(n => ({ ...n, id: n._id || n.id, time: n.time || n.createdAt })))
+      } catch (err) {
+        setError(err.message || 'Failed to load notifications')
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadNotifications()
+  }, [user?.id])
+
+  const handleMarkAsRead = async (id) => {
+    try {
+      await markAsRead(id)
+      setNotifications(notifications.map(n => n.id === id ? { ...n, read: true } : n))
+    } catch (err) {
+      // ignore
+    }
+  }
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      await markAllAsRead()
+      setNotifications(notifications.map(n => ({ ...n, read: true })))
+    } catch (err) {
+      // ignore
+    }
   }
 
   const deleteNotification = (id) => {
     setNotifications(notifications.filter(n => n.id !== id))
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[200px]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-slate-500">{error}</p>
+      </div>
+    )
   }
 
   return (
@@ -21,7 +72,7 @@ function NotificationsPage() {
           <p className="text-slate-600 mt-1">Stay updated with your bookings</p>
         </div>
         <button
-          onClick={() => setNotifications(notifications.map(n => ({ ...n, read: true })))}
+          onClick={handleMarkAllAsRead}
           className="btn-secondary flex items-center gap-2"
         >
           <Check className="w-4 h-4" />
@@ -61,7 +112,7 @@ function NotificationsPage() {
                   <div className="flex items-center gap-1 flex-shrink-0">
                     {!notification.read && (
                       <button
-                        onClick={() => markAsRead(notification.id)}
+                        onClick={() => handleMarkAsRead(notification.id)}
                         className="p-1.5 hover:bg-slate-200 rounded-lg"
                         title="Mark as read"
                       >

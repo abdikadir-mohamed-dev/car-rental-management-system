@@ -1,29 +1,28 @@
 import React from 'react'
-import { useSelector, useDispatch } from 'react-redux'
 import {
   Car, Users, Wrench, BarChart2, Bell, User, Power,
   ShipWheel, ChevronDown, DollarSign, Route, Search, Phone, Mail, Star
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { useEffect } from 'react'
-import { fetchCustomers } from '../../redux/slices/driverSlice'
+
+const customers = [
+  { name: 'Wanjiru Kamau', email: 'wanjiru.k@example.com', phone: '+254 711 222 333', trips: 12, rating: 4.9 },
+  { name: 'Brian Otieno', email: 'brian.otieno@example.com', phone: '+254 722 333 444', trips: 8, rating: 4.7 },
+  { name: 'Amina Yusuf', email: 'amina.yusuf@example.com', phone: '+254 733 444 555', trips: 21, rating: 5.0 },
+  { name: 'Kevin Njoroge', email: 'kevin.n@example.com', phone: '+254 744 555 666', trips: 5, rating: 4.4 },
+  { name: 'Grace Achieng', email: 'grace.a@example.com', phone: '+254 755 666 777', trips: 15, rating: 4.8 },
+  { name: 'Samuel Kiptoo', email: 'samuel.k@example.com', phone: '+254 766 777 888', trips: 3, rating: 4.2 },
+];
 
 export default function DriverCustomersPage() {
-  const dispatch = useDispatch()
-  const { customers, loading } = useSelector((state) => state.driver)
   const [query, setQuery] = React.useState('');
 
-  useEffect(() => {
-    dispatch(fetchCustomers())
-  }, [dispatch])
-
-  const displayCustomers = customers.length > 0 ? customers : []
-  const filtered = displayCustomers.filter((c) =>
-    (c.name || '').toLowerCase().includes(query.toLowerCase()) || (c.email || '').toLowerCase().includes(query.toLowerCase())
+  const filtered = customers.filter((c) =>
+    c.name.toLowerCase().includes(query.toLowerCase()) || c.email.toLowerCase().includes(query.toLowerCase())
   );
 
   const handleCustomerAction = (customer, action) => {
-    toast.success(`${customer.name || ''} ${action}`)
+    toast.success(`${customer.name} ${action}`)
   }
 
   return (

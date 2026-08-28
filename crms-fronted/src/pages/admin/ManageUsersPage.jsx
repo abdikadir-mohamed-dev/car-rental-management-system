@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react'
 import toast from 'react-hot-toast'
 import UserManagement from '../../components/admin/UserManagement'
-import { getUsers, createStaff, createDriver } from '../../services/adminService'
+import { getUsers, createStaff, createDriver, registerUser } from '../../services/adminService'
 
 function ManageUsersPage() {
   const [showModal, setShowModal] = useState(false)
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -19,20 +20,21 @@ function ManageUsersPage() {
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
+    const loadUsers = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        const data = await getUsers()
+        const list = Array.isArray(data) ? data : (data.users || [])
+        setUsers(list)
+      } catch (err) {
+        setError(err.message || 'Failed to load users')
+      } finally {
+        setLoading(false)
+      }
+    }
     loadUsers()
   }, [])
-
-  const loadUsers = async () => {
-    setLoading(true)
-    try {
-      const response = await getUsers()
-      setUsers(response.data)
-    } catch (error) {
-      toast.error('Failed to load users')
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
@@ -48,13 +50,14 @@ function ManageUsersPage() {
     if (!formData.name.trim()) newErrors.name = 'Name is required'
     if (!formData.email.trim()) newErrors.email = 'Email is required'
     else if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = 'Invalid email format'
+    if (!formData.phone.trim()) newErrors.phone = 'Phone is required'
+    else if (!/^\d{10}$/.test(formData.phone.trim())) newErrors.phone = 'Phone must be exactly 10 digits'
+
     if (formData.role === 'staff' || formData.role === 'driver') {
-      if (!formData.phone.trim()) newErrors.phone = 'Phone is required'
-      else if (!/^\d{10}$/.test(formData.phone.trim())) newErrors.phone = 'Phone must be exactly 10 digits'
+      if (!formData.password) newErrors.password = 'Password is required'
+      else if (formData.password.length < 6) newErrors.password = 'Password must be at least 6 characters'
+      if (formData.password !== formData.confirmPassword) newErrors.confirmPassword = 'Passwords do not match'
     }
-    if (!formData.password) newErrors.password = 'Password is required'
-    else if (formData.password.length < 6) newErrors.password = 'Password must be at least 6 characters'
-    if (formData.password !== formData.confirmPassword) newErrors.confirmPassword = 'Passwords do not match'
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors)
@@ -62,37 +65,41 @@ function ManageUsersPage() {
     }
 
     setSubmitting(true)
+
     try {
-      let response
+      let result
       if (formData.role === 'staff') {
-        response = await createStaff({
+        result = await createStaff({
           name: formData.name,
           email: formData.email,
           phone: formData.phone,
+          isActive: true,
         })
       } else if (formData.role === 'driver') {
-        response = await createDriver({
+        result = await createDriver({
           name: formData.name,
           email: formData.email,
           phone: formData.phone,
+          isActive: true,
         })
       } else {
-        response = await createStaff({
+        result = await registerUser({
           name: formData.name,
           email: formData.email,
           phone: formData.phone,
           role: formData.role,
+          password: formData.password,
         })
       }
 
-      const password = response.data.password || formData.password
-      toast.success(`Account created successfully. Credentials sent to ${formData.email}. Temporary password: ${password}`)
+      const newUser = result.user || result
+      setUsers((prev) => [newUser, ...prev])
+      toast.success(`Account created successfully. Credentials sent to ${formData.email}`)
       setFormData({ name: '', email: '', phone: '', role: 'staff', password: '', confirmPassword: '' })
       setErrors({})
       setShowModal(false)
-      loadUsers()
-    } catch (error) {
-      toast.error(error.response?.data?.error || 'Failed to create user')
+    } catch (err) {
+      toast.error(err.message || err.response?.data?.error || 'Failed to create user')
     } finally {
       setSubmitting(false)
     }
@@ -104,6 +111,23 @@ function ManageUsersPage() {
     setErrors({})
   }
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[200px]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-slate-500">{error}</p>
+        <button onClick={() => window.location.reload()} className="mt-4 text-blue-600 hover:underline">Retry</button>
+      </div>
+    )
+  }
+
   return (
     <div>
       <div className="flex items-center justify-between mb-8">
@@ -113,13 +137,7 @@ function ManageUsersPage() {
         </div>
         <button onClick={() => setShowModal(true)} className="btn-primary">Add User</button>
       </div>
-      {loading ? (
-        <div className="flex items-center justify-center min-h-[200px]">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-        </div>
-      ) : (
-        <UserManagement users={users} setUsers={setUsers} onEdit={loadUsers} />
-      )}
+      <UserManagement users={users} setUsers={setUsers} />
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
@@ -174,8 +192,6 @@ function ManageUsersPage() {
                 >
                   <option value="staff">Staff</option>
                   <option value="driver">Driver</option>
-                  <option value="customer">Customer</option>
-                  <option value="admin">Admin</option>
                 </select>
               </div>
               <div>

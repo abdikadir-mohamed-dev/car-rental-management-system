@@ -1,24 +1,52 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import { useSelector } from 'react-redux'
 import { Car, Calendar, CreditCard, Heart, MapPin, Search, Star, Users, User, FileText, CheckCircle } from 'lucide-react'
-import { mockVehicles } from '../../data/mockData'
-import { mockBookings } from '../../data/mockBookings'
+import { getVehicles } from '../../services/vehicleService'
+import { getBookings } from '../../services/bookingService'
+import { mapVehicle } from '../../utils/apiMappers'
+import { mapBooking } from '../../utils/apiMappers'
 
 function CustomerDashboard() {
+  const { user } = useSelector((state) => state.auth)
   const [pickupLocation, setPickupLocation] = useState('')
   const [pickupDate, setPickupDate] = useState('')
   const [returnDate, setReturnDate] = useState('')
+  const [vehicles, setVehicles] = useState([])
+  const [bookings, setBookings] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
-  const upcomingBooking = mockBookings.find(b => b.status === 'upcoming')
-  const recentBookings = mockBookings.filter(b => b.status === 'completed' || b.status === 'cancelled').slice(0, 3)
-  const completedBookings = mockBookings.filter(b => b.status === 'completed')
-  const recommendedVehicles = mockVehicles.slice(0, 4)
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        const [vehiclesData, bookingsData] = await Promise.all([
+          getVehicles(),
+          getBookings(),
+        ])
+        setVehicles((vehiclesData || []).map(mapVehicle))
+        setBookings((bookingsData || []).map(mapBooking))
+      } catch (err) {
+        setError(err.message || 'Failed to load data')
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadData()
+  }, [])
+
+  const upcomingBooking = bookings.find(b => b.status === 'upcoming')
+  const recentBookings = bookings.filter(b => b.status === 'completed' || b.status === 'cancelled').slice(0, 3)
+  const completedBookings = bookings.filter(b => b.status === 'completed')
+  const recommendedVehicles = vehicles.slice(0, 4)
 
   const stats = {
-    totalBookings: mockBookings.length,
-    upcoming: mockBookings.filter(b => b.status === 'upcoming').length,
-    completed: mockBookings.filter(b => b.status === 'completed').length,
-    totalSpent: mockBookings.reduce((sum, b) => sum + b.totalPrice, 0),
+    totalBookings: bookings.length,
+    upcoming: bookings.filter(b => b.status === 'upcoming').length,
+    completed: bookings.filter(b => b.status === 'completed').length,
+    totalSpent: bookings.reduce((sum, b) => sum + (b.totalPrice || 0), 0),
   }
 
   const handleSearch = (e) => {
@@ -30,10 +58,26 @@ function CustomerDashboard() {
     window.location.href = `/customer/browse?${params.toString()}`
   }
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[200px]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-slate-500">{error}</p>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-slate-900">Good morning, John! 👋</h1>
+        <h1 className="text-3xl font-bold text-slate-900">Good morning, {user?.name?.split(' ')[0] || 'Customer'}! 👋</h1>
         <p className="text-slate-600 mt-1">Ready to find your next amazing ride?</p>
       </div>
 
@@ -146,7 +190,7 @@ function CustomerDashboard() {
               <h2 className="text-xl font-semibold text-slate-900 mb-4">Upcoming Booking</h2>
               <div className="flex gap-4">
                 <img
-                  src={mockVehicles.find(v => v.id === upcomingBooking.vehicleId)?.image}
+                  src={vehicles.find(v => v.id === upcomingBooking.vehicleId)?.image}
                   alt="Vehicle"
                   className="w-32 h-24 object-cover rounded-lg"
                 />
@@ -154,7 +198,7 @@ function CustomerDashboard() {
                   <div className="flex items-start justify-between">
                     <div>
                       <h3 className="font-semibold text-slate-900">
-                        {mockVehicles.find(v => v.id === upcomingBooking.vehicleId)?.name}
+                        {vehicles.find(v => v.id === upcomingBooking.vehicleId)?.name}
                       </h3>
                       <span className="inline-block mt-1 px-2 py-1 bg-emerald-100 text-success text-xs rounded-full font-medium capitalize">
                         {upcomingBooking.status}
@@ -192,13 +236,13 @@ function CustomerDashboard() {
                 <div key={booking.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
                   <div className="flex items-center gap-3">
                     <img
-                      src={mockVehicles.find(v => v.id === booking.vehicleId)?.image}
+                      src={vehicles.find(v => v.id === booking.vehicleId)?.image}
                       alt="Vehicle"
                       className="w-16 h-12 object-cover rounded-lg"
                     />
                     <div>
                       <p className="font-medium text-slate-900">
-                        {mockVehicles.find(v => v.id === booking.vehicleId)?.name}
+                        {vehicles.find(v => v.id === booking.vehicleId)?.name}
                       </p>
                       <p className="text-sm text-slate-500">{booking.pickupDate} - {booking.returnDate}</p>
                     </div>
@@ -240,13 +284,13 @@ function CustomerDashboard() {
                   <div key={booking.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
                     <div className="flex items-center gap-3">
                       <img
-                        src={mockVehicles.find(v => v.id === booking.vehicleId)?.image}
+                        src={vehicles.find(v => v.id === booking.vehicleId)?.image}
                         alt="Vehicle"
                         className="w-16 h-12 object-cover rounded-lg"
                       />
                       <div>
                         <p className="font-medium text-slate-900">
-                          {mockVehicles.find(v => v.id === booking.vehicleId)?.name}
+                          {vehicles.find(v => v.id === booking.vehicleId)?.name}
                         </p>
                         <p className="text-sm text-slate-500">{booking.pickupDate} - {booking.returnDate}</p>
                       </div>

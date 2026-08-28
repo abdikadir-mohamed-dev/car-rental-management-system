@@ -1,41 +1,40 @@
 import React from 'react'
-import { useSelector, useDispatch } from 'react-redux'
 import {
   Car, Wrench, BarChart2, Bell, User, Power,
   ShipWheel, ChevronDown, DollarSign, Route, Search, Fuel, Gauge
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { useEffect } from 'react'
-import { fetchVehicles } from '../../redux/slices/driverSlice'
+
+const vehicles = [
+  { plate: 'KDA 221B', model: 'Toyota Prado', mileage: 45210, fuel: 'Full', status: 'Available' },
+  { plate: 'KDB 774K', model: 'Subaru Forester', mileage: 38900, fuel: '3/4', status: 'Rented' },
+  { plate: 'KCF 108T', model: 'Mazda Demio', mileage: 30880, fuel: 'Half', status: 'Rented' },
+  { plate: 'KCE 552M', model: 'Honda Accord', mileage: 52140, fuel: 'Full', status: 'Available' },
+  { plate: 'KDC 340L', model: 'Nissan X-Trail', mileage: 18200, fuel: 'Low', status: 'Maintenance' },
+  { plate: 'KDD 901R', model: 'Mercedes C-Class', mileage: 27650, fuel: '3/4', status: 'Unavailable' },
+];
 
 const tabs = ['All', 'Available', 'Rented', 'Maintenance', 'Unavailable'];
 
 const statusStyle = {
-  Available: 'bg-emerald-100 text-emerald-700',
-  Rented: 'bg-blue-100 text-blue-700',
-  Maintenance: 'bg-amber-100 text-amber-700',
-  Unavailable: 'bg-rose-100 text-rose-700',
+  Available: 'badge-success',
+  Rented: 'badge-info',
+  Maintenance: 'badge-warning',
+  Unavailable: 'badge-danger',
 };
 
 export default function DriverVehiclesPage() {
-  const dispatch = useDispatch()
-  const { vehicles, loading } = useSelector((state) => state.driver)
   const [tab, setTab] = React.useState('All');
   const [query, setQuery] = React.useState('');
 
-  useEffect(() => {
-    dispatch(fetchVehicles())
-  }, [dispatch])
-
-  const displayVehicles = vehicles.length > 0 ? vehicles : []
-  const filtered = displayVehicles.filter((v) => {
-    const matchesTab = tab === 'All' || (v.status || '').toLowerCase() === tab.toLowerCase();
-    const matchesQuery = (v.model || '').toLowerCase().includes(query.toLowerCase()) || (v.plate_number || '').toLowerCase().includes(query.toLowerCase());
+  const filtered = vehicles.filter((v) => {
+    const matchesTab = tab === 'All' || v.status === tab;
+    const matchesQuery = v.model.toLowerCase().includes(query.toLowerCase()) || v.plate.toLowerCase().includes(query.toLowerCase());
     return matchesTab && matchesQuery;
   });
 
   const handleVehicleAction = (vehicle, action) => {
-    toast.success(`${vehicle.model || ''} ${action}`)
+    toast.success(`${vehicle.model} ${action}`)
   }
 
   return (

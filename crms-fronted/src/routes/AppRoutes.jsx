@@ -29,8 +29,10 @@ import ReportsPage from '../pages/admin/ReportsPage'
 import AdminSettingsPage from '../pages/admin/SettingsPage'
 import AdminProfilePage from '../pages/admin/AdminProfilePage'
 import RentalPoliciesPage from '../pages/admin/RentalPoliciesPage'
+import AdminNotificationsPage from '../pages/admin/AdminNotificationsPage'
 
 import CustomerDashboard from '../pages/customer/CustomerDashboard'
+import CustomerPoliciesPage from '../pages/customer/CustomerPoliciesPage'
 import VehicleBrowsePage from '../pages/customer/VehicleBrowsePage'
 import CustomerVehicleDetailsPage from '../pages/customer/VehicleDetailsPage'
 import BookingPage from '../pages/customer/BookingPage'
@@ -41,6 +43,12 @@ import SavedCarsPage from '../pages/customer/SavedCarsPage'
 import NotificationsPage from '../pages/customer/NotificationsPage'
 import SettingsPage from '../pages/customer/SettingsPage'
 import HelpSupportPage from '../pages/customer/HelpSupportPage'
+import UpcomingRentalsPage from '../pages/customer/UpcomingRentalsPage'
+import ActiveRentalPage from '../pages/customer/ActiveRentalPage'
+import BookingHistoryPage from '../pages/customer/BookingHistoryPage'
+import RentalAgreementPage from '../pages/customer/RentalAgreementPage'
+import ReviewsPage from '../pages/customer/ReviewsPage'
+import PaymentsPage from '../pages/customer/PaymentsPage'
 
 import StaffDashboard from '../pages/staff/StaffDashboard'
 import StaffBookingsPage from '../pages/staff/StaffBookingsPage'
@@ -83,7 +91,7 @@ function AppRoutes() {
         <Route path="auth/login" element={<LoginPage />} />
         <Route path="auth/register" element={<RegisterPage />} />
         <Route path="auth/forgot-password" element={<ForgotPasswordPage />} />
-        <Route path="auth/reset-password/:token" element={<ResetPasswordPage />} />
+        <Route path="auth/reset-password" element={<ResetPasswordPage />} />
       </Route>
 
       <Route
@@ -98,9 +106,10 @@ function AppRoutes() {
         <Route path="users" element={<ManageUsersPage />} />
         <Route path="vehicles" element={<ManageVehiclesPage />} />
         <Route path="bookings" element={<ManageBookingsPage />} />
-        <Route path="rental-policies" element={<RentalPoliciesPage />} />
+        <Route path="policies" element={<RentalPoliciesPage />} />
         <Route path="payments" element={<ManagePaymentsPage />} />
         <Route path="reports" element={<ReportsPage />} />
+        <Route path="notifications" element={<AdminNotificationsPage />} />
         <Route path="settings" element={<AdminSettingsPage />} />
         <Route path="profile" element={<AdminProfilePage />} />
       </Route>
@@ -119,11 +128,19 @@ function AppRoutes() {
         <Route path="booking/:vehicleId" element={<BookingPage />} />
         <Route path="my-bookings" element={<MyBookingsPage />} />
         <Route path="my-bookings/:id" element={<MyBookingsPage />} />
+        <Route path="bookings" element={<MyBookingsPage />} />
+        <Route path="bookings/upcoming" element={<UpcomingRentalsPage />} />
+        <Route path="bookings/active" element={<ActiveRentalPage />} />
+        <Route path="booking-history" element={<BookingHistoryPage />} />
+        <Route path="agreements" element={<RentalAgreementPage />} />
+        <Route path="agreements/:id" element={<RentalAgreementPage />} />
+        <Route path="reviews" element={<ReviewsPage />} />
+        <Route path="payments" element={<PaymentsPage />} />
         <Route path="saved-cars" element={<SavedCarsPage />} />
-        <Route path="payments" element={<MyPaymentsPage />} />
-        <Route path="notifications" element={<NotificationsPage />} />
         <Route path="profile" element={<ProfilePage />} />
         <Route path="settings" element={<SettingsPage />} />
+        <Route path="policies" element={<CustomerPoliciesPage />} />
+        <Route path="notifications" element={<NotificationsPage />} />
         <Route path="help" element={<HelpSupportPage />} />
       </Route>
 
@@ -140,13 +157,11 @@ function AppRoutes() {
         <Route path="checkout" element={<StaffCheckoutPage />} />
         <Route path="checkin" element={<StaffCheckinPage />} />
         <Route path="vehicles" element={<StaffVehiclesPage />} />
+        <Route path="driver-assignments" element={<StaffDriverAssignmentsPage />} />
         <Route path="customers" element={<StaffCustomersPage />} />
         <Route path="reports" element={<StaffReportsPage />} />
         <Route path="notifications" element={<StaffNotificationsPage />} />
         <Route path="profile" element={<StaffProfilePage />} />
-        <Route path="trips" element={<StaffTripsPage />} />
-        <Route path="calendar" element={<StaffCalendarPage />} />
-        <Route path="driver-assignments" element={<StaffDriverAssignmentsPage />} />
       </Route>
 
       <Route

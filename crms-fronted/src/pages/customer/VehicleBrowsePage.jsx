@@ -1,11 +1,16 @@
 import { useState, useMemo, useEffect } from 'react'
-import { Heart, Star, Users, Gauge, Fuel } from 'lucide-react'
+import { Heart, Star, Users, Gauge, Fuel, Calendar } from 'lucide-react'
 import VehicleCard from '../../components/vehicles/VehicleCard'
 import { getVehicles } from '../../services/vehicleService'
+import { getBookings } from '../../services/bookingService'
+import { mapVehicle } from '../../utils/apiMappers'
+import { mapBooking } from '../../utils/apiMappers'
 
 function VehicleBrowsePage() {
   const [search, setSearch] = useState('')
   const [sortBy, setSortBy] = useState('popular')
+  const [pickupDate, setPickupDate] = useState('')
+  const [returnDate, setReturnDate] = useState('')
   const [filters, setFilters] = useState({
     location: '',
     category: '',
@@ -15,41 +20,47 @@ function VehicleBrowsePage() {
     fuelType: '',
   })
   const [vehicles, setVehicles] = useState([])
+  const [bookings, setBookings] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
-    const loadVehicles = async () => {
-      setLoading(true)
+    const loadData = async () => {
       try {
-        const response = await getVehicles()
-        const mapped = (response.data || []).map((v) => ({
-          id: v.id,
-          name: `${v.make} ${v.model}`,
-          brand: v.make,
-          category: v.vehicleType,
-          pricePerDay: v.dailyRentalRate,
-          rating: 4.5,
-          seats: v.seatingCapacity || 5,
-          doors: 4,
-          transmission: v.transmission,
-          fuelType: v.fuelType,
-          luggage: 2,
-          location: v.location,
-          image: v.images?.[0] || '/placeholder-car.jpg',
-          images: v.images || [],
-          features: v.features || [],
-          description: v.description || '',
-          available: v.available,
-        }))
-        setVehicles(mapped)
-      } catch (error) {
-        console.error('Failed to load vehicles:', error)
+        setLoading(true)
+        setError(null)
+        const [vehiclesData, bookingsData] = await Promise.all([
+          getVehicles(),
+          getBookings(),
+        ])
+        setVehicles((vehiclesData || []).map(mapVehicle))
+        setBookings((bookingsData || []).map(mapBooking))
+      } catch (err) {
+        setError(err.message || 'Failed to load data')
       } finally {
         setLoading(false)
       }
     }
-    loadVehicles()
+    loadData()
   }, [])
+
+  const getBookedVehicleIds = () => {
+    if (!pickupDate || !returnDate) return new Set()
+    const pickup = new Date(pickupDate)
+    const returnD = new Date(returnDate)
+    if (returnD < pickup) return new Set()
+    const bookedIds = new Set()
+    bookings.forEach(booking => {
+      const bStart = new Date(booking.pickupDate)
+      const bEnd = new Date(booking.returnDate)
+      if (pickup <= bEnd && returnD >= bStart) {
+        bookedIds.add(booking.vehicleId)
+      }
+    })
+    return bookedIds
+  }
+
+  const bookedVehicleIds = getBookedVehicleIds()
 
   const filteredVehicles = useMemo(() => {
     let result = [...vehicles]
@@ -61,6 +72,14 @@ function VehicleBrowsePage() {
         v.brand.toLowerCase().includes(term) ||
         v.category.toLowerCase().includes(term)
       )
+    }
+
+    if (pickupDate && returnDate) {
+      const pickup = new Date(pickupDate)
+      const returnD = new Date(returnDate)
+      if (returnD >= pickup) {
+        result = result.filter(v => !bookedVehicleIds.has(v.id))
+      }
     }
 
     if (filters.location) {
@@ -95,7 +114,7 @@ function VehicleBrowsePage() {
     }
 
     return result
-  }, [search, filters, sortBy, vehicles])
+  }, [search, filters, sortBy, pickupDate, returnDate, bookedVehicleIds, vehicles])
 
   const handleFilterChange = (name, value) => {
     setFilters({ ...filters, [name]: value })
@@ -105,6 +124,24 @@ function VehicleBrowsePage() {
     setFilters({ location: '', category: '', minPrice: '', maxPrice: '', transmission: '', fuelType: '' })
     setSearch('')
     setSortBy('popular')
+    setPickupDate('')
+    setReturnDate('')
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[200px]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-slate-500">{error}</p>
+      </div>
+    )
   }
 
   return (
@@ -119,7 +156,7 @@ function VehicleBrowsePage() {
       <section className="py-8 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-            <p className="text-slate-600">{loading ? 'Loading...' : `${filteredVehicles.length} vehicles available`}</p>
+            <p className="text-slate-600">{filteredVehicles.length} vehicles available</p>
             <div className="flex items-center gap-3 w-full sm:w-auto">
               <input
                 type="text"
@@ -211,6 +248,30 @@ function VehicleBrowsePage() {
                     </select>
                   </div>
                   <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Pick-up Date</label>
+                    <div className="relative">
+                      <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <input
+                        type="date"
+                        value={pickupDate}
+                        onChange={(e) => setPickupDate(e.target.value)}
+                        className="input pl-9"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Return Date</label>
+                    <div className="relative">
+                      <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <input
+                        type="date"
+                        value={returnDate}
+                        onChange={(e) => setReturnDate(e.target.value)}
+                        className="input pl-9"
+                      />
+                    </div>
+                  </div>
+                  <div>
                     <label className="block text-sm font-medium text-slate-700 mb-2">Fuel Type</label>
                     <select
                       value={filters.fuelType}
@@ -228,11 +289,7 @@ function VehicleBrowsePage() {
               </div>
             </div>
             <div className="flex-1">
-              {loading ? (
-                <div className="flex items-center justify-center min-h-[200px]">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-                </div>
-              ) : filteredVehicles.length > 0 ? (
+              {filteredVehicles.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                   {filteredVehicles.map((vehicle) => (
                     <VehicleCard key={vehicle.id} vehicle={vehicle} to={`/customer/vehicles/${vehicle.id}`} />

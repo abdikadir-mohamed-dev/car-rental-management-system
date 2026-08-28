@@ -10,46 +10,81 @@ const staffService = axios.create({
   },
 })
 
-staffService.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token')
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
-  }
-  return config
-})
-
-setAuthToken(localStorage.getItem('token'))
+setAuthToken(localStorage.getItem('token'), staffService)
 
 export const getStaffDashboard = async () => {
-  return await staffService.get('/dashboard')
+  const response = await staffService.get('/dashboard')
+  return response.data
 }
 
 export const getPendingBookings = async () => {
-  return await staffService.get('/bookings/pending')
+  const response = await staffService.get('/bookings/pending')
+  return response.data
 }
 
 export const approveBooking = async (id, data) => {
-  return await staffService.put(`/bookings/${id}/approve`, data)
+  const response = await staffService.put(`/bookings/${id}/approve`, data)
+  return response.data
 }
 
 export const rejectBooking = async (id, data) => {
-  return await staffService.put(`/bookings/${id}/reject`, data)
+  const response = await staffService.put(`/bookings/${id}/reject`, data)
+  return response.data
 }
 
 export const getTrips = async (params) => {
-  return await staffService.get('/trips', { params })
+  const response = await staffService.get('/trips', { params })
+  return response.data
 }
 
 export const updateTripStatus = async (id, status) => {
-  return await staffService.put(`/trips/${id}/status`, { status })
+  const response = await staffService.put(`/trips/${id}/status`, { status })
+  return response.data
 }
 
 export const getVehiclesForInspection = async () => {
-  return await staffService.get('/vehicles/inspection')
+  const response = await staffService.get('/vehicles/inspection')
+  return response.data
 }
 
 export const updateVehicleInspection = async (id, data) => {
-  return await staffService.put(`/vehicles/${id}/inspection`, data)
+  const response = await staffService.put(`/vehicles/${id}/inspection`, data)
+  return response.data
+}
+
+export const updateStaffBookingStatus = async (id, status) => {
+  const response = await staffService.put(`/bookings/${id}/approve`, { status })
+  return response.data
+}
+
+export const checkoutBooking = async (id, data) => {
+  const response = await staffService.post(`/bookings/${id}/checkout`, data)
+  return response.data
+}
+
+export const checkinBooking = async (id, data) => {
+  const response = await staffService.post(`/bookings/${id}/checkin`, data)
+  return response.data
+}
+
+export const getStaffCustomers = async () => {
+  const response = await staffService.get('/customers')
+  return response.data
+}
+
+export const getDriverRequests = async () => {
+  const response = await staffService.get('/driver-assignments')
+  return response.data
+}
+
+export const assignDriver = async (bookingId, driverId) => {
+  const response = await staffService.post('/driver-assignments', { bookingId, driverId })
+  return response.data
+}
+
+export const flagVehicleMaintenance = async (vehicleId, notes) => {
+  const response = await staffService.post(`/vehicles/${vehicleId}/maintenance`, { notes })
+  return response.data
 }
 
 export default staffService

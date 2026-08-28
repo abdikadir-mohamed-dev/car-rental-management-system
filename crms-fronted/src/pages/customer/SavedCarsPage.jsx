@@ -1,14 +1,50 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Heart, Star, Users, Gauge, Fuel } from 'lucide-react'
-import { mockVehicles } from '../../data/mockData'
+import { getVehicles } from '../../services/vehicleService'
+import { mapVehicle } from '../../utils/apiMappers'
 
 function SavedCarsPage() {
   const [savedIds, setSavedIds] = useState([1, 3])
-  const savedVehicles = mockVehicles.filter(v => savedIds.includes(v.id))
+  const [vehicles, setVehicles] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    const loadVehicles = async () => {
+      try {
+        setLoading(true)
+        const data = await getVehicles()
+        setVehicles((data || []).map(mapVehicle))
+      } catch (err) {
+        setError(err.message || 'Failed to load vehicles')
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadVehicles()
+  }, [])
+
+  const savedVehicles = vehicles.filter(v => savedIds.includes(v.id))
 
   const toggleSave = (id) => {
     setSavedIds(prev => prev.includes(id) ? prev.filter(sid => sid !== id) : [...prev, id])
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[200px]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-slate-500">{error}</p>
+      </div>
+    )
   }
 
   return (

@@ -4,30 +4,34 @@ import { Eye, RefreshCw, Search } from 'lucide-react'
 import { PAYMENT_STATUS } from '../../utils/constants'
 import ConfirmDialog from '../../components/common/ConfirmDialog'
 import { getPayments, refundPayment } from '../../services/adminService'
+import { mapPayment } from '../../utils/apiMappers'
 
 function PaymentManagement() {
   const [payments, setPayments] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [selectedPayment, setSelectedPayment] = useState(null)
   const [refundId, setRefundId] = useState(null)
   const [confirmOpen, setConfirmOpen] = useState(false)
+  const [refunding, setRefunding] = useState(false)
 
   const loadPayments = async () => {
-    setLoading(true)
     try {
-      const response = await getPayments()
-      setPayments(response.data.payments || response.data)
-    } catch {
-      toast.error('Failed to load payments')
+      setLoading(true)
+      setError(null)
+      const data = await getPayments()
+      const list = Array.isArray(data) ? data : (data.payments || [])
+      setPayments(list.map(mapPayment))
+    } catch (err) {
+      setError(err.message || 'Failed to load payments')
     } finally {
       setLoading(false)
     }
   }
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadPayments()
   }, [])
 
@@ -50,13 +54,17 @@ function PaymentManagement() {
     setConfirmOpen(false)
     if (refundId) {
       try {
-        await refundPayment(refundId)
-        setPayments(payments.map(p => (p.id || p._id) === refundId ? { ...p, status: PAYMENT_STATUS.REFUNDED } : p))
+        setRefunding(true)
+        const result = await refundPayment(refundId)
+        const updatedPayment = result.payment || result
+        setPayments(payments.map(p => (p._id || p.id) === refundId ? { ...p, ...updatedPayment } : p))
         toast.success('Payment refunded')
-      } catch {
-        toast.error('Failed to refund payment')
+      } catch (err) {
+        toast.error(err.message || 'Failed to refund payment')
+      } finally {
+        setRefunding(false)
+        setRefundId(null)
       }
-      setRefundId(null)
     }
   }
 
@@ -66,13 +74,19 @@ function PaymentManagement() {
   }
 
   const filteredPayments = payments.filter(payment => {
-    const matchesSearch = (payment.id && payment.id.toString().toLowerCase().includes(search.toLowerCase())) || (payment._id && payment._id.toString().toLowerCase().includes(search.toLowerCase()))
+    const matchesSearch = payment._id?.toLowerCase().includes(search.toLowerCase()) || payment.user?.name?.toLowerCase().includes(search.toLowerCase())
     const matchesStatus = !statusFilter || payment.status === statusFilter
     return matchesSearch && matchesStatus
   })
 
   return (
     <div>
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+          {error}
+          <button onClick={loadPayments} className="ml-2 underline">Retry</button>
+        </div>
+      )}
       <div className="flex flex-col sm:flex-row gap-4 mb-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
@@ -93,7 +107,7 @@ function PaymentManagement() {
       </div>
       {loading ? (
         <div className="flex items-center justify-center min-h-[200px]">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
         </div>
       ) : (
         <div className="overflow-x-auto">
@@ -101,6 +115,7 @@ function PaymentManagement() {
             <thead>
               <tr className="border-b border-slate-200">
                 <th className="text-left py-3 px-4 font-medium text-slate-600">ID</th>
+                <th className="text-left py-3 px-4 font-medium text-slate-600">Customer</th>
                 <th className="text-left py-3 px-4 font-medium text-slate-600">Amount</th>
                 <th className="text-left py-3 px-4 font-medium text-slate-600">Method</th>
                 <th className="text-left py-3 px-4 font-medium text-slate-600">Status</th>
@@ -109,9 +124,10 @@ function PaymentManagement() {
             </thead>
             <tbody>
               {filteredPayments.map((payment) => (
-                <tr key={payment.id || payment._id} className="border-b border-slate-100 hover:bg-slate-50">
-                  <td className="py-3 px-4 text-slate-900">#{payment.id || payment._id}</td>
-                  <td className="py-3 px-4 font-medium text-slate-900">KES {payment.amount?.toLocaleString()}</td>
+                <tr key={payment._id} className="border-b border-slate-100 hover:bg-slate-50">
+                  <td className="py-3 px-4 text-slate-900">#{payment._id?.slice(-8)}</td>
+                  <td className="py-3 px-4 text-slate-600">{payment.user?.name || 'N/A'}</td>
+                  <td className="py-3 px-4 font-medium text-slate-900">KES {(payment.amount || 0).toLocaleString()}</td>
                   <td className="py-3 px-4 capitalize text-slate-600">{payment.method || 'Card'}</td>
                   <td className="py-3 px-4">
                     <span className={`badge capitalize ${getStatusColor(payment.status)}`}>
@@ -124,7 +140,7 @@ function PaymentManagement() {
                         <Eye className="w-4 h-4" />
                       </button>
                       {payment.status === PAYMENT_STATUS.COMPLETED && (
-                        <button onClick={() => handleRefundClick(payment.id || payment._id)} className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg">
+                        <button onClick={() => handleRefundClick(payment._id)} className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg">
                           <RefreshCw className="w-4 h-4" />
                         </button>
                       )}
@@ -146,11 +162,11 @@ function PaymentManagement() {
               <h2 className="text-xl font-semibold text-slate-900">Payment Details</h2>
             </div>
             <div className="p-6 space-y-3">
-              <div><span className="text-slate-600">Payment ID:</span> <span className="font-medium text-slate-900">{selectedPayment.id || selectedPayment._id}</span></div>
-               <div><span className="text-slate-600">Amount:</span> <span className="font-medium text-slate-900">KES {selectedPayment.amount?.toLocaleString()}</span></div>
+              <div><span className="text-slate-600">Payment ID:</span> <span className="font-medium text-slate-900">{selectedPayment._id}</span></div>
+               <div><span className="text-slate-600">Amount:</span> <span className="font-medium text-slate-900">KES {(selectedPayment.amount || 0).toLocaleString()}</span></div>
               <div><span className="text-slate-600">Method:</span> <span className="font-medium text-slate-900 capitalize">{selectedPayment.method}</span></div>
               <div><span className="text-slate-600">Status:</span> <span className="font-medium text-slate-900 capitalize">{selectedPayment.status}</span></div>
-              <div><span className="text-slate-600">Date:</span> <span className="font-medium text-slate-900">{selectedPayment.createdAt}</span></div>
+              <div><span className="text-slate-600">Date:</span> <span className="font-medium text-slate-900">{selectedPayment.date}</span></div>
             </div>
             <div className="p-6 border-t border-slate-200">
               <button onClick={() => setSelectedPayment(null)} className="btn-secondary w-full">Close</button>

@@ -1,3 +1,5 @@
+from werkzeug.security import generate_password_hash, check_password_hash
+
 from app.extensions import db
 from datetime import datetime
 
@@ -16,6 +18,24 @@ class User(db.Model):
     must_change_password = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    last_login = db.Column(db.DateTime)
+
+    # Customer-specific fields
+    drivers_license = db.Column(db.String(50))
+    license_expiry = db.Column(db.String(20))
+    country = db.Column(db.String(50))
+    profile_photo = db.Column(db.String(255))
+    reset_password_token = db.Column(db.String(120))
+    reset_password_expire = db.Column(db.Integer)
+
+    driver_profile = db.relationship('Driver', backref='user', uselist=False, cascade='all, delete-orphan')
+    customer_profile = db.relationship('Customer', backref='user', uselist=False, cascade='all, delete-orphan')
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
 
     def to_dict(self):
         return {
@@ -24,10 +44,14 @@ class User(db.Model):
             'name': self.name,
             'email': self.email,
             'phone': self.phone,
-            'license_number': self.license_number,
             'role': self.role,
+            'license_number': self.license_number,
             'isActive': self.is_active,
             'mustChangePassword': self.must_change_password,
+            'driversLicense': self.drivers_license,
+            'licenseExpiry': self.license_expiry,
+            'country': self.country,
+            'profilePhoto': self.profile_photo,
             'createdAt': self.created_at.isoformat() if self.created_at else None,
             'updatedAt': self.updated_at.isoformat() if self.updated_at else None,
         }

@@ -10,30 +10,31 @@ const vehicleService = axios.create({
   },
 })
 
-vehicleService.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token')
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
-  }
-  return config
-})
-
-setAuthToken(localStorage.getItem('token'))
+setAuthToken(localStorage.getItem('token'), vehicleService)
 
 export const getVehicles = async (params) => {
-  return await vehicleService.get('/', { params })
+  const response = await vehicleService.get('/', { params })
+  return response.data.vehicles || response.data
 }
 
 export const getVehicle = async (id) => {
-  return await vehicleService.get(`/${id}`)
+  const response = await vehicleService.get(`/${id}`)
+  return response.data.vehicle || response.data
 }
 
 export const createVehicle = async (vehicleData) => {
-  return await vehicleService.post('/', vehicleData)
+  const response = await vehicleService.post('/', vehicleData)
+  return response.data.vehicle || response.data
 }
 
 export const updateVehicle = async (id, vehicleData) => {
-  return await vehicleService.patch(`/${id}`, vehicleData)
+  const response = await vehicleService.put(`/${id}`, vehicleData)
+  return response.data.vehicle || response.data
+}
+
+export const deleteVehicle = async (id) => {
+  const response = await vehicleService.delete(`/${id}`)
+  return response.data
 }
 
 export default vehicleService

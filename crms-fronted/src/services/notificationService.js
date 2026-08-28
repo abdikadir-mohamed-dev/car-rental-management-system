@@ -10,26 +10,31 @@ const notificationService = axios.create({
   },
 })
 
-notificationService.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token')
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
-  }
-  return config
-})
+setAuthToken(localStorage.getItem('token'), notificationService)
 
-setAuthToken(localStorage.getItem('token'))
+export const getNotifications = async (userId) => {
+  const response = await notificationService.get('/', { params: { user_id: userId } })
+  return response.data
+}
 
-export const getNotifications = async (params) => {
-  return await notificationService.get('/', { params })
+export const getUnreadCount = async () => {
+  const response = await notificationService.get('/unread-count')
+  return response.data
+}
+
+export const getNotification = async (id) => {
+  const response = await notificationService.get(`/${id}`)
+  return response.data
 }
 
 export const markAsRead = async (id) => {
-  return await notificationService.patch(`/${id}/read`)
+  const response = await notificationService.put(`/${id}/read`)
+  return response.data
 }
 
 export const markAllAsRead = async () => {
-  return await notificationService.patch('/read-all')
+  const response = await notificationService.put('/read-all')
+  return response.data
 }
 
 export default notificationService

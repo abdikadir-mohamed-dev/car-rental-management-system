@@ -5,8 +5,8 @@ export const fetchUser = createAsyncThunk(
   'user/fetchUser',
   async (_, { rejectWithValue }) => {
     try {
-      const response = await userService.getProfile()
-      return response.data
+      const data = await userService.getProfile()
+      return data
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Failed to fetch user')
     }
@@ -17,8 +17,8 @@ export const updateProfile = createAsyncThunk(
   'user/updateProfile',
   async (userData, { rejectWithValue }) => {
     try {
-      const response = await userService.updateProfile(userData)
-      return response.data
+      const data = await userService.updateProfile(userData)
+      return data
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Failed to update profile')
     }

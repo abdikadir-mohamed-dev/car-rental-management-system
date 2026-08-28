@@ -5,8 +5,8 @@ export const fetchVehicles = createAsyncThunk(
   'vehicles/fetchVehicles',
   async (params, { rejectWithValue }) => {
     try {
-      const response = await vehicleService.getVehicles(params)
-      return response.data
+      const data = await vehicleService.getVehicles(params)
+      return data
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Failed to fetch vehicles')
     }
@@ -17,8 +17,8 @@ export const fetchVehicle = createAsyncThunk(
   'vehicles/fetchVehicle',
   async (id, { rejectWithValue }) => {
     try {
-      const response = await vehicleService.getVehicle(id)
-      return response.data
+      const data = await vehicleService.getVehicle(id)
+      return data
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Failed to fetch vehicle')
     }
@@ -29,8 +29,8 @@ export const createVehicle = createAsyncThunk(
   'vehicles/createVehicle',
   async (vehicleData, { rejectWithValue }) => {
     try {
-      const response = await vehicleService.createVehicle(vehicleData)
-      return response.data
+      const data = await vehicleService.createVehicle(vehicleData)
+      return data
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Failed to create vehicle')
     }
@@ -41,8 +41,8 @@ export const updateVehicle = createAsyncThunk(
   'vehicles/updateVehicle',
   async ({ id, vehicleData }, { rejectWithValue }) => {
     try {
-      const response = await vehicleService.updateVehicle(id, vehicleData)
-      return response.data
+      const data = await vehicleService.updateVehicle(id, vehicleData)
+      return data
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Failed to update vehicle')
     }

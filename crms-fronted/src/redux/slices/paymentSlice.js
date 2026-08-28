@@ -5,8 +5,8 @@ export const fetchPayments = createAsyncThunk(
   'payments/fetchPayments',
   async (params, { rejectWithValue }) => {
     try {
-      const response = await paymentService.getPayments(params)
-      return response.data
+      const data = await paymentService.getPayments(params)
+      return data
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Failed to fetch payments')
     }
@@ -17,8 +17,8 @@ export const processPayment = createAsyncThunk(
   'payments/processPayment',
   async (paymentData, { rejectWithValue }) => {
     try {
-      const response = await paymentService.processPayment(paymentData)
-      return response.data
+      const data = await paymentService.processPayment(paymentData)
+      return data
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Payment failed')
     }
@@ -29,8 +29,8 @@ export const refundPayment = createAsyncThunk(
   'payments/refundPayment',
   async (id, { rejectWithValue }) => {
     try {
-      const response = await paymentService.refundPayment(id)
-      return response.data
+      const data = await paymentService.refundPayment(id)
+      return data
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Refund failed')
     }

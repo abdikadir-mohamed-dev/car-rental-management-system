@@ -8,11 +8,59 @@ import { formatDate as formatDateUtil } from '../../utils/formatDate'
 import { PAYMENT_STATUS } from '../../utils/constants'
 import StatusBadge from '../../components/common/StatusBadge'
 import Loader from '../../components/common/Loader'
+import { getReceipt } from '../../services/paymentService'
 
 function PaymentsPage() {
   const dispatch = useDispatch()
   const { payments = [], loading } = useSelector((state) => state.payments)
   const [filter, setFilter] = useState('all')
+  const [receipt, setReceipt] = useState(null)
+
+  const loadReceipt = async (paymentId) => {
+    try {
+      const data = await getReceipt(paymentId)
+      setReceipt(data)
+    } catch {
+      toast.error('Failed to load receipt')
+    }
+  }
+
+  const handlePrint = () => {
+    if (!receipt) return
+    const printWindow = window.open('', '_blank')
+    printWindow.document.write(`
+      <html>
+        <head><title>Receipt ${receipt.receiptNumber}</title></head>
+        <body style="font-family: Arial, sans-serif; padding: 20px;">
+          <h2>${receipt.business.name}</h2>
+          <p>${receipt.business.address}</p>
+          <p>${receipt.business.phone} | ${receipt.business.email}</p>
+          <hr />
+          <h3>Receipt: ${receipt.receiptNumber}</h3>
+          <p>Transaction ID: ${receipt.transactionId}</p>
+          <p>Date: ${receipt.date}</p>
+          <p>Status: ${receipt.status}</p>
+          <p>Method: ${receipt.method}</p>
+          <p>Amount: KES ${receipt.amount}</p>
+          <hr />
+          <h4>Customer</h4>
+          <p>${receipt.customer.name}</p>
+          <p>${receipt.customer.email}</p>
+          <p>${receipt.customer.phone}</p>
+          <hr />
+          <h4>Booking</h4>
+          <p>Booking #${receipt.booking.id}</p>
+          <p>Vehicle: ${receipt.booking.vehicle}</p>
+          <p>Pickup: ${receipt.booking.pickupDate}</p>
+          <p>Return: ${receipt.booking.returnDate}</p>
+          <hr />
+          <p>Thank you for choosing DriveGo!</p>
+        </body>
+      </html>
+    `)
+    printWindow.document.close()
+    printWindow.print()
+  }
 
   useEffect(() => {
     dispatch(fetchPayments({}))
@@ -119,10 +167,10 @@ function PaymentsPage() {
                     <p className="font-bold text-primary text-lg">{formatCurrency(payment.amount || 0)}</p>
                   </div>
                   <div className="flex gap-2">
-                    <button className="p-2 hover:bg-slate-100 rounded-lg" title="Print Receipt">
+                    <button onClick={() => loadReceipt(payment._id)} className="p-2 hover:bg-slate-100 rounded-lg" title="Print Receipt">
                       <Printer className="w-4 h-4 text-slate-600" />
                     </button>
-                    <button className="p-2 hover:bg-slate-100 rounded-lg" title="Download Receipt">
+                    <button onClick={handlePrint} className="p-2 hover:bg-slate-100 rounded-lg" title="Download Receipt">
                       <Download className="w-4 h-4 text-slate-600" />
                     </button>
                   </div>

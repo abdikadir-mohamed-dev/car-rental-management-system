@@ -8,11 +8,13 @@ from app.models.shift import Shift
 from app.models.booking import Booking
 from app.models.payment import Payment
 from app.routes import bp
+from app.utils.auth import role_required
 from werkzeug.security import generate_password_hash
 from datetime import datetime
 
 
 @bp.route('/dashboard', methods=['GET'])
+@role_required('admin')
 def admin_dashboard():
     total_users = User.query.count()
     total_vehicles = Vehicle.query.count()
@@ -20,6 +22,7 @@ def admin_dashboard():
     total_revenue = db.session.query(db.func.coalesce(db.func.sum(Payment.amount), 0)).scalar()
     recent_bookings = Booking.query.order_by(Booking.created_at.desc()).limit(5).all()
     recent_users = User.query.order_by(User.created_at.desc()).limit(5).all()
+    recent_logins = User.query.filter(User.last_login != None).order_by(User.last_login.desc()).limit(5).all()
 
     return jsonify({
         'totalUsers': total_users,
@@ -39,16 +42,22 @@ def admin_dashboard():
             {'_id': str(u.id), 'name': u.name, 'role': u.role}
             for u in recent_users
         ],
+        'recentLogins': [
+            {'_id': str(u.id), 'name': u.name, 'role': u.role, 'lastLogin': u.last_login.isoformat() if u.last_login else None}
+            for u in recent_logins
+        ],
     })
 
 
 @bp.route('/users', methods=['GET'])
+@role_required('admin')
 def get_users():
     users = User.query.all()
     return jsonify([u.to_dict() for u in users])
 
 
 @bp.route('/users/<int:user_id>', methods=['PUT'])
+@role_required('admin')
 def update_user(user_id):
     user = User.query.get_or_404(user_id)
     data = request.get_json() or {}
@@ -65,6 +74,7 @@ def update_user(user_id):
 
 
 @bp.route('/users/<int:user_id>', methods=['DELETE'])
+@role_required('admin')
 def delete_user(user_id):
     user = User.query.get_or_404(user_id)
     db.session.delete(user)
@@ -73,18 +83,21 @@ def delete_user(user_id):
 
 
 @bp.route('/vehicles', methods=['GET'])
+@role_required('admin')
 def get_vehicles():
     vehicles = Vehicle.query.all()
     return jsonify([v.to_dict() for v in vehicles])
 
 
 @bp.route('/vehicles/<int:vehicle_id>', methods=['GET'])
+@role_required('admin')
 def get_vehicle(vehicle_id):
     vehicle = Vehicle.query.get_or_404(vehicle_id)
     return jsonify(vehicle.to_dict())
 
 
 @bp.route('/vehicles', methods=['POST'])
+@role_required('admin')
 def create_vehicle():
     data = request.get_json() or {}
 
@@ -117,6 +130,7 @@ def create_vehicle():
 
 
 @bp.route('/vehicles/<int:vehicle_id>', methods=['PUT'])
+@role_required('admin')
 def update_vehicle(vehicle_id):
     vehicle = Vehicle.query.get_or_404(vehicle_id)
     data = request.get_json() or {}
@@ -161,6 +175,7 @@ def update_vehicle(vehicle_id):
 
 
 @bp.route('/vehicles/<int:vehicle_id>', methods=['DELETE'])
+@role_required('admin')
 def delete_vehicle(vehicle_id):
     vehicle = Vehicle.query.get_or_404(vehicle_id)
     db.session.delete(vehicle)
@@ -168,7 +183,47 @@ def delete_vehicle(vehicle_id):
     return jsonify({'message': 'Vehicle deleted'}), 200
 
 
+@bp.route('/maintenance', methods=['GET'])
+@role_required('admin')
+def get_maintenance():
+    records = Maintenance.query.all()
+    result = []
+    for m in records:
+        result.append({
+            'id': m.id,
+            'vehicleId': m.vehicle_id,
+            'vehicle': f"{m.vehicle.make} {m.vehicle.model}" if m.vehicle else 'Unknown',
+            'notes': m.notes,
+            'status': m.status,
+            'created_at': m.created_at.isoformat() if m.created_at else None,
+        })
+    return jsonify(result), 200
+
+
+@bp.route('/maintenance/<int:maintenance_id>', methods=['PUT'])
+@role_required('admin')
+def update_maintenance(maintenance_id):
+    m = Maintenance.query.get_or_404(maintenance_id)
+    data = request.get_json() or {}
+    m.status = data.get('status', m.status)
+    m.notes = data.get('notes', m.notes)
+    db.session.commit()
+
+    vehicle = Vehicle.query.get(m.vehicle_id)
+    if m.status == 'resolved':
+        if vehicle:
+            vehicle.status = 'available'
+            vehicle.is_available = True
+    elif m.status == 'in_progress':
+        if vehicle:
+            vehicle.status = 'maintenance'
+            vehicle.is_available = False
+    db.session.commit()
+    return jsonify({'message': 'Maintenance updated'}), 200
+
+
 @bp.route('/staff', methods=['GET'])
+@role_required('admin')
 def get_staff():
     staff = User.query.filter_by(role='staff').all()
     return jsonify([s.to_dict() for s in staff])
@@ -184,6 +239,7 @@ def generate_password(length=8):
 
 
 @bp.route('/staff', methods=['POST'])
+@role_required('admin')
 def create_staff():
     data = request.get_json() or {}
     name = data.get('name')
@@ -227,6 +283,7 @@ def create_staff():
 
 
 @bp.route('/staff/<int:staff_id>', methods=['PUT'])
+@role_required('admin')
 def update_staff(staff_id):
     user = User.query.get_or_404(staff_id)
     if user.role != 'staff':
@@ -257,6 +314,7 @@ def update_staff(staff_id):
 
 
 @bp.route('/staff/<int:staff_id>/shift', methods=['PUT'])
+@role_required('admin')
 def update_staff_shift(staff_id):
     user = User.query.get_or_404(staff_id)
     if user.role != 'staff':
@@ -278,6 +336,7 @@ def update_staff_shift(staff_id):
 
 
 @bp.route('/rental-policies', methods=['GET'])
+@role_required('admin')
 def get_policies():
     policies = RentalPolicy.query.all()
     result = {}
@@ -286,7 +345,17 @@ def get_policies():
     return jsonify(result)
 
 
+@bp.route('/rental-policies/public', methods=['GET'])
+def get_public_policies():
+    policies = RentalPolicy.query.all()
+    result = {}
+    for policy in policies:
+        result[policy.key] = policy.value
+    return jsonify(result)
+
+
 @bp.route('/rental-policies', methods=['PUT'])
+@role_required('admin')
 def update_policies():
     data = request.get_json() or {}
     for key, value in data.items():
@@ -301,6 +370,7 @@ def update_policies():
 
 
 @bp.route('/reports', methods=['GET'])
+@role_required('admin')
 def get_reports():
     return jsonify({
         'revenue': {
@@ -327,6 +397,7 @@ def get_reports():
 
 
 @bp.route('/reports/revenue', methods=['GET'])
+@role_required('admin')
 def report_revenue():
     period = request.args.get('period', '30d')
     data = {
@@ -341,6 +412,7 @@ def report_revenue():
 
 
 @bp.route('/reports/bookings', methods=['GET'])
+@role_required('admin')
 def report_bookings():
     return jsonify({
         'labels': ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
@@ -349,6 +421,7 @@ def report_bookings():
 
 
 @bp.route('/reports/vehicles', methods=['GET'])
+@role_required('admin')
 def report_vehicles():
     return jsonify({
         'labels': ['Sedan', 'SUV', 'Luxury', 'Van'],
@@ -357,6 +430,7 @@ def report_vehicles():
 
 
 @bp.route('/reports/fleet-utilization', methods=['GET'])
+@role_required('admin')
 def report_fleet_utilization():
     return jsonify({
         'utilizationRate': 78,
@@ -368,18 +442,30 @@ def report_fleet_utilization():
 
 
 @bp.route('/bookings', methods=['GET'])
+@role_required('admin')
 def admin_get_bookings():
     bookings = Booking.query.order_by(Booking.created_at.desc()).all()
-    return jsonify({'bookings': [b.to_dict() for b in bookings]})
+    result = []
+    for b in bookings:
+        booking_dict = b.to_dict()
+        booking_dict['user'] = {'name': b.user.name} if b.user else None
+        booking_dict['vehicle'] = {'name': f"{b.vehicle.make} {b.vehicle.model}"} if b.vehicle else None
+        result.append(booking_dict)
+    return jsonify({'bookings': result})
 
 
 @bp.route('/bookings/<int:booking_id>', methods=['GET'])
+@role_required('admin')
 def admin_get_booking(booking_id):
     booking = Booking.query.get_or_404(booking_id)
-    return jsonify(booking.to_dict())
+    booking_dict = booking.to_dict()
+    booking_dict['user'] = {'name': booking.user.name} if booking.user else None
+    booking_dict['vehicle'] = {'name': f"{booking.vehicle.make} {booking.vehicle.model}"} if booking.vehicle else None
+    return jsonify(booking_dict)
 
 
 @bp.route('/bookings/<int:booking_id>', methods=['PUT'])
+@role_required('admin')
 def admin_update_booking(booking_id):
     booking = Booking.query.get_or_404(booking_id)
     data = request.get_json() or {}
@@ -394,18 +480,30 @@ def admin_update_booking(booking_id):
 
 
 @bp.route('/payments', methods=['GET'])
+@role_required('admin')
 def admin_get_payments():
     payments = Payment.query.order_by(Payment.created_at.desc()).all()
-    return jsonify({'payments': [p.to_dict() for p in payments]})
+    result = []
+    for p in payments:
+        payment_dict = p.to_dict()
+        payment_dict['user'] = {'name': p.customer.name} if p.customer else None
+        payment_dict['booking'] = {'vehicle': {'name': f"{p.booking.vehicle.make} {p.booking.vehicle.model}"}} if p.booking and p.booking.vehicle else None
+        result.append(payment_dict)
+    return jsonify({'payments': result})
 
 
 @bp.route('/payments/<int:payment_id>', methods=['GET'])
+@role_required('admin')
 def admin_get_payment(payment_id):
     payment = Payment.query.get_or_404(payment_id)
-    return jsonify(payment.to_dict())
+    payment_dict = payment.to_dict()
+    payment_dict['user'] = {'name': payment.customer.name} if payment.customer else None
+    payment_dict['booking'] = {'vehicle': {'name': f"{payment.booking.vehicle.make} {payment.booking.vehicle.model}"}} if payment.booking and payment.booking.vehicle else None
+    return jsonify(payment_dict)
 
 
 @bp.route('/payments/<int:payment_id>/refund', methods=['POST'])
+@role_required('admin')
 def admin_refund_payment(payment_id):
     payment = Payment.query.get_or_404(payment_id)
     payment.status = 'refunded'
@@ -414,12 +512,14 @@ def admin_refund_payment(payment_id):
 
 
 @bp.route('/drivers', methods=['GET'])
+@role_required('admin')
 def admin_get_drivers():
     drivers = User.query.filter_by(role='driver').all()
     return jsonify([d.to_dict() for d in drivers])
 
 
 @bp.route('/drivers', methods=['POST'])
+@role_required('admin')
 def create_driver():
     data = request.get_json() or {}
     name = data.get('name')
@@ -452,6 +552,7 @@ def create_driver():
 
 
 @bp.route('/drivers/<int:driver_id>', methods=['PUT'])
+@role_required('admin')
 def admin_update_driver(driver_id):
     user = User.query.get_or_404(driver_id)
     if user.role != 'driver':
@@ -470,6 +571,7 @@ def admin_update_driver(driver_id):
 
 
 @bp.route('/seed', methods=['POST'])
+@role_required('admin')
 def seed_data():
     data = request.get_json() or {}
 
@@ -483,10 +585,11 @@ def seed_data():
                 {'name': 'Staff 2', 'email': 'staff2@drivego.com', 'phone': '0711000002'},
                 {'name': 'Staff 3', 'email': 'staff3@drivego.com', 'phone': '0711000003'},
             ]
+            today = datetime.utcnow().date()
             shift_times = [
-                (datetime(2026, 8, 26, 8, 0, 0), datetime(2026, 8, 26, 16, 0, 0)),
-                (datetime(2026, 8, 26, 16, 0, 0), datetime(2026, 8, 27, 0, 0, 0)),
-                (datetime(2026, 8, 27, 0, 0, 0), datetime(2026, 8, 27, 8, 0, 0)),
+                (datetime.combine(today, datetime.min.time().replace(hour=0, minute=0)), datetime.combine(today, datetime.min.time().replace(hour=8, minute=0))),
+                (datetime.combine(today, datetime.min.time().replace(hour=8, minute=0)), datetime.combine(today, datetime.min.time().replace(hour=16, minute=0))),
+                (datetime.combine(today, datetime.min.time().replace(hour=16, minute=0)), datetime.combine(today, datetime.min.time().replace(hour=23, minute=59, second=59))),
             ]
             for i, payload in enumerate(staff_payloads):
                 start, end = shift_times[i]
@@ -530,13 +633,6 @@ def seed_data():
             {'make': 'Chevrolet', 'model': 'Tahoe', 'year': 2022, 'registration_number': 'KDR 890R', 'vehicle_type': 'SUV', 'transmission': 'Automatic', 'fuel_type': 'Petrol', 'seating_capacity': 8, 'daily_rental_rate': 11000, 'status': 'available', 'available': True, 'location': 'Nairobi CBD', 'description': 'Spacious SUV for large groups.', 'images': ['https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?w=800&q=80'], 'features': ['Air Conditioning', 'Bluetooth', 'Backup Camera', 'Parking Sensors']},
             {'make': 'Jeep', 'model': 'Wrangler', 'year': 2023, 'registration_number': 'KDS 901S', 'vehicle_type': 'SUV', 'transmission': 'Manual', 'fuel_type': 'Petrol', 'seating_capacity': 4, 'daily_rental_rate': 9500, 'status': 'available', 'available': True, 'location': 'Kilimani', 'description': 'Off-road adventure vehicle.', 'images': ['https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=800&q=80'], 'features': ['Air Conditioning', 'Bluetooth', 'GPS', '4WD']},
             {'make': 'Toyota', 'model': 'Hilux', 'year': 2022, 'registration_number': 'KDT 012T', 'vehicle_type': 'Truck', 'transmission': 'Manual', 'fuel_type': 'Diesel', 'seating_capacity': 5, 'daily_rental_rate': 8000, 'status': 'available', 'available': True, 'location': 'Westlands', 'description': 'Heavy-duty pickup truck.', 'images': ['https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=800&q=80'], 'features': ['Air Conditioning', 'Bluetooth', 'Backup Camera']},
-            {'make': 'Nissan', 'model': 'Navara', 'year': 2023, 'registration_number': 'KDU 123U', 'vehicle_type': 'Truck', 'transmission': 'Automatic', 'fuel_type': 'Diesel', 'seating_capacity': 5, 'daily_rental_rate': 8500, 'status': 'available', 'available': True, 'location': 'Karen', 'description': 'Reliable pickup truck.', 'images': ['https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=800&q=80'], 'features': ['Air Conditioning', 'Bluetooth', 'Backup Camera']},
-            {'make': 'Mercedes', 'model': 'Sprinter', 'year': 2023, 'registration_number': 'KDV 234V', 'vehicle_type': 'Van', 'transmission': 'Automatic', 'fuel_type': 'Diesel', 'seating_capacity': 12, 'daily_rental_rate': 13000, 'status': 'available', 'available': True, 'location': 'Nairobi CBD', 'description': ' spacious van for group transport.', 'images': ['https://images.unsplash.com/photo-1619642756654-33f2432073e4?w=800&q=80'], 'features': ['Air Conditioning', 'Bluetooth', 'GPS', 'USB Charging']},
-            {'make': 'Toyota', 'model': 'Hiace', 'year': 2022, 'registration_number': 'KDW 345W', 'vehicle_type': 'Van', 'transmission': 'Manual', 'fuel_type': 'Diesel', 'seating_capacity': 14, 'daily_rental_rate': 10000, 'status': 'available', 'available': True, 'location': 'Westlands', 'description': 'Classic van for safari and group trips.', 'images': ['https://images.unsplash.com/photo-1619642756654-33f2432073e4?w=800&q=80'], 'features': ['Air Conditioning', 'Bluetooth']},
-            {'make': 'Isuzu', 'model': 'D-Max', 'year': 2023, 'registration_number': 'KDX 456X', 'vehicle_type': 'Truck', 'transmission': 'Automatic', 'fuel_type': 'Diesel', 'seating_capacity': 5, 'daily_rental_rate': 9000, 'status': 'available', 'available': True, 'location': 'Kilimani', 'description': 'Rugged pickup truck.', 'images': ['https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=800&q=80'], 'features': ['Air Conditioning', 'Bluetooth', 'Backup Camera']},
-            {'make': 'Mitsubishi', 'model': 'Outlander', 'year': 2023, 'registration_number': 'KDY 567Y', 'vehicle_type': 'SUV', 'transmission': 'Automatic', 'fuel_type': 'Petrol', 'seating_capacity': 7, 'daily_rental_rate': 7000, 'status': 'available', 'available': True, 'location': 'Karen', 'description': '7-seater family SUV.', 'images': ['https://images.unsplash.com/photo-1551836022-d5d88e9218df?w=800&q=80'], 'features': ['Air Conditioning', 'Bluetooth', 'USB Charging', 'Cruise Control']},
-            {'make': 'Suzuki', 'model': 'Swift', 'year': 2023, 'registration_number': 'KDZ 678Z', 'vehicle_type': 'Hatchback', 'transmission': 'Automatic', 'fuel_type': 'Petrol', 'seating_capacity': 5, 'daily_rental_rate': 3000, 'status': 'available', 'available': True, 'location': 'Nairobi CBD', 'description': 'Economy hatchback for city driving.', 'images': ['https://images.unsplash.com/photo-1471479917193-f00955256237?w=800&q=80'], 'features': ['Air Conditioning', 'Bluetooth', 'USB Charging']},
-            {'make': 'Nissan', 'model': 'March', 'year': 2022, 'registration_number': 'KEA 789A', 'vehicle_type': 'Hatchback', 'transmission': 'Automatic', 'fuel_type': 'Petrol', 'seating_capacity': 5, 'daily_rental_rate': 2800, 'status': 'available', 'available': True, 'location': 'Westlands', 'description': 'Compact and fuel-efficient.', 'images': ['https://images.unsplash.com/photo-1471479917193-f00955256237?w=800&q=80'], 'features': ['Air Conditioning', 'Bluetooth']},
         ]
         for v in vehicle_list:
             if not Vehicle.query.filter_by(registration_number=v['registration_number']).first():

@@ -10,26 +10,21 @@ const userService = axios.create({
   },
 })
 
-userService.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token')
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
-  }
-  return config
-})
-
-setAuthToken(localStorage.getItem('token'))
+setAuthToken(localStorage.getItem('token'), userService)
 
 export const getProfile = async () => {
-  return await userService.get('/profile')
+  const response = await userService.get('/profile')
+  return response.data.user || response.data
 }
 
 export const updateProfile = async (userData) => {
-  return await userService.put('/profile', userData)
+  const response = await userService.put('/profile', userData)
+  return response.data.user || response.data
 }
 
 export const changePassword = async (passwordData) => {
-  return await userService.put('/change-password', passwordData)
+  const response = await userService.put('/change-password', passwordData)
+  return response.data
 }
 
 export default userService

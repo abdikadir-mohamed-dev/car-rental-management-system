@@ -1,6 +1,7 @@
 import axios from 'axios'
+import { VITE_API_URL } from '../utils/constants'
 
-const API_URL = import.meta.env.VITE_API_URL
+const API_URL = import.meta.env.VITE_API_URL || VITE_API_URL
 
 const authService = axios.create({
   baseURL: `${API_URL}/auth`,
@@ -9,19 +10,11 @@ const authService = axios.create({
   },
 })
 
-authService.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token')
+export const setAuthToken = (token, service = authService) => {
   if (token) {
-    config.headers.Authorization = `Bearer ${token}`
-  }
-  return config
-})
-
-export const setAuthToken = (token) => {
-  if (token) {
-    authService.defaults.headers.common['Authorization'] = `Bearer ${token}`
+    service.defaults.headers.common['Authorization'] = `Bearer ${token}`
   } else {
-    delete authService.defaults.headers.common['Authorization']
+    delete service.defaults.headers.common['Authorization']
   }
 }
 
@@ -44,5 +37,11 @@ export const forgotPassword = async (email) => {
 export const resetPassword = async (token, password) => {
   return await authService.post(`/reset-password/${token}`, { password })
 }
+
+export const getProfile = async () => {
+  return await authService.get('/profile')
+}
+
+setAuthToken(localStorage.getItem('token'), authService)
 
 export default authService

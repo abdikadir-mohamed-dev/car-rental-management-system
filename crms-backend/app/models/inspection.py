@@ -1,5 +1,6 @@
-from app import db
+from app.extensions import db
 from datetime import datetime
+
 
 class Inspection(db.Model):
     __tablename__ = 'inspections'
@@ -16,3 +17,18 @@ class Inspection(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     inspector = db.relationship('User', backref='inspections')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'booking_id': self.booking_id,
+            'vehicle_id': self.vehicle_id,
+            'inspector_id': self.inspector_id,
+            'type': self.type,
+            'mileage': self.mileage,
+            'fuel_level': self.fuel_level,
+            'condition': self.condition,
+            'damage_notes': self.damage_notes,
+            'status': self.status,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }

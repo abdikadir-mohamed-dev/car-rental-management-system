@@ -3,3 +3,5 @@ crms-backend/instance/
 crms-backend/venv/
 __pycache__/
 *.pyc
+crms-backend/.env
+crms-backend/.env.local

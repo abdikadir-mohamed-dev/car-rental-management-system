@@ -10,82 +10,36 @@ const driverService = axios.create({
   },
 })
 
-driverService.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token')
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
-  }
-  return config
-})
-
-setAuthToken(localStorage.getItem('token'))
+setAuthToken(localStorage.getItem('token'), driverService)
 
 export const getDriverDashboard = async () => {
-  return await driverService.get('/dashboard')
-}
-
-export const getAssignments = async (params) => {
-  return await driverService.get('/assignments', { params })
+  const response = await driverService.get('/dashboard')
+  return response.data
 }
 
 export const getTrips = async (params) => {
-  return await driverService.get('/trips', { params })
+  const response = await driverService.get('/trips', { params })
+  return response.data
 }
 
 export const getTrip = async (id) => {
-  return await driverService.get(`/trips/${id}`)
+  const response = await driverService.get(`/trips/${id}`)
+  return response.data
 }
 
 export const updateTripStatus = async (id, status) => {
-  return await driverService.patch(`/trips/${id}/status`, { status })
+  const response = await driverService.put(`/trips/${id}/status`, { status })
+  return response.data
 }
 
 export const getEarnings = async (params) => {
-  return await driverService.get('/earnings', { params })
+  const response = await driverService.get('/earnings', { params })
+  return response.data
 }
 
-export const getEarningsSummary = async (params) => {
-  return await driverService.get('/earnings/summary', { params })
-}
-
-export const getBookings = async (params) => {
-  return await driverService.get('/bookings', { params })
-}
-
-export const getVehicles = async (params) => {
-  return await driverService.get('/vehicles', { params })
-}
-
-export const getCustomers = async (params) => {
-  return await driverService.get('/customers', { params })
-}
-
-export const getMaintenance = async (params) => {
-  return await driverService.get('/maintenance', { params })
-}
-
-export const createMaintenance = async (data) => {
-  return await driverService.post('/maintenance', data)
-}
-
-export const getReports = async (params) => {
-  return await driverService.get('/reports', { params })
-}
-
-export const getNotifications = async (params) => {
-  return await driverService.get('/notifications', { params })
-}
-
-export const markNotificationRead = async (id) => {
-  return await driverService.patch(`/notifications/${id}/read`)
-}
-
-export const markAllNotificationsRead = async () => {
-  return await driverService.patch('/notifications/read-all')
-}
-
-export const getPayments = async (params) => {
-  return await driverService.get('/payments', { params })
+export const getDrivers = async (params) => {
+  const response = await driverService.get('/drivers', { params })
+  return response.data
 }
 
 export default driverService

@@ -4,100 +4,137 @@ import { setAuthToken } from './authService'
 const API_URL = import.meta.env.VITE_API_URL
 
 const adminService = axios.create({
-  baseURL: `${API_URL}/admin`,
+  baseURL: `${API_URL}/api/admin`,
   headers: {
     'Content-Type': 'application/json',
   },
 })
 
-adminService.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token')
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
-  }
-  return config
-})
-
-setAuthToken(localStorage.getItem('token'))
+setAuthToken(localStorage.getItem('token'), adminService)
 
 export const getDashboardStats = async () => {
-  return await adminService.get('/dashboard')
+  const response = await adminService.get('/dashboard')
+  return response.data
 }
 
 export const getUsers = async (params) => {
-  return await adminService.get('/users', { params })
+  const response = await adminService.get('/users', { params })
+  return response.data
 }
 
 export const updateUser = async (id, userData) => {
-  return await adminService.put(`/users/${id}`, userData)
+  const response = await adminService.put(`/users/${id}`, userData)
+  return response.data
 }
 
 export const deleteUser = async (id) => {
-  return await adminService.delete(`/users/${id}`)
+  const response = await adminService.delete(`/users/${id}`)
+  return response.data
 }
 
 export const getVehicles = async (params) => {
-  return await adminService.get('/vehicles', { params })
+  const response = await adminService.get('/vehicles', { params })
+  return response.data
+}
+
+export const getVehicle = async (id) => {
+  const response = await adminService.get(`/vehicles/${id}`)
+  return response.data
 }
 
 export const createVehicle = async (vehicleData) => {
-  return await adminService.post('/vehicles', vehicleData)
+  const response = await adminService.post('/vehicles', vehicleData)
+  return response.data
 }
 
 export const updateVehicle = async (id, vehicleData) => {
-  return await adminService.put(`/vehicles/${id}`, vehicleData)
+  const response = await adminService.put(`/vehicles/${id}`, vehicleData)
+  return response.data
 }
 
 export const deleteVehicle = async (id) => {
-  return await adminService.delete(`/vehicles/${id}`)
+  const response = await adminService.delete(`/vehicles/${id}`)
+  return response.data
 }
 
-export const getBookings = async (params) => {
-  return await adminService.get('/bookings', { params })
-}
-
-export const updateBooking = async (id, bookingData) => {
-  return await adminService.put(`/bookings/${id}`, bookingData)
-}
-
-export const getPayments = async (params) => {
-  return await adminService.get('/payments', { params })
-}
-
-export const refundPayment = async (id) => {
-  return await adminService.post(`/payments/${id}/refund`)
-}
-
-export const getDrivers = async (params) => {
-  return await adminService.get('/drivers', { params })
-}
-
-export const updateDriver = async (id, driverData) => {
-  return await adminService.put(`/drivers/${id}`, driverData)
+export const getStaff = async (params) => {
+  const response = await adminService.get('/staff', { params })
+  return response.data
 }
 
 export const createStaff = async (staffData) => {
-  return await adminService.post('/staff', staffData)
+  const response = await adminService.post('/staff', staffData)
+  return response.data
 }
 
-export const createDriver = async (driverData) => {
-  return await adminService.post('/drivers', driverData)
+export const updateStaff = async (id, staffData) => {
+  const response = await adminService.put(`/staff/${id}`, staffData)
+  return response.data
 }
 
-export const seedData = async (data) => {
-  return await adminService.post('/seed', data)
-}
-
-export const getReports = async (params) => {
-  return await adminService.get('/reports', { params })
+export const updateStaffShift = async (id, shiftData) => {
+  const response = await adminService.put(`/staff/${id}/shift`, shiftData)
+  return response.data
 }
 
 export const getPolicies = async () => {
-  return await adminService.get('/rental-policies')
+  const response = await adminService.get('/rental-policies')
+  return response.data
 }
 
-export const updatePolicies = async (policies) => {
-  return await adminService.put('/rental-policies', policies)
+export const updatePolicies = async (policiesData) => {
+  const response = await adminService.put('/rental-policies', policiesData)
+  return response.data
+}
+
+export const getReports = async (params) => {
+  const response = await adminService.get('/reports', { params })
+  return response.data
+}
+
+export const getBookings = async (params) => {
+  const response = await adminService.get('/bookings', { params })
+  return response.data
+}
+
+export const updateBooking = async (id, bookingData) => {
+  const response = await adminService.put(`/bookings/${id}`, bookingData)
+  return response.data
+}
+
+export const getPayments = async (params) => {
+  const response = await adminService.get('/payments', { params })
+  return response.data
+}
+
+export const refundPayment = async (id) => {
+  const response = await adminService.post(`/payments/${id}/refund`)
+  return response.data
+}
+
+export const getDrivers = async (params) => {
+  const response = await adminService.get('/drivers', { params })
+  return response.data
+}
+
+export const createDriver = async (driverData) => {
+  const response = await adminService.post('/drivers', driverData)
+  return response.data
+}
+
+export const updateDriver = async (id, driverData) => {
+  const response = await adminService.put(`/drivers/${id}`, driverData)
+  return response.data
+}
+
+export const getPublicPolicies = async () => {
+  const response = await adminService.get('/rental-policies/public')
+  return response.data
+}
+
+export const registerUser = async (userData) => {
+  const response = await axios.post(`${API_URL}/auth/register`, userData)
+  return response.data
 }
 
 export default adminService

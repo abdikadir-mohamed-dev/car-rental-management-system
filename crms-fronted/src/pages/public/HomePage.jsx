@@ -1,43 +1,35 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Search, ArrowRight, Shield, Clock, DollarSign, Car, Star, MapPin, Calendar, Users, Fuel, Gauge } from 'lucide-react'
-import { mockLocations } from '../../data/mockData'
 import { getVehicles } from '../../services/vehicleService'
+import { mapVehicle } from '../../utils/apiMappers'
 
 function HomePage() {
   const [pickupLocation, setPickupLocation] = useState('')
   const [pickupDate, setPickupDate] = useState('')
   const [returnDate, setReturnDate] = useState('')
-  const [featuredVehicles, setFeaturedVehicles] = useState([])
+  const [vehicles, setVehicles] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  const locations = [
+    'Nairobi CBD',
+    'Westlands',
+    'Kilimani',
+    'Karen',
+    'Industrial Area',
+    'Jomo Kenyatta Airport',
+    'Nairobi West',
+  ]
 
   useEffect(() => {
     const loadVehicles = async () => {
-      setLoading(true)
       try {
-        const response = await getVehicles()
-        const mapped = (response.data || []).map((v) => ({
-          id: v.id,
-          name: `${v.make} ${v.model}`,
-          brand: v.make,
-          category: v.vehicleType,
-          pricePerDay: v.dailyRentalRate,
-          rating: 4.5,
-          seats: v.seatingCapacity || 5,
-          doors: 4,
-          transmission: v.transmission,
-          fuelType: v.fuelType,
-          luggage: 2,
-          location: v.location,
-          image: v.images?.[0] || '/placeholder-car.jpg',
-          images: v.images || [],
-          features: v.features || [],
-          description: v.description || '',
-          available: v.available,
-        }))
-        setFeaturedVehicles(mapped.slice(0, 8))
-      } catch (error) {
-        console.error('Failed to load vehicles:', error)
+        setLoading(true)
+        const data = await getVehicles()
+        setVehicles((data || []).map(mapVehicle))
+      } catch (err) {
+        setError(err.message || 'Failed to load vehicles')
       } finally {
         setLoading(false)
       }
@@ -84,7 +76,7 @@ function HomePage() {
                       className="input pl-10 bg-slate-50 text-slate-900"
                     >
                       <option value="">Select location</option>
-                      {mockLocations.map((loc) => (
+                      {locations.map((loc) => (
                         <option key={loc} value={loc}>{loc}</option>
                       ))}
                     </select>
@@ -137,11 +129,22 @@ function HomePage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {loading ? (
               <div className="col-span-full flex items-center justify-center min-h-[200px]">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
               </div>
-            ) : featuredVehicles.map((vehicle) => (
-              <VehicleCard key={vehicle.id} vehicle={vehicle} />
-            ))}
+            ) : error ? (
+              <div className="col-span-full text-center py-12">
+                <p className="text-slate-500">{error}</p>
+              </div>
+            ) : vehicles.length === 0 ? (
+              <div className="col-span-full text-center py-12">
+                <p className="text-slate-500 text-lg">No vehicles found.</p>
+                <Link to="/vehicles" className="text-blue-600 hover:text-blue-700 font-medium mt-2">Browse all cars</Link>
+              </div>
+            ) : (
+              vehicles.slice(0, 8).map((vehicle) => (
+                <VehicleCard key={vehicle.id} vehicle={vehicle} />
+              ))
+            )}
           </div>
         </div>
       </section>

@@ -16,6 +16,7 @@ import { formatCurrency } from '../../utils/formatCurrency'
 import { formatDate as formatDateUtil } from '../../utils/formatDate'
 import StatusBadge from '../../components/common/StatusBadge'
 import Loader from '../../components/common/Loader'
+import { getPublicPolicies } from '../../services/adminService'
 
 function RentalAgreementPage() {
   const { id } = useParams()
@@ -24,12 +25,29 @@ function RentalAgreementPage() {
   const showConfirmation = searchParams.get('confirmation') === 'true'
   const dispatch = useDispatch()
   const { currentBooking, loading } = useSelector((state) => state.bookings)
+  const [policies, setPolicies] = useState([])
+  const [policiesLoading, setPoliciesLoading] = useState(true)
 
   useEffect(() => {
     if (id) {
       dispatch(fetchBooking(id))
     }
   }, [dispatch, id])
+
+  useEffect(() => {
+    const loadPolicies = async () => {
+      try {
+        setPoliciesLoading(true)
+        const data = await getPublicPolicies()
+        setPolicies(Object.entries(data || {}))
+      } catch {
+        setPolicies([])
+      } finally {
+        setPoliciesLoading(false)
+      }
+    }
+    loadPolicies()
+  }, [])
 
   const handlePrint = () => {
     window.print()
@@ -350,32 +368,20 @@ function RentalAgreementPage() {
             <Shield className="w-4 h-4 text-primary" />
             Terms and Conditions
           </h4>
-          <ul className="space-y-2 text-sm text-slate-600">
-            <li className="flex items-start gap-2">
-              <CheckCircle className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />
-              <span>The vehicle must be returned in the same condition as received, with full fuel tank.</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <CheckCircle className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />
-              <span>A valid driver's license and ID must be presented at pickup.</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <CheckCircle className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />
-              <span>Cancellation made 48 hours before pickup is eligible for full refund.</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <CheckCircle className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />
-              <span>Smoking and off-road driving are strictly prohibited.</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <CheckCircle className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />
-              <span>Late returns will incur additional charges at the daily rate.</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <CheckCircle className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />
-              <span>DriveGo is not liable for personal belongings left in the vehicle.</span>
-            </li>
-          </ul>
+          {policiesLoading ? (
+            <p className="text-slate-500 text-sm">Loading policies...</p>
+          ) : policies.length > 0 ? (
+            <ul className="space-y-2 text-sm text-slate-600">
+              {policies.map(([key, value]) => (
+                <li key={key} className="flex items-start gap-2">
+                  <CheckCircle className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />
+                  <span>{String(value)}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-slate-500 text-sm">No policies available.</p>
+          )}
         </div>
 
         <div className="border-t border-slate-200 pt-6">

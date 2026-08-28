@@ -1,15 +1,20 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { SlidersHorizontal } from 'lucide-react'
+import { SlidersHorizontal, Calendar } from 'lucide-react'
 import VehicleCard from '../../components/vehicles/VehicleCard'
 import VehicleFilter from '../../components/vehicles/VehicleFilter'
 import { getVehicles } from '../../services/vehicleService'
+import { getBookings } from '../../services/bookingService'
+import { mapVehicle } from '../../utils/apiMappers'
+import { mapBooking } from '../../utils/apiMappers'
 
 function VehicleListingPage() {
   const [searchParams] = useSearchParams()
   const [showFilters, setShowFilters] = useState(false)
   const [search, setSearch] = useState(searchParams.get('search') || '')
   const [sortBy, setSortBy] = useState('popular')
+  const [pickupDate, setPickupDate] = useState(searchParams.get('pickup') || '')
+  const [returnDate, setReturnDate] = useState(searchParams.get('return') || '')
   const [filters, setFilters] = useState({
     location: searchParams.get('location') || '',
     category: '',
@@ -19,41 +24,47 @@ function VehicleListingPage() {
     fuelType: '',
   })
   const [vehicles, setVehicles] = useState([])
+  const [bookings, setBookings] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
-    const loadVehicles = async () => {
-      setLoading(true)
+    const loadData = async () => {
       try {
-        const response = await getVehicles()
-        const mapped = (response.data || []).map((v) => ({
-          id: v.id,
-          name: `${v.make} ${v.model}`,
-          brand: v.make,
-          category: v.vehicleType,
-          pricePerDay: v.dailyRentalRate,
-          rating: 4.5,
-          seats: v.seatingCapacity || 5,
-          doors: 4,
-          transmission: v.transmission,
-          fuelType: v.fuelType,
-          luggage: 2,
-          location: v.location,
-          image: v.images?.[0] || '/placeholder-car.jpg',
-          images: v.images || [],
-          features: v.features || [],
-          description: v.description || '',
-          available: v.available,
-        }))
-        setVehicles(mapped)
-      } catch (error) {
-        console.error('Failed to load vehicles:', error)
+        setLoading(true)
+        setError(null)
+        const [vehiclesData, bookingsData] = await Promise.all([
+          getVehicles(),
+          getBookings(),
+        ])
+        setVehicles((vehiclesData || []).map(mapVehicle))
+        setBookings((bookingsData || []).map(mapBooking))
+      } catch (err) {
+        setError(err.message || 'Failed to load data')
       } finally {
         setLoading(false)
       }
     }
-    loadVehicles()
+    loadData()
   }, [])
+
+  const getBookedVehicleIds = () => {
+    if (!pickupDate || !returnDate) return new Set()
+    const pickup = new Date(pickupDate)
+    const returnD = new Date(returnDate)
+    if (returnD < pickup) return new Set()
+    const bookedIds = new Set()
+    bookings.forEach(booking => {
+      const bStart = new Date(booking.pickupDate)
+      const bEnd = new Date(booking.returnDate)
+      if (pickup <= bEnd && returnD >= bStart) {
+        bookedIds.add(booking.vehicleId)
+      }
+    })
+    return bookedIds
+  }
+
+  const bookedVehicleIds = getBookedVehicleIds()
 
   const filteredVehicles = useMemo(() => {
     let result = [...vehicles]
@@ -65,6 +76,14 @@ function VehicleListingPage() {
         v.brand.toLowerCase().includes(term) ||
         v.category.toLowerCase().includes(term)
       )
+    }
+
+    if (pickupDate && returnDate) {
+      const pickup = new Date(pickupDate)
+      const returnD = new Date(returnDate)
+      if (returnD >= pickup) {
+        result = result.filter(v => !bookedVehicleIds.has(v.id))
+      }
     }
 
     if (filters.location) {
@@ -106,7 +125,7 @@ function VehicleListingPage() {
     }
 
     return result
-  }, [search, filters, sortBy, vehicles])
+  }, [search, filters, sortBy, pickupDate, returnDate, bookedVehicleIds, vehicles])
 
   const handleFilterChange = (newFilters) => {
     setFilters(newFilters)
@@ -123,6 +142,8 @@ function VehicleListingPage() {
     })
     setSearch('')
     setSortBy('popular')
+    setPickupDate('')
+    setReturnDate('')
   }
 
   const handleSortChange = (e) => {
@@ -141,7 +162,7 @@ function VehicleListingPage() {
       <section className="py-8 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-            <p className="text-slate-600">{loading ? 'Loading...' : `${filteredVehicles.length} vehicles available`}</p>
+            <p className="text-slate-600">{filteredVehicles.length} vehicles available</p>
             <div className="flex items-center gap-3 w-full sm:w-auto">
               <div className="relative flex-1 sm:flex-none">
                 <SlidersHorizontal className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -159,35 +180,72 @@ function VehicleListingPage() {
             </div>
           </div>
 
-          <div className="flex flex-col lg:flex-row gap-8">
-            <div className="w-full lg:w-72 flex-shrink-0">
-              <VehicleFilter
-                filters={filters}
-                onChange={handleFilterChange}
-                onReset={handleReset}
-                sortBy={sortBy}
-                onSortChange={setSortBy}
-              />
+          {loading ? (
+            <div className="flex items-center justify-center min-h-[200px]">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
             </div>
-            <div className="flex-1">
-              {loading ? (
-                <div className="flex items-center justify-center min-h-[200px]">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-                </div>
-              ) : filteredVehicles.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                  {filteredVehicles.map((vehicle) => (
-                    <VehicleCard key={vehicle.id} vehicle={vehicle} />
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <p className="text-slate-500 text-lg">No vehicles found matching your criteria.</p>
-                  <button onClick={handleReset} className="text-blue-600 hover:text-blue-700 font-medium mt-2">Clear filters</button>
-                </div>
-              )}
+          ) : error ? (
+            <div className="text-center py-12">
+              <p className="text-slate-500">{error}</p>
             </div>
-          </div>
+          ) : (
+            <div className="flex flex-col lg:flex-row gap-8">
+              <div className="w-full lg:w-72 flex-shrink-0 space-y-4">
+                <div className="bg-white rounded-xl border border-slate-200 p-4">
+                  <h3 className="font-semibold text-slate-900 mb-3">Dates</h3>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Pick-up Date</label>
+                      <div className="relative">
+                        <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <input
+                          type="date"
+                          value={pickupDate}
+                          onChange={(e) => setPickupDate(e.target.value)}
+                          min={new Date().toISOString().split('T')[0]}
+                          className="input pl-9"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Return Date</label>
+                      <div className="relative">
+                        <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <input
+                          type="date"
+                          value={returnDate}
+                          onChange={(e) => setReturnDate(e.target.value)}
+                          min={pickupDate || new Date().toISOString().split('T')[0]}
+                          className="input pl-9"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <VehicleFilter
+                  filters={filters}
+                  onChange={handleFilterChange}
+                  onReset={handleReset}
+                  sortBy={sortBy}
+                  onSortChange={setSortBy}
+                />
+              </div>
+              <div className="flex-1">
+                {filteredVehicles.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                    {filteredVehicles.map((vehicle) => (
+                      <VehicleCard key={vehicle.id} vehicle={vehicle} />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <p className="text-slate-500 text-lg">No vehicles found matching your criteria.</p>
+                    <button onClick={handleReset} className="text-blue-600 hover:text-blue-700 font-medium mt-2">Clear filters</button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </section>
     </div>

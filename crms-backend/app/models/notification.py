@@ -1,5 +1,6 @@
-from app import db
+from app.extensions import db
 from datetime import datetime
+
 
 class Notification(db.Model):
     __tablename__ = 'notifications'
@@ -11,3 +12,13 @@ class Notification(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     user = db.relationship('User', backref='notifications')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'title': self.title,
+            'message': self.message,
+            'read': self.read,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }

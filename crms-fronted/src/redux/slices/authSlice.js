@@ -1,23 +1,25 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
-import authService from '../../services/authService'
+import { login, register, logout, setAuthToken, getProfile } from '../../services/authService'
 
-export const login = createAsyncThunk(
+export const loginThunk = createAsyncThunk(
   'auth/login',
   async (credentials, { rejectWithValue }) => {
     try {
-      const response = await authService.login(credentials)
+      const response = await login(credentials)
       return response.data
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Login failed')
+      const message = error.response?.data?.message || error.message || 'Login failed'
+      console.error('Login error:', error)
+      return rejectWithValue(message)
     }
   }
 )
 
-export const register = createAsyncThunk(
+export const registerThunk = createAsyncThunk(
   'auth/register',
   async (userData, { rejectWithValue }) => {
     try {
-      const response = await authService.register(userData)
+      const response = await register(userData)
       return response.data
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Registration failed')
@@ -25,23 +27,38 @@ export const register = createAsyncThunk(
   }
 )
 
-export const logout = createAsyncThunk(
+export const logoutThunk = createAsyncThunk(
   'auth/logout',
   async (_, { rejectWithValue }) => {
     try {
-      await authService.logout()
+      await logout()
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Logout failed')
     }
   }
 )
 
+export const initializeAuth = createAsyncThunk(
+  'auth/initialize',
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await getProfile()
+      return response.data.user || response.data
+    } catch (error) {
+      return rejectWithValue(null)
+    }
+  }
+)
+
+const token = localStorage.getItem('token')
+const storedUser = token ? localStorage.getItem('user') : null
+
 const authSlice = createSlice({
   name: 'auth',
   initialState: {
-    user: null,
-    token: localStorage.getItem('token'),
-    isAuthenticated: false,
+    user: storedUser ? JSON.parse(storedUser) : null,
+    token,
+    isAuthenticated: !!token,
     loading: false,
     error: null,
   },
@@ -52,32 +69,50 @@ const authSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      .addCase(login.pending, (state) => {
+      .addCase(loginThunk.pending, (state) => {
         state.loading = true
         state.error = null
       })
-      .addCase(login.fulfilled, (state, action) => {
+      .addCase(loginThunk.fulfilled, (state, action) => {
         state.loading = false
         state.user = action.payload.user
         state.token = action.payload.token
         state.isAuthenticated = true
         localStorage.setItem('token', action.payload.token)
+        localStorage.setItem('user', JSON.stringify(action.payload.user))
+        setAuthToken(action.payload.token)
       })
-      .addCase(login.rejected, (state, action) => {
+      .addCase(loginThunk.rejected, (state, action) => {
         state.loading = false
         state.error = action.payload
       })
-      .addCase(register.fulfilled, (state, action) => {
+      .addCase(registerThunk.fulfilled, (state, action) => {
         state.user = action.payload.user
         state.token = action.payload.token
         state.isAuthenticated = true
         localStorage.setItem('token', action.payload.token)
+        localStorage.setItem('user', JSON.stringify(action.payload.user))
+        setAuthToken(action.payload.token)
       })
-      .addCase(logout.fulfilled, (state) => {
+      .addCase(logoutThunk.fulfilled, (state) => {
         state.user = null
         state.token = null
         state.isAuthenticated = false
         localStorage.removeItem('token')
+        localStorage.removeItem('user')
+        setAuthToken(null)
+      })
+      .addCase(initializeAuth.fulfilled, (state, action) => {
+        state.user = action.payload
+        state.isAuthenticated = true
+      })
+      .addCase(initializeAuth.rejected, (state) => {
+        state.user = null
+        state.token = null
+        state.isAuthenticated = false
+        localStorage.removeItem('token')
+        localStorage.removeItem('user')
+        setAuthToken(null)
       })
   },
 })

@@ -1,8 +1,10 @@
 from flask import Blueprint, request, jsonify
-from app import db
+from app.extensions import db
 from app.models.notification import Notification
+from app.utils.auth import token_required
 
-bp = Blueprint('notifications', __name__)
+bp = Blueprint('notifications', __name__, url_prefix='/api/notifications')
+
 
 @bp.route('/', methods=['GET'])
 def get_notifications():
@@ -10,16 +12,19 @@ def get_notifications():
     query = Notification.query
     if user_id:
         query = query.filter_by(user_id=user_id)
-    notifications = query.all()
-    result = [{
-        'id': n.id,
-        'user_id': n.user_id,
-        'title': n.title,
-        'message': n.message,
-        'read': n.read,
-        'created_at': n.created_at.isoformat()
-    } for n in notifications]
+    notifications = query.order_by(Notification.created_at.desc()).all()
+    result = [n.to_dict() for n in notifications]
     return jsonify(result), 200
+
+
+@bp.route('/unread-count', methods=['GET'])
+@token_required
+def get_unread_count():
+    from flask_jwt_extended import get_jwt_identity
+    user_id = int(get_jwt_identity())
+    count = Notification.query.filter_by(user_id=user_id, read=False).count()
+    return jsonify({'count': count}), 200
+
 
 @bp.route('/<int:notification_id>/read', methods=['PUT'])
 def mark_read(notification_id):
@@ -27,3 +32,13 @@ def mark_read(notification_id):
     n.read = True
     db.session.commit()
     return jsonify({'message': 'Notification marked as read'}), 200
+
+
+@bp.route('/read-all', methods=['PUT'])
+@token_required
+def mark_all_read():
+    from flask_jwt_extended import get_jwt_identity
+    user_id = int(get_jwt_identity())
+    Notification.query.filter_by(user_id=user_id, read=False).update({'read': True})
+    db.session.commit()
+    return jsonify({'message': 'All notifications marked as read'}), 200

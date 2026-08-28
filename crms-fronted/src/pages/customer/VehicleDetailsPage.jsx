@@ -1,13 +1,18 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { Star, Users, Gauge, Fuel, MapPin, Calendar, Heart, ArrowLeft, Check } from 'lucide-react'
-import { mockVehicles } from '../../data/mockData'
-import { mockDrivers } from '../../data/mockDrivers'
+import { getVehicle } from '../../services/vehicleService'
+import { getDrivers } from '../../services/driverService'
+import { mapVehicle } from '../../utils/apiMappers'
 import toast from 'react-hot-toast'
+import AvailabilityCalendar from '../../components/customer/AvailabilityCalendar'
 
 function VehicleDetailsPage() {
   const { id } = useParams()
-  const vehicle = mockVehicles.find(v => v.id === Number(id))
+  const [vehicle, setVehicle] = useState(null)
+  const [drivers, setDrivers] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [selectedImage, setSelectedImage] = useState(0)
   const [pickupDate, setPickupDate] = useState('')
   const [returnDate, setReturnDate] = useState('')
@@ -15,11 +20,40 @@ function VehicleDetailsPage() {
   const [drivingOption, setDrivingOption] = useState('self')
   const [selectedDriver, setSelectedDriver] = useState(null)
 
-  if (!vehicle) {
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        const [vehicleData, driversData] = await Promise.all([
+          getVehicle(id),
+          getDrivers(),
+        ])
+        setVehicle(mapVehicle(vehicleData))
+        setDrivers(driversData || [])
+      } catch (err) {
+        setError(err.message || 'Failed to load data')
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadData()
+  }, [id])
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    )
+  }
+
+  if (error || !vehicle) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-slate-900 mb-4">Vehicle Not Found</h1>
+          <p className="text-slate-600 mb-4">{error}</p>
           <Link to="/customer/browse" className="text-blue-600 hover:text-blue-700 font-medium">Back to Browse Cars</Link>
         </div>
       </div>
@@ -33,7 +67,7 @@ function VehicleDetailsPage() {
   const driverCost = drivingOption === 'hire' && selectedDriver ? days * selectedDriver.pricePerDay : 0
   const totalPrice = vehicleCost + driverCost
 
-  const availableDrivers = mockDrivers.filter(d => d.available)
+  const availableDrivers = drivers.filter(d => d.available)
 
   const handleContinue = () => {
     if (!pickupDate || !returnDate) {
@@ -185,6 +219,14 @@ function VehicleDetailsPage() {
                       </div>
                     </div>
                   </div>
+                </div>
+
+                <div className="mb-4">
+                  <AvailabilityCalendar
+                    vehicleId={vehicle.id}
+                    pickupDate={pickupDate}
+                    returnDate={returnDate}
+                  />
                 </div>
 
                 <div className="border-t border-slate-200 pt-4 mb-4">

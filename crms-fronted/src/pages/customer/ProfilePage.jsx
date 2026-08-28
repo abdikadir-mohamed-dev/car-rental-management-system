@@ -1,23 +1,55 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { User, Mail, Phone, MapPin, Calendar, CreditCard, Save } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { mockUsers } from '../../data/mockUsers'
+import { getProfile } from '../../services/userService'
+import { mapUser } from '../../utils/apiMappers'
 
 function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [formData, setFormData] = useState({
-    firstName: mockUsers.customer.firstName,
-    lastName: mockUsers.customer.lastName,
-    email: mockUsers.customer.email,
-    phone: mockUsers.customer.phone,
-    address: mockUsers.customer.address,
-    dateOfBirth: mockUsers.customer.dateOfBirth,
-    licenseNumber: mockUsers.customer.licenseNumber,
-    licenseType: mockUsers.customer.licenseType,
-    licenseIssueDate: mockUsers.customer.licenseIssueDate,
-    licenseExpiryDate: mockUsers.customer.licenseExpiryDate,
-    licenseCountry: mockUsers.customer.licenseCountry,
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    address: '',
+    dateOfBirth: '',
+    licenseNumber: '',
+    licenseType: '',
+    licenseIssueDate: '',
+    licenseExpiryDate: '',
+    licenseCountry: '',
   })
+
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        const data = await getProfile()
+        const user = mapUser(data)
+        setFormData({
+          firstName: user.firstName || user.name?.split(' ')[0] || '',
+          lastName: user.lastName || user.name?.split(' ').slice(1).join(' ') || '',
+          email: user.email || '',
+          phone: user.phone || '',
+          address: user.address || '',
+          dateOfBirth: user.dateOfBirth || '',
+          licenseNumber: user.licenseNumber || '',
+          licenseType: user.licenseType || '',
+          licenseIssueDate: user.licenseIssueDate || '',
+          licenseExpiryDate: user.licenseExpiryDate || '',
+          licenseCountry: user.licenseCountry || '',
+        })
+      } catch (err) {
+        setError(err.message || 'Failed to load profile')
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadProfile()
+  }, [])
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
@@ -27,6 +59,22 @@ function ProfilePage() {
     e.preventDefault()
     toast.success('Profile updated successfully')
     setIsEditing(false)
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[200px]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-slate-500">{error}</p>
+      </div>
+    )
   }
 
   return (

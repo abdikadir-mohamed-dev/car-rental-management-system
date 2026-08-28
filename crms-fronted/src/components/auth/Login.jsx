@@ -1,10 +1,8 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { useDispatch } from 'react-redux'
-import { login as loginUser } from '../../redux/slices/authSlice'
-import { setAuthToken } from '../../services/authService'
 import toast from 'react-hot-toast'
-import { login } from '../../services/authService'
+import { useDispatch } from 'react-redux'
+import { loginThunk as login } from '../../redux/slices/authSlice'
 
 function Login() {
   const [formData, setFormData] = useState({ email: '', password: '' })
@@ -20,7 +18,7 @@ function Login() {
     }
   }
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault()
     const newErrors = {}
     if (!formData.email) newErrors.email = 'Email is required'
@@ -32,37 +30,27 @@ function Login() {
     }
 
     setLoading(true)
-    try {
-      const result = await dispatch(loginUser({ email: formData.email, password: formData.password })).unwrap()
-      if (result.token) {
-        setAuthToken(result.token)
+    dispatch(login({ email: formData.email, password: formData.password }))
+      .unwrap()
+      .then((res) => {
         toast.success('Login successful!')
-        if (result.user?.role === 'admin') {
+        const role = res.user?.role
+        if (role === 'admin') {
           navigate('/admin')
+        } else if (role === 'staff') {
+          navigate('/staff')
+        } else if (role === 'driver') {
+          navigate('/driver')
         } else {
           navigate('/customer')
         }
-      }
-    } catch (err) {
-      toast.error(err || 'Invalid email or password')
-      const response = await login(formData)
-      const user = response.data
-      localStorage.setItem('user', JSON.stringify(user))
-      toast.success('Login successful!')
-      if (user.role === 'admin') {
-        navigate('/admin')
-      } else if (user.role === 'staff') {
-        navigate('/staff')
-      } else if (user.role === 'driver') {
-        navigate('/driver')
-      } else {
-        navigate('/customer')
-      }
-    } catch (error) {
-      toast.error(error.response?.data?.error || 'Invalid email or password')
-    } finally {
-      setLoading(false)
-    }
+      })
+      .catch((err) => {
+        toast.error(err || 'Invalid email or password')
+      })
+      .finally(() => {
+        setLoading(false)
+      })
   }
 
   return (
@@ -75,7 +63,7 @@ function Login() {
           value={formData.email}
           onChange={handleChange}
           className={`input ${errors.email ? 'border-red-500' : ''}`}
-          placeholder="john@example.com"
+          placeholder="customer@drivego.com"
         />
         {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
       </div>
@@ -87,7 +75,7 @@ function Login() {
           value={formData.password}
           onChange={handleChange}
           className={`input ${errors.password ? 'border-red-500' : ''}`}
-          placeholder="Enter your password"
+          placeholder="password123"
         />
         {errors.password && <p className="text-red-500 text-sm mt-1">{errors.password}</p>}
       </div>
@@ -100,6 +88,11 @@ function Login() {
       <p className="text-center text-sm text-slate-600">
         Don't have an account? <Link to="/auth/register" className="text-blue-600 hover:underline font-medium">Create Account</Link>
       </p>
+      <div className="bg-slate-50 rounded-lg p-3 text-xs text-slate-500">
+        <p className="font-medium mb-1">Demo credentials:</p>
+        <p>Customer: customer@drivego.com / password123</p>
+        <p>Admin: admin@drivego.com / admin123</p>
+      </div>
     </form>
   )
 }

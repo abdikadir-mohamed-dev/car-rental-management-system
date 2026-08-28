@@ -9,3 +9,6 @@ from app.models.trip import Trip
 from app.models.driver_assignment import DriverAssignment
 from app.models.inspection import Inspection
 from app.models.notification import Notification
+from app.models.driver import Driver, Customer
+from app.models.earning import Earning
+from app.models.maintenance import Maintenance

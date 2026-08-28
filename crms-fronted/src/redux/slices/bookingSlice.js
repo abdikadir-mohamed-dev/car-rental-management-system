@@ -5,8 +5,8 @@ export const fetchBookings = createAsyncThunk(
   'bookings/fetchBookings',
   async (params, { rejectWithValue }) => {
     try {
-      const response = await bookingService.getBookings(params)
-      return response.data
+      const data = await bookingService.getBookings(params)
+      return data
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Failed to fetch bookings')
     }
@@ -17,8 +17,8 @@ export const fetchBooking = createAsyncThunk(
   'bookings/fetchBooking',
   async (id, { rejectWithValue }) => {
     try {
-      const response = await bookingService.getBooking(id)
-      return response.data
+      const data = await bookingService.getBooking(id)
+      return data
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Failed to fetch booking')
     }
@@ -29,8 +29,8 @@ export const createBooking = createAsyncThunk(
   'bookings/createBooking',
   async (bookingData, { rejectWithValue }) => {
     try {
-      const response = await bookingService.createBooking(bookingData)
-      return response.data
+      const data = await bookingService.createBooking(bookingData)
+      return data
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Failed to create booking')
     }
@@ -41,8 +41,8 @@ export const updateBooking = createAsyncThunk(
   'bookings/updateBooking',
   async ({ id, bookingData }, { rejectWithValue }) => {
     try {
-      const response = await bookingService.updateBooking(id, bookingData)
-      return response.data
+      const data = await bookingService.updateBooking(id, bookingData)
+      return data
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Failed to update booking')
     }
@@ -53,8 +53,8 @@ export const cancelBooking = createAsyncThunk(
   'bookings/cancelBooking',
   async (id, { rejectWithValue }) => {
     try {
-      const response = await bookingService.cancelBooking(id)
-      return response.data
+      const data = await bookingService.cancelBooking(id)
+      return data
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Failed to cancel booking')
     }

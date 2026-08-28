@@ -1,9 +1,28 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { CreditCard, TrendingDown, Clock, RefreshCw } from 'lucide-react'
-import { mockPayments } from '../../data/mockPayments'
+import { getPayments } from '../../services/paymentService'
+import { mapPayment } from '../../utils/apiMappers'
 
 function MyPaymentsPage() {
-  const payments = mockPayments
+  const [payments, setPayments] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    const loadPayments = async () => {
+      try {
+        setLoading(true)
+        const data = await getPayments()
+        setPayments((data || []).map(mapPayment))
+      } catch (err) {
+        setError(err.message || 'Failed to load payments')
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadPayments()
+  }, [])
+
   const totalSpent = payments.filter(p => p.status === 'paid').reduce((sum, p) => sum + p.amount, 0)
   const thisMonth = payments.filter(p => {
     const date = new Date(p.date)
@@ -12,6 +31,22 @@ function MyPaymentsPage() {
   }).reduce((sum, p) => sum + p.amount, 0)
   const pending = payments.filter(p => p.status === 'pending').reduce((sum, p) => sum + p.amount, 0)
   const refunded = payments.filter(p => p.status === 'refunded').reduce((sum, p) => sum + p.amount, 0)
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[200px]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-slate-500">{error}</p>
+      </div>
+    )
+  }
 
   return (
     <div>

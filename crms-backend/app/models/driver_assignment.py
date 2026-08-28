@@ -1,5 +1,6 @@
-from app import db
+from app.extensions import db
 from datetime import datetime
+
 
 class DriverAssignment(db.Model):
     __tablename__ = 'driver_assignments'
@@ -10,3 +11,12 @@ class DriverAssignment(db.Model):
     assigned_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     driver = db.relationship('User', backref='driver_assignments')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'booking_id': self.booking_id,
+            'driver_id': self.driver_id,
+            'status': self.status,
+            'assigned_at': self.assigned_at.isoformat() if self.assigned_at else None,
+        }

@@ -14,7 +14,14 @@ class Payment(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+    # Customer-facing fields
+    customer_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    mpesa_receipt_number = db.Column(db.String(120))
+    paid_at = db.Column(db.DateTime)
+    date = db.Column(db.Date, nullable=False)
+
     booking = db.relationship('Booking', backref='payments')
+    customer = db.relationship('User', backref='payments')
 
     def to_dict(self):
         return {
@@ -25,6 +32,10 @@ class Payment(db.Model):
             'method': self.method,
             'status': self.status,
             'transactionId': self.transaction_id,
+            'customerId': self.customer_id,
+            'mpesaReceiptNumber': self.mpesa_receipt_number,
+            'paidAt': self.paid_at.isoformat() if self.paid_at else None,
+            'date': self.date.isoformat() if self.date else None,
             'createdAt': self.created_at.isoformat() if self.created_at else None,
             'updatedAt': self.updated_at.isoformat() if self.updated_at else None,
         }

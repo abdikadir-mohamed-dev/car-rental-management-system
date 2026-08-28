@@ -3,28 +3,31 @@ import toast from 'react-hot-toast'
 import { Edit, Trash2, Search } from 'lucide-react'
 import ConfirmDialog from '../../components/common/ConfirmDialog'
 import { getVehicles, deleteVehicle } from '../../services/adminService'
+import { mapVehicle } from '../../utils/apiMappers'
 
 function VehicleManagement({ onEdit }) {
   const [vehicles, setVehicles] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [search, setSearch] = useState('')
   const [deleteId, setDeleteId] = useState(null)
   const [confirmOpen, setConfirmOpen] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   const loadVehicles = async () => {
-    setLoading(true)
     try {
-      const response = await getVehicles()
-      setVehicles(response.data)
-    } catch {
-      toast.error('Failed to load vehicles')
+      setLoading(true)
+      setError(null)
+      const data = await getVehicles()
+      setVehicles((data || []).map(mapVehicle))
+    } catch (err) {
+      setError(err.message || 'Failed to load vehicles')
     } finally {
       setLoading(false)
     }
   }
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadVehicles()
   }, [])
 
@@ -37,13 +40,16 @@ function VehicleManagement({ onEdit }) {
     setConfirmOpen(false)
     if (deleteId) {
       try {
+        setDeleting(true)
         await deleteVehicle(deleteId)
-        setVehicles(vehicles.filter(v => v.id !== deleteId))
+        setVehicles(vehicles.filter(v => v._id !== deleteId))
         toast.success('Vehicle deleted')
-      } catch {
-        toast.error('Failed to delete vehicle')
+      } catch (err) {
+        toast.error(err.message || 'Failed to delete vehicle')
+      } finally {
+        setDeleting(false)
+        setDeleteId(null)
       }
-      setDeleteId(null)
     }
   }
 
@@ -53,12 +59,18 @@ function VehicleManagement({ onEdit }) {
   }
 
   const filteredVehicles = vehicles.filter(vehicle =>
-    (vehicle.make && vehicle.make.toLowerCase().includes(search.toLowerCase())) ||
-    (vehicle.model && vehicle.model.toLowerCase().includes(search.toLowerCase()))
+    vehicle.name?.toLowerCase().includes(search.toLowerCase()) ||
+    vehicle.brand?.toLowerCase().includes(search.toLowerCase())
   )
 
   return (
     <div>
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+          {error}
+          <button onClick={loadVehicles} className="ml-2 underline">Retry</button>
+        </div>
+      )}
       <div className="mb-4">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
@@ -73,13 +85,14 @@ function VehicleManagement({ onEdit }) {
       </div>
       {loading ? (
         <div className="flex items-center justify-center min-h-[200px]">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
         </div>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b border-slate-200">
+                <th className="text-left py-3 px-4 font-medium text-slate-600">Image</th>
                 <th className="text-left py-3 px-4 font-medium text-slate-600">Name</th>
                 <th className="text-left py-3 px-4 font-medium text-slate-600">Type</th>
                 <th className="text-left py-3 px-4 font-medium text-slate-600">Price/Day</th>
@@ -89,13 +102,16 @@ function VehicleManagement({ onEdit }) {
             </thead>
             <tbody>
               {filteredVehicles.map((vehicle) => (
-                <tr key={vehicle.id || vehicle._id} className="border-b border-slate-100 hover:bg-slate-50">
-                  <td className="py-3 px-4 text-slate-900">{vehicle.make} {vehicle.model}</td>
-                  <td className="py-3 px-4 capitalize text-slate-600">{vehicle.vehicleType}</td>
-                  <td className="py-3 px-4 text-slate-600">KES {vehicle.dailyRentalRate?.toLocaleString()}</td>
+                <tr key={vehicle._id} className="border-b border-slate-100 hover:bg-slate-50">
                   <td className="py-3 px-4">
-                    <span className={`badge ${vehicle.status === 'available' ? 'badge-success' : 'badge-danger'}`}>
-                      {vehicle.status}
+                    <img src={vehicle.image || vehicle.images?.[0] || '/placeholder.png'} alt={vehicle.name} className="w-12 h-12 object-cover rounded-lg" />
+                  </td>
+                  <td className="py-3 px-4 text-slate-900">{vehicle.name}</td>
+                  <td className="py-3 px-4 capitalize text-slate-600">{vehicle.category}</td>
+                  <td className="py-3 px-4 text-slate-600">KES {(vehicle.pricePerDay || 0).toLocaleString()}</td>
+                  <td className="py-3 px-4">
+                    <span className={`badge ${vehicle.available ? 'badge-success' : 'badge-danger'}`}>
+                      {vehicle.available ? 'Available' : 'Unavailable'}
                     </span>
                   </td>
                   <td className="py-3 px-4">
@@ -103,7 +119,7 @@ function VehicleManagement({ onEdit }) {
                       <button onClick={() => onEdit?.(vehicle)} className="p-2 text-primary hover:bg-primary-light rounded-lg">
                         <Edit className="w-4 h-4" />
                       </button>
-                      <button onClick={() => handleDeleteClick(vehicle.id || vehicle._id)} className="p-2 text-danger hover:bg-red-50 rounded-lg">
+                      <button onClick={() => handleDeleteClick(vehicle._id)} className="p-2 text-danger hover:bg-red-50 rounded-lg">
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>

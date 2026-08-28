@@ -1,13 +1,18 @@
 import { useState, useEffect } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import { Star, Users, Gauge, Fuel, MapPin, Calendar, Heart, ArrowLeft, Check } from 'lucide-react'
 import { getVehicle } from '../../services/vehicleService'
+import { mapVehicle } from '../../utils/apiMappers'
 import toast from 'react-hot-toast'
+import { useSelector } from 'react-redux'
 
 function VehicleDetailsPage() {
   const { id } = useParams()
+  const navigate = useNavigate()
+  const { isAuthenticated, user } = useSelector((state) => state.auth)
   const [vehicle, setVehicle] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [selectedImage, setSelectedImage] = useState(0)
   const [pickupDate, setPickupDate] = useState('')
   const [returnDate, setReturnDate] = useState('')
@@ -15,31 +20,13 @@ function VehicleDetailsPage() {
 
   useEffect(() => {
     const loadVehicle = async () => {
-      setLoading(true)
       try {
-        const response = await getVehicle(id)
-        const v = response.data
-        setVehicle({
-          id: v.id,
-          name: `${v.make} ${v.model}`,
-          brand: v.make,
-          category: v.vehicleType,
-          pricePerDay: v.dailyRentalRate,
-          rating: 4.5,
-          seats: v.seatingCapacity || 5,
-          doors: 4,
-          transmission: v.transmission,
-          fuelType: v.fuelType,
-          luggage: 2,
-          location: v.location,
-          image: v.images?.[0] || '/placeholder-car.jpg',
-          images: v.images || [],
-          features: v.features || [],
-          description: v.description || '',
-          available: v.available,
-        })
-      } catch (error) {
-        toast.error('Failed to load vehicle details')
+        setLoading(true)
+        setError(null)
+        const data = await getVehicle(id)
+        setVehicle(mapVehicle(data))
+      } catch (err) {
+        setError(err.message || 'Failed to load vehicle')
       } finally {
         setLoading(false)
       }
@@ -50,16 +37,17 @@ function VehicleDetailsPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     )
   }
 
-  if (!vehicle) {
+  if (error || !vehicle) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-slate-900 mb-4">Vehicle Not Found</h1>
+          <p className="text-slate-600 mb-4">{error}</p>
           <Link to="/vehicles" className="text-blue-600 hover:text-blue-700 font-medium">Back to Browse Cars</Link>
         </div>
       </div>
@@ -192,6 +180,7 @@ function VehicleDetailsPage() {
                           type="date"
                           value={pickupDate}
                           onChange={(e) => setPickupDate(e.target.value)}
+                          min={new Date().toISOString().split('T')[0]}
                           className="input pl-9 bg-slate-50"
                         />
                       </div>
@@ -204,6 +193,7 @@ function VehicleDetailsPage() {
                           type="date"
                           value={returnDate}
                           onChange={(e) => setReturnDate(e.target.value)}
+                          min={pickupDate || new Date().toISOString().split('T')[0]}
                           className="input pl-9 bg-slate-50"
                         />
                       </div>
@@ -234,7 +224,12 @@ function VehicleDetailsPage() {
                       toast.error('Please select pick-up and return dates')
                       return
                     }
-                    toast.success(`Booking request sent for ${vehicle.name}!`)
+                    if (!isAuthenticated || user?.role !== 'customer') {
+                      toast.error('Please login as a customer to book')
+                      navigate('/auth/login')
+                      return
+                    }
+                    navigate(`/customer/booking/${vehicle.id}?pickup=${pickupDate}&return=${returnDate}`)
                   }}
                   className="btn-primary w-full py-3"
                 >

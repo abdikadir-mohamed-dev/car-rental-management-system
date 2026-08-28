@@ -10,30 +10,41 @@ const bookingService = axios.create({
   },
 })
 
-bookingService.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token')
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
-  }
-  return config
-})
-
-setAuthToken(localStorage.getItem('token'))
+setAuthToken(localStorage.getItem('token'), bookingService)
 
 export const getBookings = async (params) => {
-  return await bookingService.get('/', { params })
+  const response = await bookingService.get('/', { params })
+  return response.data.bookings || response.data
 }
 
 export const getBooking = async (id) => {
-  return await bookingService.get(`/${id}`)
+  const response = await bookingService.get(`/${id}`)
+  return response.data.booking || response.data
 }
 
 export const createBooking = async (bookingData) => {
-  return await bookingService.post('/', bookingData)
+  const response = await bookingService.post('/', bookingData)
+  return response.data.booking || response.data
+}
+
+export const updateBooking = async (id, bookingData) => {
+  const response = await bookingService.put(`/${id}`, bookingData)
+  return response.data.booking || response.data
+}
+
+export const cancelBooking = async (id) => {
+  const response = await bookingService.delete(`/${id}`)
+  return response.data
+}
+
+export const checkAvailability = async (vehicleId, pickupDate, returnDate) => {
+  const response = await bookingService.get('/availability', { params: { vehicleId, pickupDate, returnDate } })
+  return response.data
 }
 
 export const updateBookingStatus = async (id, status) => {
-  return await bookingService.patch(`/${id}/status`, { status })
+  const response = await bookingService.patch(`/${id}`, { status })
+  return response.data.booking || response.data
 }
 
 export default bookingService

@@ -3,33 +3,37 @@ import toast from 'react-hot-toast'
 import { Edit, Trash2, Search } from 'lucide-react'
 import ConfirmDialog from '../../components/common/ConfirmDialog'
 import { getUsers, updateUser, deleteUser } from '../../services/adminService'
+import { mapUser } from '../../utils/apiMappers'
 
 function UserManagement({ users: externalUsers, setUsers: externalSetUsers, onEdit }) {
   const [internalUsers, setInternalUsers] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [search, setSearch] = useState('')
   const [editingUser, setEditingUser] = useState(null)
   const [formData, setFormData] = useState({ name: '', email: '', role: 'customer' })
   const [deleteId, setDeleteId] = useState(null)
   const [confirmOpen, setConfirmOpen] = useState(false)
+  const [updating, setUpdating] = useState(false)
 
   const users = externalUsers || internalUsers
   const setUsers = externalSetUsers || setInternalUsers
 
   const loadUsers = async () => {
-    setLoading(true)
     try {
-      const response = await getUsers()
-      setUsers(response.data)
-    } catch {
-      toast.error('Failed to load users')
+      setLoading(true)
+      setError(null)
+      const data = await getUsers()
+      const list = Array.isArray(data) ? data : (data.users || [])
+      setUsers(list.map(mapUser))
+    } catch (err) {
+      setError(err.message || 'Failed to load users')
     } finally {
       setLoading(false)
     }
   }
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!externalUsers) {
       loadUsers()
     } else {
@@ -45,13 +49,16 @@ function UserManagement({ users: externalUsers, setUsers: externalSetUsers, onEd
 
   const handleUpdate = async (e) => {
     e.preventDefault()
+    setUpdating(true)
     try {
-      const response = await updateUser(editingUser.id, formData)
-      setUsers(users.map(u => u.id === editingUser.id ? response.data : u))
+      const updated = await updateUser(editingUser.id || editingUser._id, formData)
+      setUsers(users.map(u => (u._id || u.id) === (editingUser._id || editingUser.id) ? { ...u, ...updated } : u))
       toast.success('User updated')
       setEditingUser(null)
-    } catch {
-      toast.error('Failed to update user')
+    } catch (err) {
+      toast.error(err.message || 'Failed to update user')
+    } finally {
+      setUpdating(false)
     }
   }
 
@@ -65,10 +72,10 @@ function UserManagement({ users: externalUsers, setUsers: externalSetUsers, onEd
     if (deleteId) {
       try {
         await deleteUser(deleteId)
-        setUsers(users.filter(u => u.id !== deleteId))
+        setUsers(users.filter(u => (u._id || u.id) !== deleteId))
         toast.success('User deleted')
-      } catch {
-        toast.error('Failed to delete user')
+      } catch (err) {
+        toast.error(err.message || 'Failed to delete user')
       }
       setDeleteId(null)
     }
@@ -86,6 +93,12 @@ function UserManagement({ users: externalUsers, setUsers: externalSetUsers, onEd
 
   return (
     <div>
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+          {error}
+          <button onClick={loadUsers} className="ml-2 underline">Retry</button>
+        </div>
+      )}
       <div className="mb-4">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
@@ -100,7 +113,7 @@ function UserManagement({ users: externalUsers, setUsers: externalSetUsers, onEd
       </div>
       {loading ? (
         <div className="flex items-center justify-center min-h-[200px]">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
         </div>
       ) : (
         <div className="overflow-x-auto">
@@ -116,7 +129,7 @@ function UserManagement({ users: externalUsers, setUsers: externalSetUsers, onEd
             </thead>
             <tbody>
               {filteredUsers.map((user) => (
-                <tr key={user.id || user._id} className="border-b border-slate-100 hover:bg-slate-50">
+                <tr key={user._id} className="border-b border-slate-100 hover:bg-slate-50">
                   <td className="py-3 px-4 text-slate-900">{user.name}</td>
                   <td className="py-3 px-4 text-slate-600">{user.email}</td>
                   <td className="py-3 px-4 text-slate-600">{user.phone || 'N/A'}</td>
@@ -126,7 +139,7 @@ function UserManagement({ users: externalUsers, setUsers: externalSetUsers, onEd
                       <button onClick={() => handleEdit(user)} className="p-2 text-primary hover:bg-primary-light rounded-lg">
                         <Edit className="w-4 h-4" />
                       </button>
-                      <button onClick={() => handleDeleteClick(user.id || user._id)} className="p-2 text-danger hover:bg-red-50 rounded-lg">
+                      <button onClick={() => handleDeleteClick(user._id)} className="p-2 text-danger hover:bg-red-50 rounded-lg">
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
@@ -165,7 +178,7 @@ function UserManagement({ users: externalUsers, setUsers: externalSetUsers, onEd
                 </select>
               </div>
               <div className="flex gap-3 pt-4">
-                <button type="submit" className="btn-primary flex-1">Save</button>
+                <button type="submit" className="btn-primary flex-1" disabled={updating}>{updating ? 'Saving...' : 'Save'}</button>
                 <button type="button" onClick={() => setEditingUser(null)} className="btn-secondary flex-1">Cancel</button>
               </div>
             </form>

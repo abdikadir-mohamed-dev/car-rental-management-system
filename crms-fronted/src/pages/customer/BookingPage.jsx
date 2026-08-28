@@ -1,14 +1,18 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { ArrowLeft, CreditCard, Wallet, Banknote } from 'lucide-react'
+import { ArrowLeft, CreditCard, Wallet, Banknote, Check } from 'lucide-react'
 import { getVehicle } from '../../services/vehicleService'
-import { mockDrivers } from '../../data/mockDrivers'
+import { getDrivers } from '../../services/driverService'
+import { getPublicConfig } from '../../services/paymentService'
+import { mapVehicle } from '../../utils/apiMappers'
 import toast from 'react-hot-toast'
 
 function BookingPage() {
   const { vehicleId } = useParams()
   const [vehicle, setVehicle] = useState(null)
+  const [drivers, setDrivers] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [pickupDate, setPickupDate] = useState('')
   const [returnDate, setReturnDate] = useState('')
   const [drivingOption, setDrivingOption] = useState('self')
@@ -17,39 +21,30 @@ function BookingPage() {
   const [processing, setProcessing] = useState(false)
   const [confirmed, setConfirmed] = useState(false)
   const [bookingId, setBookingId] = useState('')
+  const [mpesaNumber, setMpesaNumber] = useState('0728268111')
 
   useEffect(() => {
-    const loadVehicle = async () => {
-      setLoading(true)
+    const loadData = async () => {
       try {
-        const response = await getVehicle(vehicleId)
-        const v = response.data
-        setVehicle({
-          id: v.id,
-          name: `${v.make} ${v.model}`,
-          brand: v.make,
-          category: v.vehicleType,
-          pricePerDay: v.dailyRentalRate,
-          rating: 4.5,
-          seats: v.seatingCapacity || 5,
-          doors: 4,
-          transmission: v.transmission,
-          fuelType: v.fuelType,
-          luggage: 2,
-          location: v.location,
-          image: v.images?.[0] || '/placeholder-car.jpg',
-          images: v.images || [],
-          features: v.features || [],
-          description: v.description || '',
-          available: v.available,
-        })
-      } catch (error) {
-        toast.error('Failed to load vehicle details')
+        setLoading(true)
+        setError(null)
+        const [vehicleData, driversData, config] = await Promise.all([
+          getVehicle(vehicleId),
+          getDrivers(),
+          getPublicConfig(),
+        ])
+        setVehicle(mapVehicle(vehicleData))
+        setDrivers(driversData || [])
+        if (config?.mpesaPaymentNumber) {
+          setMpesaNumber(config.mpesaPaymentNumber)
+        }
+      } catch (err) {
+        setError(err.message || 'Failed to load data')
       } finally {
         setLoading(false)
       }
     }
-    loadVehicle()
+    loadData()
   }, [vehicleId])
 
   useEffect(() => {
@@ -62,10 +57,10 @@ function BookingPage() {
     if (returnD) setReturnDate(returnD)
     if (option) setDrivingOption(option)
     if (driverId) {
-      const driver = mockDrivers.find(d => d.id === Number(driverId))
+      const driver = drivers.find(d => d.id === Number(driverId))
       setSelectedDriver(driver)
     }
-  }, [vehicleId])
+  }, [vehicleId, drivers])
 
   const days = pickupDate && returnDate
     ? Math.max(1, Math.ceil((new Date(returnDate) - new Date(pickupDate)) / (1000 * 60 * 60 * 24)))
@@ -90,11 +85,20 @@ function BookingPage() {
     }, 1500)
   }
 
-  if (!vehicle) {
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    )
+  }
+
+  if (error || !vehicle) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-slate-900 mb-4">Vehicle Not Found</h1>
+          <p className="text-slate-600 mb-4">{error}</p>
           <Link to="/customer/browse" className="text-blue-600 hover:text-blue-700 font-medium">Back to Browse</Link>
         </div>
       </div>
@@ -201,7 +205,7 @@ function BookingPage() {
                     <Wallet className="w-6 h-6 text-green-600" />
                     <div>
                       <p className="font-medium text-slate-900">M-Pesa</p>
-                      <p className="text-sm text-slate-600">Pay with M-Pesa</p>
+                      <p className="text-sm text-slate-600">Pay with M-Pesa to {mpesaNumber}</p>
                     </div>
                   </button>
                   <button
