@@ -31,7 +31,7 @@ const customerLinks = [
   { to: '/customer/support', icon: HelpCircle, label: 'Help & Support' },
 ]
 
-function CustomerSidebar({ isOpen, onClose }) {
+function CustomerSidebar({ isOpen, onClose, unreadCount = 0 }) {
   const navigate = useNavigate()
 
   const handleLogout = () => {
@@ -82,6 +82,9 @@ function CustomerSidebar({ isOpen, onClose }) {
             >
               {link.icon && <link.icon className="w-5 h-5" />}
               {link.label}
+              {link.to === '/customer/notifications' && unreadCount > 0 && (
+                <span className="ml-auto bg-danger text-white text-xs px-2 py-0.5 rounded-full">{unreadCount}</span>
+              )}
             </NavLink>
           ))}
         </nav>

@@ -7,12 +7,11 @@ bp = Blueprint('notifications', __name__, url_prefix='/api/notifications')
 
 
 @bp.route('/', methods=['GET'])
+@token_required
 def get_notifications():
-    user_id = request.args.get('user_id', type=int)
-    query = Notification.query
-    if user_id:
-        query = query.filter_by(user_id=user_id)
-    notifications = query.order_by(Notification.created_at.desc()).all()
+    from flask_jwt_extended import get_jwt_identity
+    user_id = int(get_jwt_identity())
+    notifications = Notification.query.filter_by(user_id=user_id).order_by(Notification.created_at.desc()).all()
     result = [n.to_dict() for n in notifications]
     return jsonify(result), 200
 

@@ -169,6 +169,8 @@ def create_booking():
     for staff in staff_users:
         create_notification(staff.id, 'New Booking', f'New booking #{booking.id} created by {booking.user.name}.')
 
+    create_notification(booking.user_id, 'Booking Confirmed', f'Your booking #{booking.id} for {booking.vehicle.make} {booking.vehicle.model} has been created successfully.')
+
     db.session.commit()
     return jsonify({'booking': booking.to_dict()}), 201
 

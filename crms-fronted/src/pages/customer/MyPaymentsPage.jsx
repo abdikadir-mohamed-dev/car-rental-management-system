@@ -23,11 +23,11 @@ function MyPaymentsPage() {
     loadPayments()
   }, [])
 
-  const totalSpent = payments.filter(p => p.status === 'paid').reduce((sum, p) => sum + p.amount, 0)
+  const totalSpent = payments.filter(p => p.status === 'completed').reduce((sum, p) => sum + p.amount, 0)
   const thisMonth = payments.filter(p => {
     const date = new Date(p.date)
     const now = new Date()
-    return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear() && p.status === 'paid'
+    return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear() && p.status === 'completed'
   }).reduce((sum, p) => sum + p.amount, 0)
   const pending = payments.filter(p => p.status === 'pending').reduce((sum, p) => sum + p.amount, 0)
   const refunded = payments.filter(p => p.status === 'refunded').reduce((sum, p) => sum + p.amount, 0)
@@ -123,8 +123,8 @@ function MyPaymentsPage() {
                   <td className="py-4 px-4 text-sm text-slate-600">{payment.method}</td>
                   <td className="py-4 px-4 text-sm font-medium text-slate-900">KES {payment.amount.toLocaleString()}</td>
                   <td className="py-4 px-4">
-                    <span className={`inline-block px-2 py-1 text-xs rounded-full font-medium capitalize ${
-                      payment.status === 'paid' ? 'bg-emerald-100 text-success' :
+                     <span className={`inline-block px-2 py-1 text-xs rounded-full font-medium capitalize ${
+                      payment.status === 'completed' ? 'bg-emerald-100 text-success' :
                       payment.status === 'pending' ? 'bg-amber-100 text-warning' :
                       payment.status === 'refunded' ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-danger'
                     }`}>

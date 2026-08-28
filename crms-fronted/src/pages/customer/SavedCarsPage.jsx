@@ -5,7 +5,7 @@ import { getVehicles } from '../../services/vehicleService'
 import { mapVehicle } from '../../utils/apiMappers'
 
 function SavedCarsPage() {
-  const [savedIds, setSavedIds] = useState([1, 3])
+  const [savedIds, setSavedIds] = useState([])
   const [vehicles, setVehicles] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)

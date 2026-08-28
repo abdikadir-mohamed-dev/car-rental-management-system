@@ -12,8 +12,8 @@ const notificationService = axios.create({
 
 setAuthToken(localStorage.getItem('token'), notificationService)
 
-export const getNotifications = async (userId) => {
-  const response = await notificationService.get('/', { params: { user_id: userId } })
+export const getNotifications = async () => {
+  const response = await notificationService.get('/')
   return response.data
 }
 
