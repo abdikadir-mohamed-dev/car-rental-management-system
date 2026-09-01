@@ -11,8 +11,11 @@ import { BOOKING_STATUS } from '../../utils/constants'
 import toast from 'react-hot-toast'
 
 import {
-  getPendingBookings,
-  updateStaffBookingStatus,
+  getBookings,
+  updateBookingStatus,
+} from '../../services/bookingService'
+
+import {
   checkoutBooking,
   checkinBooking,
 } from '../../services/staffService'
@@ -27,13 +30,18 @@ function BookingManagement({ onView }) {
   const [dateFilter, setDateFilter] = useState('')
   const [selectedBooking, setSelectedBooking] = useState(null)
 
-  // Load bookings that customers have submitted
+  // ============================================================
+  // LOAD BOOKINGS
+  // ============================================================
+
   const loadBookings = async () => {
     try {
       setLoading(true)
       setError(null)
 
-      const response = await getPendingBookings()
+      const response = await getBookings({
+        limit: 100,
+      })
 
       const list = Array.isArray(response)
         ? response
@@ -41,7 +49,7 @@ function BookingManagement({ onView }) {
 
       setBookings(list)
     } catch (err) {
-      console.error('Failed to load staff bookings:', err)
+      console.error('Failed to load bookings:', err)
 
       const message =
         err?.response?.data?.message ||
@@ -60,14 +68,22 @@ function BookingManagement({ onView }) {
     loadBookings()
   }, [])
 
+  // ============================================================
+  // HELPER FUNCTIONS
+  // ============================================================
+
   const getBookingId = (booking) => {
-    return booking?._id || booking?.id || booking?.booking_id
+    return (
+      booking?.id ||
+      booking?._id ||
+      booking?.booking_id
+    )
   }
 
   const getCustomerName = (booking) => {
     return (
-      booking?.user?.name ||
       booking?.customer?.name ||
+      booking?.user?.name ||
       booking?.customer?.full_name ||
       booking?.user_name ||
       booking?.customer_name ||
@@ -79,6 +95,7 @@ function BookingManagement({ onView }) {
     return (
       booking?.vehicle?.name ||
       booking?.vehicle?.model ||
+      booking?.vehicle?.make ||
       booking?.vehicle_name ||
       booking?.vehicle?.registration_number ||
       'N/A'
@@ -98,6 +115,7 @@ function BookingManagement({ onView }) {
     return (
       booking?.dropoffDate ||
       booking?.dropoff_date ||
+      booking?.returnDate ||
       booking?.end_date ||
       'N/A'
     )
@@ -114,6 +132,8 @@ function BookingManagement({ onView }) {
   const getDropoffLocation = (booking) => {
     return (
       booking?.dropoffLocation ||
+      booking?.dropoff_location ||
+      booking?.returnLocation ||
       booking?.dropoff_location ||
       'N/A'
     )
@@ -141,9 +161,16 @@ function BookingManagement({ onView }) {
     }
   }
 
-  const updateBookingStatus = async (bookingId, newStatus) => {
+  // ============================================================
+  // UPDATE BOOKING STATUS
+  // ============================================================
+
+  const updateBooking = async (bookingId, newStatus) => {
     try {
-      await updateStaffBookingStatus(bookingId, newStatus)
+      await updateBookingStatus(
+        bookingId,
+        newStatus
+      )
 
       setBookings((currentBookings) =>
         currentBookings.map((booking) =>
@@ -165,22 +192,36 @@ function BookingManagement({ onView }) {
           : null
       )
 
-      toast.success(`Booking status updated to ${newStatus}`)
+      toast.success(
+        `Booking status updated to ${newStatus}`
+      )
     } catch (err) {
-      console.error('Failed to update booking:', err)
+      console.error(
+        'Failed to update booking status:',
+        err
+      )
 
       const message =
         err?.response?.data?.message ||
         err?.response?.data?.error ||
         err?.message ||
-        'Failed to update booking'
+        'Failed to update booking status'
 
       toast.error(message)
     }
   }
 
+  // ============================================================
+  // CHECKOUT
+  // ============================================================
+
   const handleCheckout = async (booking) => {
     const bookingId = getBookingId(booking)
+
+    if (!bookingId) {
+      toast.error('Invalid booking ID')
+      return
+    }
 
     try {
       await checkoutBooking(bookingId, {
@@ -200,8 +241,16 @@ function BookingManagement({ onView }) {
         )
       )
 
+      setSelectedBooking((current) =>
+        current
+          ? {
+              ...current,
+              status: 'active',
+            }
+          : null
+      )
+
       toast.success('Vehicle checked out')
-      setSelectedBooking(null)
     } catch (err) {
       console.error('Checkout failed:', err)
 
@@ -215,8 +264,17 @@ function BookingManagement({ onView }) {
     }
   }
 
+  // ============================================================
+  // CHECKIN
+  // ============================================================
+
   const handleCheckin = async (booking) => {
     const bookingId = getBookingId(booking)
+
+    if (!bookingId) {
+      toast.error('Invalid booking ID')
+      return
+    }
 
     try {
       await checkinBooking(bookingId, {
@@ -237,8 +295,16 @@ function BookingManagement({ onView }) {
         )
       )
 
+      setSelectedBooking((current) =>
+        current
+          ? {
+              ...current,
+              status: 'completed',
+            }
+          : null
+      )
+
       toast.success('Vehicle checked in')
-      setSelectedBooking(null)
     } catch (err) {
       console.error('Check-in failed:', err)
 
@@ -252,14 +318,32 @@ function BookingManagement({ onView }) {
     }
   }
 
+  // ============================================================
+  // FILTER BOOKINGS
+  // ============================================================
+
   const filteredBookings = bookings.filter((booking) => {
     const searchLower = search.toLowerCase()
 
-    const bookingId = String(getBookingId(booking) || '').toLowerCase()
-    const customerName = getCustomerName(booking).toLowerCase()
-    const vehicleName = getVehicleName(booking).toLowerCase()
-    const pickupLocation = getPickupLocation(booking).toLowerCase()
-    const dropoffLocation = getDropoffLocation(booking).toLowerCase()
+    const bookingId = String(
+      getBookingId(booking) || ''
+    ).toLowerCase()
+
+    const customerName = String(
+      getCustomerName(booking) || ''
+    ).toLowerCase()
+
+    const vehicleName = String(
+      getVehicleName(booking) || ''
+    ).toLowerCase()
+
+    const pickupLocation = String(
+      getPickupLocation(booking) || ''
+    ).toLowerCase()
+
+    const dropoffLocation = String(
+      getDropoffLocation(booking) || ''
+    ).toLowerCase()
 
     const matchesSearch =
       !search ||
@@ -273,17 +357,41 @@ function BookingManagement({ onView }) {
       !statusFilter ||
       booking.status === statusFilter
 
+    const pickupDate = getPickupDate(booking)
+    const dropoffDate = getDropoffDate(booking)
+
+    const normalizedPickupDate =
+      typeof pickupDate === 'string'
+        ? pickupDate.slice(0, 10)
+        : pickupDate
+
+    const normalizedDropoffDate =
+      typeof dropoffDate === 'string'
+        ? dropoffDate.slice(0, 10)
+        : dropoffDate
+
     const matchesDate =
       !dateFilter ||
-      getPickupDate(booking) === dateFilter ||
-      getDropoffDate(booking) === dateFilter
+      normalizedPickupDate === dateFilter ||
+      normalizedDropoffDate === dateFilter
 
-    return matchesSearch && matchesStatus && matchesDate
+    return (
+      matchesSearch &&
+      matchesStatus &&
+      matchesDate
+    )
   })
+
+  // ============================================================
+  // RENDER
+  // ============================================================
 
   return (
     <div>
-      {/* Error */}
+      {/* ======================================================
+          ERROR
+      ====================================================== */}
+
       {error && (
         <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
           {error}
@@ -297,8 +405,13 @@ function BookingManagement({ onView }) {
         </div>
       )}
 
-      {/* Filters */}
+      {/* ======================================================
+          FILTERS
+      ====================================================== */}
+
       <div className="flex flex-col sm:flex-row gap-4 mb-4">
+        {/* Search */}
+
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
 
@@ -306,10 +419,14 @@ function BookingManagement({ onView }) {
             type="text"
             placeholder="Search by booking ID, customer, vehicle, or location..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) =>
+              setSearch(e.target.value)
+            }
             className="input pl-10"
           />
         </div>
+
+        {/* Date */}
 
         <div className="flex items-center gap-2">
           <Filter className="w-5 h-5 text-slate-400" />
@@ -317,27 +434,53 @@ function BookingManagement({ onView }) {
           <input
             type="date"
             value={dateFilter}
-            onChange={(e) => setDateFilter(e.target.value)}
+            onChange={(e) =>
+              setDateFilter(e.target.value)
+            }
             className="input sm:w-48"
           />
         </div>
 
+        {/* Status */}
+
         <select
           value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
+          onChange={(e) =>
+            setStatusFilter(e.target.value)
+          }
           className="input sm:w-48"
         >
-          <option value="">All Statuses</option>
+          <option value="">
+            All Statuses
+          </option>
 
-          {Object.values(BOOKING_STATUS).map((status) => (
-            <option key={status} value={status}>
-              {status}
+          {Object.values(BOOKING_STATUS).map(
+            (status) => (
+              <option
+                key={status}
+                value={status}
+              >
+                {status}
+              </option>
+            )
+          )}
+
+          {/* Active is not necessarily inside
+              BOOKING_STATUS, so include it */}
+          {!Object.values(BOOKING_STATUS).includes(
+            'active'
+          ) && (
+            <option value="active">
+              active
             </option>
-          ))}
+          )}
         </select>
       </div>
 
-      {/* Loading */}
+      {/* ======================================================
+          LOADING
+      ====================================================== */}
+
       {loading ? (
         <div className="flex items-center justify-center min-h-[200px]">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
@@ -375,28 +518,43 @@ function BookingManagement({ onView }) {
 
             <tbody>
               {filteredBookings.map((booking) => {
-                const bookingId = getBookingId(booking)
+                const bookingId =
+                  getBookingId(booking)
 
                 return (
                   <tr
                     key={bookingId}
                     className="border-b border-slate-100 hover:bg-slate-50"
                   >
+                    {/* ID */}
+
                     <td className="py-3 px-4 text-slate-900">
-                      #{String(bookingId || '').slice(-8)}
+                      #
+                      {String(
+                        bookingId || ''
+                      ).slice(-8)}
                     </td>
+
+                    {/* Vehicle */}
 
                     <td className="py-3 px-4 text-slate-600">
                       {getVehicleName(booking)}
                     </td>
 
+                    {/* Customer */}
+
                     <td className="py-3 px-4 text-slate-600">
                       {getCustomerName(booking)}
                     </td>
 
+                    {/* Dates */}
+
                     <td className="py-3 px-4 text-slate-600">
-                      {getPickupDate(booking)} - {getDropoffDate(booking)}
+                      {getPickupDate(booking)} -{' '}
+                      {getDropoffDate(booking)}
                     </td>
+
+                    {/* Status */}
 
                     <td className="py-3 px-4">
                       <span
@@ -404,16 +562,22 @@ function BookingManagement({ onView }) {
                           booking.status
                         )}`}
                       >
-                        {booking.status || 'pending'}
+                        {booking.status ||
+                          'pending'}
                       </span>
                     </td>
+
+                    {/* Actions */}
 
                     <td className="py-3 px-4">
                       <div className="flex gap-2">
                         {/* View */}
+
                         <button
                           onClick={() => {
-                            setSelectedBooking(booking)
+                            setSelectedBooking(
+                              booking
+                            )
 
                             if (onView) {
                               onView(booking)
@@ -426,11 +590,13 @@ function BookingManagement({ onView }) {
                         </button>
 
                         {/* Pending */}
-                        {booking.status === BOOKING_STATUS.PENDING && (
+
+                        {booking.status ===
+                          BOOKING_STATUS.PENDING && (
                           <>
                             <button
                               onClick={() =>
-                                updateBookingStatus(
+                                updateBooking(
                                   bookingId,
                                   BOOKING_STATUS.CONFIRMED
                                 )
@@ -443,7 +609,7 @@ function BookingManagement({ onView }) {
 
                             <button
                               onClick={() =>
-                                updateBookingStatus(
+                                updateBooking(
                                   bookingId,
                                   BOOKING_STATUS.CANCELLED
                                 )
@@ -457,9 +623,15 @@ function BookingManagement({ onView }) {
                         )}
 
                         {/* Confirmed */}
-                        {booking.status === BOOKING_STATUS.CONFIRMED && (
+
+                        {booking.status ===
+                          BOOKING_STATUS.CONFIRMED && (
                           <button
-                            onClick={() => handleCheckout(booking)}
+                            onClick={() =>
+                              handleCheckout(
+                                booking
+                              )
+                            }
                             className="p-2 text-success hover:bg-emerald-50 rounded-lg"
                             title="Check-out"
                           >
@@ -468,9 +640,15 @@ function BookingManagement({ onView }) {
                         )}
 
                         {/* Active */}
-                        {booking.status === 'active' && (
+
+                        {booking.status ===
+                          'active' && (
                           <button
-                            onClick={() => handleCheckin(booking)}
+                            onClick={() =>
+                              handleCheckin(
+                                booking
+                              )
+                            }
                             className="p-2 text-primary hover:bg-primary-light rounded-lg"
                             title="Check-in"
                           >
@@ -485,6 +663,8 @@ function BookingManagement({ onView }) {
             </tbody>
           </table>
 
+          {/* No bookings */}
+
           {filteredBookings.length === 0 && (
             <p className="text-center text-slate-500 py-8">
               No bookings found.
@@ -493,10 +673,15 @@ function BookingManagement({ onView }) {
         </div>
       )}
 
-      {/* Booking Details Modal */}
+      {/* ======================================================
+          BOOKING DETAILS MODAL
+      ====================================================== */}
+
       {selectedBooking && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+
+            {/* Modal Header */}
 
             <div className="p-6 border-b border-slate-200 flex items-center justify-between">
               <h3 className="text-lg font-semibold text-slate-900">
@@ -504,15 +689,21 @@ function BookingManagement({ onView }) {
               </h3>
 
               <button
-                onClick={() => setSelectedBooking(null)}
+                onClick={() =>
+                  setSelectedBooking(null)
+                }
                 className="text-slate-400 hover:text-slate-600"
               >
                 <XCircle className="w-5 h-5" />
               </button>
             </div>
 
+            {/* Modal Body */}
+
             <div className="p-6 space-y-4">
               <div className="grid grid-cols-2 gap-4">
+
+                {/* Booking ID */}
 
                 <div>
                   <p className="text-sm text-slate-500">
@@ -520,9 +711,16 @@ function BookingManagement({ onView }) {
                   </p>
 
                   <p className="font-medium text-slate-900">
-                    #{String(getBookingId(selectedBooking) || '').slice(-8)}
+                    #
+                    {String(
+                      getBookingId(
+                        selectedBooking
+                      ) || ''
+                    ).slice(-8)}
                   </p>
                 </div>
+
+                {/* Status */}
 
                 <div>
                   <p className="text-sm text-slate-500">
@@ -534,9 +732,12 @@ function BookingManagement({ onView }) {
                       selectedBooking.status
                     )}`}
                   >
-                    {selectedBooking.status}
+                    {selectedBooking.status ||
+                      'pending'}
                   </span>
                 </div>
+
+                {/* Customer */}
 
                 <div>
                   <p className="text-sm text-slate-500">
@@ -544,9 +745,13 @@ function BookingManagement({ onView }) {
                   </p>
 
                   <p className="font-medium text-slate-900">
-                    {getCustomerName(selectedBooking)}
+                    {getCustomerName(
+                      selectedBooking
+                    )}
                   </p>
                 </div>
+
+                {/* Vehicle */}
 
                 <div>
                   <p className="text-sm text-slate-500">
@@ -554,9 +759,13 @@ function BookingManagement({ onView }) {
                   </p>
 
                   <p className="font-medium text-slate-900">
-                    {getVehicleName(selectedBooking)}
+                    {getVehicleName(
+                      selectedBooking
+                    )}
                   </p>
                 </div>
+
+                {/* Pickup Date */}
 
                 <div>
                   <p className="text-sm text-slate-500">
@@ -564,9 +773,13 @@ function BookingManagement({ onView }) {
                   </p>
 
                   <p className="font-medium text-slate-900">
-                    {getPickupDate(selectedBooking)}
+                    {getPickupDate(
+                      selectedBooking
+                    )}
                   </p>
                 </div>
+
+                {/* Return Date */}
 
                 <div>
                   <p className="text-sm text-slate-500">
@@ -574,9 +787,13 @@ function BookingManagement({ onView }) {
                   </p>
 
                   <p className="font-medium text-slate-900">
-                    {getDropoffDate(selectedBooking)}
+                    {getDropoffDate(
+                      selectedBooking
+                    )}
                   </p>
                 </div>
+
+                {/* Pickup Location */}
 
                 <div>
                   <p className="text-sm text-slate-500">
@@ -584,9 +801,13 @@ function BookingManagement({ onView }) {
                   </p>
 
                   <p className="font-medium text-slate-900">
-                    {getPickupLocation(selectedBooking)}
+                    {getPickupLocation(
+                      selectedBooking
+                    )}
                   </p>
                 </div>
+
+                {/* Dropoff Location */}
 
                 <div>
                   <p className="text-sm text-slate-500">
@@ -594,30 +815,94 @@ function BookingManagement({ onView }) {
                   </p>
 
                   <p className="font-medium text-slate-900">
-                    {getDropoffLocation(selectedBooking)}
+                    {getDropoffLocation(
+                      selectedBooking
+                    )}
                   </p>
                 </div>
+
+                {/* Total Amount */}
+
+                {selectedBooking.total_amount !=
+                  null && (
+                  <div>
+                    <p className="text-sm text-slate-500">
+                      Total Amount
+                    </p>
+
+                    <p className="font-medium text-slate-900">
+                      KES{' '}
+                      {Number(
+                        selectedBooking.total_amount
+                      ).toLocaleString()}
+                    </p>
+                  </div>
+                )}
+
+                {selectedBooking.totalAmount !=
+                  null && (
+                  <div>
+                    <p className="text-sm text-slate-500">
+                      Total Amount
+                    </p>
+
+                    <p className="font-medium text-slate-900">
+                      KES{' '}
+                      {Number(
+                        selectedBooking.totalAmount
+                      ).toLocaleString()}
+                    </p>
+                  </div>
+                )}
+
+                {/* Payment Status */}
+
+                {selectedBooking.paymentStatus && (
+                  <div>
+                    <p className="text-sm text-slate-500">
+                      Payment Status
+                    </p>
+
+                    <p className="font-medium text-slate-900 capitalize">
+                      {
+                        selectedBooking.paymentStatus
+                      }
+                    </p>
+                  </div>
+                )}
 
               </div>
             </div>
 
+            {/* Modal Footer */}
+
             <div className="p-6 border-t border-slate-200 flex justify-end gap-3">
 
+              {/* Close */}
+
               <button
-                onClick={() => setSelectedBooking(null)}
+                onClick={() =>
+                  setSelectedBooking(null)
+                }
                 className="btn-secondary"
               >
                 Close
               </button>
 
-              {selectedBooking.status === BOOKING_STATUS.PENDING && (
+              {/* Pending Actions */}
+
+              {selectedBooking.status ===
+                BOOKING_STATUS.PENDING && (
                 <>
                   <button
-                    onClick={() => {
-                      updateBookingStatus(
-                        getBookingId(selectedBooking),
+                    onClick={async () => {
+                      await updateBooking(
+                        getBookingId(
+                          selectedBooking
+                        ),
                         BOOKING_STATUS.CANCELLED
                       )
+
                       setSelectedBooking(null)
                     }}
                     className="btn-danger"
@@ -626,11 +911,14 @@ function BookingManagement({ onView }) {
                   </button>
 
                   <button
-                    onClick={() => {
-                      updateBookingStatus(
-                        getBookingId(selectedBooking),
+                    onClick={async () => {
+                      await updateBooking(
+                        getBookingId(
+                          selectedBooking
+                        ),
                         BOOKING_STATUS.CONFIRMED
                       )
+
                       setSelectedBooking(null)
                     }}
                     className="btn-primary"
@@ -640,24 +928,37 @@ function BookingManagement({ onView }) {
                 </>
               )}
 
-              {selectedBooking.status === BOOKING_STATUS.CONFIRMED && (
+              {/* Confirmed Action */}
+
+              {selectedBooking.status ===
+                BOOKING_STATUS.CONFIRMED && (
                 <button
-                  onClick={() => handleCheckout(selectedBooking)}
+                  onClick={() =>
+                    handleCheckout(
+                      selectedBooking
+                    )
+                  }
                   className="btn-primary"
                 >
                   Check-out
                 </button>
               )}
 
-              {selectedBooking.status === 'active' && (
+              {/* Active Action */}
+
+              {selectedBooking.status ===
+                'active' && (
                 <button
-                  onClick={() => handleCheckin(selectedBooking)}
+                  onClick={() =>
+                    handleCheckin(
+                      selectedBooking
+                    )
+                  }
                   className="btn-primary"
                 >
                   Check-in
                 </button>
               )}
-
             </div>
           </div>
         </div>

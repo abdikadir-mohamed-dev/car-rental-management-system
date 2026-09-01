@@ -58,7 +58,7 @@ def update_profile():
     user_id = int(get_jwt_identity())
     user = User.query.get_or_404(user_id)
     data = request.get_json() or {}
-    for field in ['name', 'email', 'phone', 'drivers_license', 'license_expiry', 'country', 'profile_photo']:
+    for field in ['name', 'email', 'phone', 'drivers_license', 'license_expiry', 'country', 'profile_photo', 'email_notifications', 'booking_notifications', 'promotional_notifications', 'language']:
         if field in data:
             setattr(user, field, data[field])
     db.session.commit()
@@ -80,3 +80,53 @@ def change_password():
     user.set_password(new_password)
     db.session.commit()
     return jsonify({'message': 'Password changed successfully'}), 200
+@bp.route('/settings', methods=['GET'])
+@jwt_required()
+def get_settings():
+    user_id = int(get_jwt_identity())
+    user = User.query.get_or_404(user_id)
+
+    return jsonify({
+        'settings': {
+            'emailNotifications': user.email_notifications,
+            'bookingNotifications': user.booking_notifications,
+            'promotionalNotifications': user.promotional_notifications,
+            'language': user.language,
+        }
+    }), 200
+
+
+@bp.route('/settings', methods=['PUT'])
+@jwt_required()
+def update_settings():
+    user_id = int(get_jwt_identity())
+    user = User.query.get_or_404(user_id)
+
+    data = request.get_json() or {}
+
+    if 'emailNotifications' in data:
+        user.email_notifications = bool(data['emailNotifications'])
+
+    if 'bookingNotifications' in data:
+        user.booking_notifications = bool(data['bookingNotifications'])
+
+    if 'promotionalNotifications' in data:
+        user.promotional_notifications = bool(data['promotionalNotifications'])
+
+    if 'language' in data:
+        if data['language'] not in ['en', 'sw']:
+            return jsonify({'message': 'Unsupported language'}), 400
+
+        user.language = data['language']
+
+    db.session.commit()
+
+    return jsonify({
+        'message': 'Settings saved successfully',
+        'settings': {
+            'emailNotifications': user.email_notifications,
+            'bookingNotifications': user.booking_notifications,
+            'promotionalNotifications': user.promotional_notifications,
+            'language': user.language,
+        }
+    }), 200

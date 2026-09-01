@@ -1,33 +1,168 @@
-import { useState } from 'react'
-import { Search, Download, BarChart3 } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Search, Download } from 'lucide-react'
+import axios from 'axios'
+import { setAuthToken } from '../../services/authService'
 
-const MOCK_REPORTS = [
-  { _id: 'RPT-101', title: 'Monthly Revenue', type: 'Revenue', date: '2026-08-01', status: 'ready' },
-  { _id: 'RPT-102', title: 'Booking Summary', type: 'Bookings', date: '2026-08-01', status: 'ready' },
-  { _id: 'RPT-103', title: 'Fleet Utilization', type: 'Fleet', date: '2026-07-01', status: 'ready' },
-  { _id: 'RPT-104', title: 'Most Rented Vehicles', type: 'Fleet', date: '2026-07-01', status: 'processing' },
-]
+const API_URL = import.meta.env.VITE_API_URL
+
+const reportService = axios.create({
+  baseURL: `${API_URL}/api/reports`,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+})
+
+setAuthToken(localStorage.getItem('token'), reportService)
+
 
 function StaffReports() {
-  const [reports] = useState(MOCK_REPORTS)
-  const [search, setSearch] = useState('')
 
-  const filtered = reports.filter(r =>
-    r.title?.toLowerCase().includes(search.toLowerCase()) ||
-    r.type?.toLowerCase().includes(search.toLowerCase())
+  const [reports, setReports] = useState([])
+  const [search, setSearch] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+
+  // ==========================================================
+  // LOAD REPORTS
+  // ==========================================================
+
+  useEffect(() => {
+
+    const fetchReports = async () => {
+
+      try {
+
+        setLoading(true)
+        setError('')
+
+        const response = await reportService.get('/')
+
+        setReports(response.data)
+
+      } catch (err) {
+
+        console.error('Failed to load reports:', err)
+
+        setError(
+          err.response?.data?.message ||
+          'Failed to load reports'
+        )
+
+      } finally {
+
+        setLoading(false)
+
+      }
+    }
+
+    fetchReports()
+
+  }, [])
+
+
+  // ==========================================================
+  // SEARCH
+  // ==========================================================
+
+  const filtered = reports.filter(report =>
+    report.title?.toLowerCase().includes(search.toLowerCase()) ||
+    report.type?.toLowerCase().includes(search.toLowerCase())
   )
+
+
+  // ==========================================================
+  // DOWNLOAD REPORT
+  // ==========================================================
+
+  const handleDownload = (report) => {
+
+    const content = JSON.stringify(
+      report.data || report,
+      null,
+      2
+    )
+
+    const blob = new Blob(
+      [content],
+      { type: 'application/json' }
+    )
+
+    const url = URL.createObjectURL(blob)
+
+    const link = document.createElement('a')
+
+    link.href = url
+    link.download = `${report._id}-${report.title}.json`
+
+    document.body.appendChild(link)
+
+    link.click()
+
+    document.body.removeChild(link)
+
+    URL.revokeObjectURL(url)
+  }
+
+
+  // ==========================================================
+  // LOADING
+  // ==========================================================
+
+  if (loading) {
+
+    return (
+      <div className="flex items-center justify-center py-12">
+        <p className="text-slate-500">
+          Loading reports...
+        </p>
+      </div>
+    )
+
+  }
+
+
+  // ==========================================================
+  // PAGE
+  // ==========================================================
 
   return (
     <div className="space-y-6">
+
       <div className="flex items-center justify-between">
+
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Reports</h1>
-          <p className="text-slate-600">View and download operational reports</p>
+
+          <h1 className="text-2xl font-bold text-slate-900">
+            Reports
+          </h1>
+
+          <p className="text-slate-600">
+            View and download operational reports
+          </p>
+
         </div>
+
       </div>
+
+
+      {/* ERROR */}
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-4">
+          {error}
+        </div>
+      )}
+
+
+      {/* SEARCH */}
+
       <div className="mb-4">
+
         <div className="relative">
+
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+
           <input
             type="text"
             placeholder="Search reports..."
@@ -35,48 +170,128 @@ function StaffReports() {
             onChange={(e) => setSearch(e.target.value)}
             className="input pl-10"
           />
+
         </div>
+
       </div>
+
+
+      {/* TABLE */}
+
       <div className="overflow-x-auto">
+
         <table className="w-full">
+
           <thead>
+
             <tr className="border-b border-slate-200">
-              <th className="text-left py-3 px-4 font-medium text-slate-600">ID</th>
-              <th className="text-left py-3 px-4 font-medium text-slate-600">Title</th>
-              <th className="text-left py-3 px-4 font-medium text-slate-600">Type</th>
-              <th className="text-left py-3 px-4 font-medium text-slate-600">Date</th>
-              <th className="text-left py-3 px-4 font-medium text-slate-600">Status</th>
-              <th className="text-left py-3 px-4 font-medium text-slate-600">Actions</th>
+
+              <th className="text-left py-3 px-4 font-medium text-slate-600">
+                ID
+              </th>
+
+              <th className="text-left py-3 px-4 font-medium text-slate-600">
+                Title
+              </th>
+
+              <th className="text-left py-3 px-4 font-medium text-slate-600">
+                Type
+              </th>
+
+              <th className="text-left py-3 px-4 font-medium text-slate-600">
+                Date
+              </th>
+
+              <th className="text-left py-3 px-4 font-medium text-slate-600">
+                Status
+              </th>
+
+              <th className="text-left py-3 px-4 font-medium text-slate-600">
+                Actions
+              </th>
+
             </tr>
+
           </thead>
+
+
           <tbody>
+
             {filtered.map((report) => (
-              <tr key={report._id} className="border-b border-slate-100 hover:bg-slate-50">
-                <td className="py-3 px-4 text-slate-900">#{report._id}</td>
-                <td className="py-3 px-4 text-slate-600 font-medium">{report.title}</td>
-                <td className="py-3 px-4 text-slate-600">{report.type}</td>
-                <td className="py-3 px-4 text-slate-600">{report.date}</td>
+
+              <tr
+                key={report.id}
+                className="border-b border-slate-100 hover:bg-slate-50"
+              >
+
+                <td className="py-3 px-4 text-slate-900">
+                  #{report._id}
+                </td>
+
+                <td className="py-3 px-4 text-slate-600 font-medium">
+                  {report.title}
+                </td>
+
+                <td className="py-3 px-4 text-slate-600">
+                  {report.type}
+                </td>
+
+                <td className="py-3 px-4 text-slate-600">
+                  {report.date}
+                </td>
+
                 <td className="py-3 px-4">
-                  <span className={`badge ${report.status === 'ready' ? 'badge-success' : 'badge-warning'}`}>
+
+                  <span
+                    className={`badge ${
+                      report.status === 'ready'
+                        ? 'badge-success'
+                        : 'badge-warning'
+                    }`}
+                  >
                     {report.status}
                   </span>
+
                 </td>
+
                 <td className="py-3 px-4">
+
                   {report.status === 'ready' && (
-                    <button className="btn-secondary text-sm px-3 py-1 flex items-center gap-2">
+
+                    <button
+                      onClick={() => handleDownload(report)}
+                      className="btn-secondary text-sm px-3 py-1 flex items-center gap-2"
+                    >
+
                       <Download className="w-4 h-4" />
+
                       Download
+
                     </button>
+
                   )}
+
                 </td>
+
               </tr>
+
             ))}
+
           </tbody>
+
         </table>
+
+
         {filtered.length === 0 && (
-          <p className="text-center text-slate-500 py-8">No reports found.</p>
+
+          <p className="text-center text-slate-500 py-8">
+            No reports found.
+          </p>
+
         )}
+
       </div>
+
     </div>
   )
 }

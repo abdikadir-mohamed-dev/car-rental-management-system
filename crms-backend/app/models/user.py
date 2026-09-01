@@ -16,6 +16,10 @@ class User(db.Model):
     is_active = db.Column(db.Boolean, default=True)
     password_hash = db.Column(db.String(255), nullable=True)
     must_change_password = db.Column(db.Boolean, default=True)
+    email_notifications = db.Column(db.Boolean, default=True, nullable=False)
+    booking_notifications = db.Column(db.Boolean, default=True, nullable=False)
+    promotional_notifications = db.Column(db.Boolean, default=False, nullable=False)
+    language = db.Column(db.String(10), default='en', nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     last_login = db.Column(db.DateTime)
@@ -28,8 +32,19 @@ class User(db.Model):
     reset_password_token = db.Column(db.String(120))
     reset_password_expire = db.Column(db.Integer)
 
-    driver_profile = db.relationship('Driver', backref='user', uselist=False, cascade='all, delete-orphan')
-    customer_profile = db.relationship('Customer', backref='user', uselist=False, cascade='all, delete-orphan')
+    driver_profile = db.relationship(
+    'Driver',
+    foreign_keys='Driver.user_id',
+    uselist=False,
+    cascade='all, delete-orphan'
+)
+
+    customer_profile = db.relationship(
+    'Customer',
+    foreign_keys='Customer.user_id',
+    uselist=False,
+    cascade='all, delete-orphan'
+)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -48,10 +63,15 @@ class User(db.Model):
             'license_number': self.license_number,
             'isActive': self.is_active,
             'mustChangePassword': self.must_change_password,
+            'emailNotifications': self.email_notifications,
+            'bookingNotifications': self.booking_notifications,
+            'promotionalNotifications': self.promotional_notifications,
+            'language': self.language,
             'driversLicense': self.drivers_license,
             'licenseExpiry': self.license_expiry,
             'country': self.country,
             'profilePhoto': self.profile_photo,
+            
             'createdAt': self.created_at.isoformat() if self.created_at else None,
             'updatedAt': self.updated_at.isoformat() if self.updated_at else None,
         }

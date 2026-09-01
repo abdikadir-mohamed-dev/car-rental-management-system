@@ -1,229 +1,790 @@
 from flask import Blueprint, request, jsonify
-from app.extensions import db
-from app.models import Driver, Trip, Vehicle, Customer, Earning, Payment, Booking, Maintenance
 from datetime import datetime
-from app.utils.auth import token_required, role_required
 
-bp = Blueprint('driver', __name__, url_prefix='/api/driver')
+from flask_jwt_extended import get_jwt_identity
+
+from app.extensions import db
+from app.models import (
+    Driver,
+    Trip,
+    Booking,
+    Notification
+)
+from app.utils.auth import role_required
 
 
-@bp.route('/drivers', methods=['GET'])
-def list_drivers():
-    drivers = Driver.query.filter_by(status='available').all()
-    result = []
-    for d in drivers:
-        data = d.to_dict()
-        data['image'] = d.user.profile_photo
-        result.append(data)
-    return jsonify(result), 200
+bp = Blueprint(
+    'driver',
+    __name__,
+    url_prefix='/api/driver'
+)
+
+
+# ============================================================
+# HELPERS
+# ============================================================
+
+def get_current_driver():
+    """
+    Get the Driver profile belonging to the currently
+    authenticated User.
+    """
+
+    user_id = int(get_jwt_identity())
+
+    return Driver.query.filter_by(
+        user_id=user_id
+    ).first()
 
 
 def get_current_driver_id():
-    from flask_jwt_extended import get_jwt_identity
-    user_id = int(get_jwt_identity())
-    driver = Driver.query.filter_by(user_id=user_id).first()
+    driver = get_current_driver()
+
     return driver.id if driver else None
 
+
+# ============================================================
+# SERIALIZE CUSTOMER
+# ============================================================
+
+def serialize_customer(booking):
+    """
+    Customer information comes from Booking.user.
+    """
+
+    if not booking or not booking.user:
+        return None
+
+    user = booking.user
+
+    return {
+        'id': user.id,
+        'name': user.name,
+        'email': user.email,
+        'phone': user.phone
+    }
+
+
+# ============================================================
+# SERIALIZE VEHICLE
+# ============================================================
+
+def serialize_vehicle(booking):
+    """
+    Vehicle information comes from Booking.vehicle.
+    """
+
+    if not booking or not booking.vehicle:
+        return None
+
+    vehicle = booking.vehicle
+
+    return {
+        'id': vehicle.id,
+        'name': (
+            vehicle.name
+            or f'{vehicle.make} {vehicle.model}'
+        ),
+        'make': vehicle.make,
+        'model': vehicle.model,
+        'registrationNumber': vehicle.registration_number
+    }
+
+
+# ============================================================
+# SERIALIZE BOOKING FOR DRIVER
+# ============================================================
+
+def serialize_driver_booking(booking):
+    """
+    Converts a real Booking into the format needed
+    by the Driver frontend.
+
+    The booking status comes directly from the database.
+    """
+
+    if not booking:
+        return None
+
+    pickup_date = (
+        booking.pickup_date.isoformat()
+        if booking.pickup_date
+        else None
+    )
+
+    dropoff_date = (
+        booking.dropoff_date.isoformat()
+        if booking.dropoff_date
+        else (
+            booking.return_date.isoformat()
+            if booking.return_date
+            else None
+        )
+    )
+
+    return {
+        'id': booking.id,
+
+        '_id': str(booking.id),
+
+        'displayId': (
+            f'BKG-{booking.id:04d}'
+        ),
+
+        'customerId': booking.user_id,
+
+        'vehicleId': booking.vehicle_id,
+
+        'driverId': booking.driver_id,
+
+        'customer': serialize_customer(
+            booking
+        ),
+
+        'vehicle': serialize_vehicle(
+            booking
+        ),
+
+        'pickupLocation': booking.pickup_location,
+
+        'dropoffLocation': (
+            booking.dropoff_location
+            or booking.return_location
+        ),
+
+        'pickupDate': pickup_date,
+
+        'dropoffDate': dropoff_date,
+
+        'returnDate': dropoff_date,
+
+        'drivingOption': (
+            booking.driving_option
+            or (
+                'with_driver'
+                if booking.driver_option
+                else 'self'
+            )
+        ),
+
+        'specialRequests': booking.special_requests,
+
+        'totalAmount': (
+            booking.total_amount_customer
+            if booking.total_amount_customer is not None
+            else booking.total_amount
+        ),
+
+        # IMPORTANT:
+        # Always return the real database status.
+        'status': booking.status,
+
+        'createdAt': (
+            booking.created_at.isoformat()
+            if booking.created_at
+            else None
+        ),
+
+        'updatedAt': (
+            booking.updated_at.isoformat()
+            if booking.updated_at
+            else None
+        )
+    }
+
+
+# ============================================================
+# SERIALIZE TRIP FROM BOOKING
+# ============================================================
+
+def serialize_trip_from_booking(
+    booking,
+    assignment=None
+):
+    """
+    A driver's trip is based on the real Booking.
+
+    IMPORTANT:
+    Trip status is derived from booking.status.
+
+    This prevents a trip that was already started from
+    becoming "upcoming" again when the driver leaves the
+    page and returns.
+
+    Database is the single source of truth.
+    """
+
+    if not booking:
+        return None
+
+    pickup_date = booking.pickup_date
+
+    dropoff_date = (
+        booking.dropoff_date
+        or booking.return_date
+    )
+
+    # --------------------------------------------------------
+    # Determine trip status from REAL booking status
+    # --------------------------------------------------------
+
+    booking_status = (
+        booking.status or 'pending'
+    ).lower()
+
+    if booking_status in [
+        'active',
+        'in_progress'
+    ]:
+        trip_status = 'active'
+
+    elif booking_status == 'completed':
+        trip_status = 'completed'
+
+    elif booking_status in [
+        'cancelled',
+        'rejected'
+    ]:
+        trip_status = 'cancelled'
+
+    elif booking_status in [
+        'pending',
+        'confirmed',
+        'approved',
+        'assigned',
+        'upcoming'
+    ]:
+        trip_status = 'upcoming'
+
+    else:
+        trip_status = 'upcoming'
+
+    return {
+        'id': booking.trip_id or booking.id,
+
+        '_id': (
+            f'TRP-{booking.id:04d}'
+        ),
+
+        'bookingId': booking.id,
+
+        'booking': serialize_driver_booking(
+            booking
+        ),
+
+        'customerId': booking.user_id,
+
+        'vehicleId': booking.vehicle_id,
+
+        'driverId': booking.driver_id,
+
+        'customer': serialize_customer(
+            booking
+        ),
+
+        'vehicle': serialize_vehicle(
+            booking
+        ),
+
+        'pickupLocation': booking.pickup_location,
+
+        'dropoffLocation': (
+            booking.dropoff_location
+            or booking.return_location
+        ),
+
+        'pickupDate': (
+            pickup_date.isoformat()
+            if pickup_date
+            else None
+        ),
+
+        'dropoffDate': (
+            dropoff_date.isoformat()
+            if dropoff_date
+            else None
+        ),
+
+        'date': (
+            pickup_date.date().isoformat()
+            if pickup_date
+            else None
+        ),
+
+        'time': (
+            pickup_date.strftime('%H:%M')
+            if pickup_date
+            else None
+        ),
+
+        'fare': (
+            booking.total_amount_customer
+            if booking.total_amount_customer is not None
+            else booking.total_amount
+        ),
+
+        # Real persisted trip status
+        'status': trip_status,
+
+        # Assignment status is kept separate from trip status
+        'assignmentStatus': (
+            assignment.status
+            if assignment
+            else None
+        ),
+
+        'createdAt': (
+            booking.created_at.isoformat()
+            if booking.created_at
+            else None
+        )
+    }
+
+
+# ============================================================
+# AVAILABLE DRIVERS
+# ============================================================
+
+@bp.route('/drivers', methods=['GET'])
+@role_required('driver')
+def list_drivers():
+
+    drivers = Driver.query.filter_by(
+        status='available'
+    ).all()
+
+    result = []
+
+    for driver in drivers:
+
+        data = driver.to_dict()
+
+        data['image'] = (
+            driver.user.profile_photo
+            if driver.user
+            else None
+        )
+
+        result.append(data)
+
+    return jsonify(result), 200
+
+
+# ============================================================
+# DRIVER DASHBOARD
+# ============================================================
 
 @bp.route('/dashboard', methods=['GET'])
 @role_required('driver')
 def get_dashboard():
-    driver_id = get_current_driver_id()
+
+    driver = get_current_driver()
+
+    if not driver:
+        return jsonify({
+            'message': 'Driver profile not found'
+        }), 404
+
     today = datetime.utcnow().date()
 
-    trips_today = Trip.query.filter_by(driver_id=driver_id).filter(Trip.date == today).count()
-    upcoming = Trip.query.filter_by(driver_id=driver_id, status='upcoming').count()
-    completed = Trip.query.filter_by(driver_id=driver_id, status='completed').count()
+    # --------------------------------------------------------
+    # Get real bookings assigned to this driver
+    # --------------------------------------------------------
 
-    earnings = db.session.query(db.func.sum(Earning.amount)).filter(
-        Earning.driver_id == driver_id,
-        Earning.date == today
-    ).scalar() or 0
+    bookings = Booking.query.filter_by(
+        driver_id=driver.user_id
+    ).all()
+
+    trips_today = 0
+    upcoming = 0
+    completed = 0
+
+    for booking in bookings:
+
+        if booking.pickup_date:
+            if booking.pickup_date.date() == today:
+                trips_today += 1
+
+        status = (
+            booking.status or ''
+        ).lower()
+
+        if status in [
+            'pending',
+            'confirmed',
+            'approved',
+            'assigned',
+            'upcoming'
+        ]:
+            upcoming += 1
+
+        if status == 'completed':
+            completed += 1
 
     return jsonify({
         'trips_today': trips_today,
         'upcoming': upcoming,
-        'completed': completed,
-        'total_earnings': earnings
+        'completed': completed
     }), 200
 
+
+# ============================================================
+# DRIVER ASSIGNMENTS / TRIPS
+#
+# These come from REAL DRIVER ASSIGNMENTS.
+# ============================================================
 
 @bp.route('/assignments', methods=['GET'])
 @role_required('driver')
 def get_assignments():
-    driver_id = get_current_driver_id()
-    status = request.args.get('status', 'all')
 
-    query = Trip.query.filter_by(driver_id=driver_id)
-    if status != 'all':
-        query = query.filter_by(status=status.lower())
+    from app.models.driver_assignment import DriverAssignment
 
-    trips = query.order_by(Trip.created_at.desc()).all()
-    return jsonify([trip.to_dict() for trip in trips]), 200
+    user_id = int(get_jwt_identity())
 
+    assignments = DriverAssignment.query.filter_by(
+        driver_id=user_id
+    ).order_by(
+        DriverAssignment.assigned_at.desc()
+    ).all()
+
+    result = []
+
+    for assignment in assignments:
+
+        booking = Booking.query.get(
+            assignment.booking_id
+        )
+
+        if not booking:
+            continue
+
+        result.append(
+            serialize_trip_from_booking(
+                booking,
+                assignment
+            )
+        )
+
+    return jsonify(result), 200
+
+
+# ============================================================
+# TRIPS
+#
+# GET /api/driver/trips
+#
+# REAL BOOKINGS ASSIGNED TO DRIVER
+# ============================================================
 
 @bp.route('/trips', methods=['GET'])
 @role_required('driver')
 def get_trips():
-    driver_id = get_current_driver_id()
-    trips = Trip.query.filter_by(driver_id=driver_id).order_by(Trip.date.desc()).all()
-    return jsonify([trip.to_dict() for trip in trips]), 200
 
+    user_id = int(get_jwt_identity())
+
+    bookings = Booking.query.filter_by(
+        driver_id=user_id
+    ).order_by(
+        Booking.pickup_date.asc()
+    ).all()
+
+    result = []
+
+    for booking in bookings:
+
+        result.append(
+            serialize_trip_from_booking(
+                booking
+            )
+        )
+
+    return jsonify(result), 200
+
+
+# ============================================================
+# GET SINGLE TRIP
+# ============================================================
 
 @bp.route('/trips/<int:trip_id>', methods=['GET'])
 @role_required('driver')
 def get_trip(trip_id):
-    trip = Trip.query.get_or_404(trip_id)
-    return jsonify(trip.to_dict()), 200
+
+    user_id = int(get_jwt_identity())
+
+    # --------------------------------------------------------
+    # First try the real Trip record
+    # --------------------------------------------------------
+
+    trip = Trip.query.get(trip_id)
+
+    if trip:
+
+        booking = Booking.query.filter_by(
+            id=trip.booking.id
+            if trip.booking
+            else None
+        ).first()
+
+        if booking and booking.driver_id == user_id:
+
+            return jsonify(
+                serialize_trip_from_booking(
+                    booking
+                )
+            ), 200
+
+    # --------------------------------------------------------
+    # Otherwise treat ID as Booking ID
+    # --------------------------------------------------------
+
+    booking = Booking.query.filter_by(
+        id=trip_id,
+        driver_id=user_id
+    ).first()
+
+    if not booking:
+
+        return jsonify({
+            'message': 'Trip not found'
+        }), 404
+
+    return jsonify(
+        serialize_trip_from_booking(
+            booking
+        )
+    ), 200
 
 
-@bp.route('/trips/<int:trip_id>/status', methods=['PATCH'])
+# ============================================================
+# UPDATE TRIP STATUS
+# ============================================================
+
+@bp.route(
+    '/trips/<int:trip_id>/status',
+    methods=['PATCH']
+)
 @role_required('driver')
 def update_trip_status(trip_id):
-    trip = Trip.query.get_or_404(trip_id)
-    data = request.get_json()
-    trip.status = data.get('status', trip.status)
+
+    user_id = int(get_jwt_identity())
+
+    booking = Booking.query.filter_by(
+        id=trip_id,
+        driver_id=user_id
+    ).first()
+
+    if not booking:
+
+        return jsonify({
+            'message': 'Trip not found'
+        }), 404
+
+    data = request.get_json() or {}
+
+    status = (
+        data.get('status') or ''
+    ).lower()
+
+    allowed_statuses = [
+        'upcoming',
+        'active',
+        'in_progress',
+        'completed',
+        'cancelled'
+    ]
+
+    if status not in allowed_statuses:
+
+        return jsonify({
+            'message': 'Invalid trip status'
+        }), 400
+
+    # --------------------------------------------------------
+    # Normalize trip status
+    # --------------------------------------------------------
+
+    if status == 'in_progress':
+        booking.status = 'active'
+    else:
+        booking.status = status
+
+    # --------------------------------------------------------
+    # Update driver availability
+    #
+    # Active trip = driver busy
+    # Completed/cancelled = driver available
+    # --------------------------------------------------------
+
+    driver = Driver.query.filter_by(
+        user_id=user_id
+    ).first()
+
+    if driver:
+
+        if status in [
+            'active',
+            'in_progress'
+        ]:
+            driver.status = 'busy'
+
+        elif status in [
+            'completed',
+            'cancelled'
+        ]:
+            driver.status = 'available'
+
     db.session.commit()
-    return jsonify(trip.to_dict()), 200
+
+    return jsonify(
+        serialize_driver_booking(
+            booking
+        )
+    ), 200
 
 
-@bp.route('/earnings', methods=['GET'])
-@role_required('driver')
-def get_earnings():
-    driver_id = get_current_driver_id()
-    earnings = Earning.query.filter_by(driver_id=driver_id).order_by(Earning.date.desc()).all()
-    return jsonify([e.to_dict() for e in earnings]), 200
-
-
-@bp.route('/earnings/summary', methods=['GET'])
-@role_required('driver')
-def get_earnings_summary():
-    driver_id = get_current_driver_id()
-    period = request.args.get('period', 'month')
-
-    total = db.session.query(db.func.sum(Earning.amount)).filter_by(driver_id=driver_id).scalar() or 0
-    trips = Trip.query.filter_by(driver_id=driver_id, status='completed').count()
-    avg = total / trips if trips > 0 else 0
-
-    return jsonify({
-        'total': total,
-        'trips': trips,
-        'avg': avg,
-        'period': period
-    }), 200
-
+# ============================================================
+# BOOKINGS
+#
+# REAL BOOKINGS ASSIGNED TO DRIVER
+# ============================================================
 
 @bp.route('/bookings', methods=['GET'])
 @role_required('driver')
 def get_bookings():
-    driver_id = get_current_driver_id()
-    trips = Trip.query.filter_by(driver_id=driver_id).all()
-    trip_ids = [t.id for t in trips]
-    bookings = Booking.query.filter(Booking.trip_id.in_(trip_ids)).all() if trip_ids else []
-    return jsonify([b.to_dict() for b in bookings]), 200
+
+    user_id = int(get_jwt_identity())
+
+    bookings = Booking.query.filter_by(
+        driver_id=user_id
+    ).order_by(
+        Booking.created_at.desc()
+    ).all()
+
+    return jsonify([
+        serialize_driver_booking(
+            booking
+        )
+        for booking in bookings
+    ]), 200
 
 
-@bp.route('/bookings/<int:booking_id>', methods=['GET'])
+# ============================================================
+# SINGLE BOOKING
+# ============================================================
+
+@bp.route(
+    '/bookings/<int:booking_id>',
+    methods=['GET']
+)
 @role_required('driver')
 def get_booking(booking_id):
-    booking = Booking.query.get_or_404(booking_id)
-    return jsonify(booking.to_dict()), 200
+
+    user_id = int(get_jwt_identity())
+
+    booking = Booking.query.filter_by(
+        id=booking_id,
+        driver_id=user_id
+    ).first()
+
+    if not booking:
+
+        return jsonify({
+            'message': 'Booking not found'
+        }), 404
+
+    return jsonify(
+        serialize_driver_booking(
+            booking
+        )
+    ), 200
 
 
-@bp.route('/vehicles', methods=['GET'])
-@role_required('driver')
-def get_vehicles():
-    vehicles = Vehicle.query.all()
-    return jsonify([v.to_dict() for v in vehicles]), 200
-
-
-@bp.route('/vehicles/<int:vehicle_id>', methods=['GET'])
-@role_required('driver')
-def get_vehicle(vehicle_id):
-    vehicle = Vehicle.query.get_or_404(vehicle_id)
-    return jsonify(vehicle.to_dict()), 200
-
-
-@bp.route('/customers', methods=['GET'])
-@role_required('driver')
-def get_customers():
-    customers = Customer.query.all()
-    return jsonify([c.to_dict() for c in customers]), 200
-
-
-@bp.route('/maintenance', methods=['GET'])
-@role_required('driver')
-def get_maintenance():
-    vehicle_id = request.args.get('vehicle_id')
-    query = Maintenance.query
-    if vehicle_id:
-        query = query.filter_by(vehicle_id=vehicle_id)
-    requests = query.order_by(Maintenance.created_at.desc()).all()
-    return jsonify([m.to_dict() for m in requests]), 200
-
-
-@bp.route('/maintenance', methods=['POST'])
-@role_required('driver')
-def create_maintenance():
-    data = request.get_json()
-    maintenance = Maintenance(
-        vehicle_id=data.get('vehicle_id'),
-        issue=data.get('issue'),
-        priority=data.get('priority', 'Medium'),
-        status='Open',
-        date=data.get('date', datetime.utcnow().strftime('%b %d'))
-    )
-    db.session.add(maintenance)
-    db.session.commit()
-    return jsonify(maintenance.to_dict()), 201
-
-
-@bp.route('/reports', methods=['GET'])
-@role_required('driver')
-def get_reports():
-    driver_id = get_current_driver_id()
-    period = request.args.get('period', '30d')
-
-    completed = Trip.query.filter_by(driver_id=driver_id, status='completed').count()
-    return jsonify({
-        'period': period,
-        'trips_completed': completed,
-        'on_time_rate': 94,
-        'avg_rating': 4.8
-    }), 200
-
+# ============================================================
+# NOTIFICATIONS
+# ============================================================
 
 @bp.route('/notifications', methods=['GET'])
 @role_required('driver')
 def get_notifications():
-    from flask_jwt_extended import get_jwt_identity
-    user_id = int(get_jwt_identity())
-    notifications = Notification.query.filter_by(user_id=user_id).order_by(Notification.created_at.desc()).all()
-    return jsonify([n.to_dict() for n in notifications]), 200
+
+    user_id = int(
+        get_jwt_identity()
+    )
+
+    notifications = Notification.query.filter_by(
+        user_id=user_id
+    ).order_by(
+        Notification.created_at.desc()
+    ).all()
+
+    return jsonify([
+        notification.to_dict()
+        for notification in notifications
+    ]), 200
 
 
-@bp.route('/notifications/<int:notification_id>/read', methods=['PATCH'])
+# ============================================================
+# MARK NOTIFICATION AS READ
+# ============================================================
+
+@bp.route(
+    '/notifications/<int:notification_id>/read',
+    methods=['PATCH']
+)
 @role_required('driver')
-def mark_notification_read(notification_id):
-    notification = Notification.query.get_or_404(notification_id)
+def mark_notification_read(
+    notification_id
+):
+
+    user_id = int(
+        get_jwt_identity()
+    )
+
+    notification = Notification.query.filter_by(
+        id=notification_id,
+        user_id=user_id
+    ).first()
+
+    if not notification:
+
+        return jsonify({
+            'message': 'Notification not found'
+        }), 404
+
     notification.read = True
+
     db.session.commit()
-    return jsonify(notification.to_dict()), 200
+
+    return jsonify(
+        notification.to_dict()
+    ), 200
 
 
-@bp.route('/notifications/read-all', methods=['PATCH'])
+# ============================================================
+# MARK ALL NOTIFICATIONS AS READ
+# ============================================================
+
+@bp.route(
+    '/notifications/read-all',
+    methods=['PATCH']
+)
 @role_required('driver')
 def mark_all_notifications_read():
-    from flask_jwt_extended import get_jwt_identity
-    user_id = int(get_jwt_identity())
-    Notification.query.filter_by(user_id=user_id, read=False).update({'read': True})
+
+    user_id = int(
+        get_jwt_identity()
+    )
+
+    Notification.query.filter_by(
+        user_id=user_id,
+        read=False
+    ).update({
+        'read': True
+    })
+
     db.session.commit()
-    return jsonify({'message': 'All notifications marked as read'}), 200
 
-
-@bp.route('/payments', methods=['GET'])
-@role_required('driver')
-def get_payments():
-    driver_id = get_current_driver_id()
-    payments = Payment.query.filter_by(driver_id=driver_id).order_by(Payment.date.desc()).all()
-    return jsonify([p.to_dict() for p in payments]), 200
+    return jsonify({
+        'message': 'All notifications marked as read'
+    }), 200

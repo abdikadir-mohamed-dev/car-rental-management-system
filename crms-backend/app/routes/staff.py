@@ -1,4 +1,5 @@
 from flask import Blueprint, request, jsonify
+from flask_jwt_extended import get_jwt_identity
 from app.extensions import db
 from app.models.user import User
 from app.models.vehicle import Vehicle
@@ -9,359 +10,991 @@ from app.models.inspection import Inspection
 from app.models.report import Report
 from app.models.notification import Notification
 from app.models.maintenance import Maintenance
-from datetime import datetime, date
-from app.utils.auth import token_required, role_required
+from datetime import date
+from app.utils.auth import role_required
+
 
 bp = Blueprint('staff', __name__, url_prefix='/staff')
 
+
+# ============================================================
+# NOTIFICATIONS
+# ============================================================
+
+def create_notification(user_id, title, message):
+    try:
+        notification = Notification(
+            user_id=user_id,
+            title=title,
+            message=message
+        )
+        db.session.add(notification)
+    except Exception:
+        pass
+
+
+# ============================================================
+# DASHBOARD
+# ============================================================
 
 @bp.route('/dashboard', methods=['GET'])
 @role_required('staff', 'admin')
 def get_dashboard():
     today = date.today()
-    bookings = Booking.query.all()
-    today_bookings = [b for b in bookings if b.pickup_date and b.pickup_date.date() == today or b.dropoff_date and b.dropoff_date.date() == today]
-    pickups = sum(1 for b in today_bookings if b.pickup_date and b.pickup_date.date() == today and b.status == 'confirmed')
-    returns = sum(1 for b in today_bookings if b.dropoff_date and b.dropoff_date.date() == today and b.status == 'active')
-    pending = sum(1 for b in bookings if b.status == 'pending')
-    active = sum(1 for b in bookings if b.status == 'active')
 
-    vehicles = Vehicle.query.all()
-    available = sum(1 for v in vehicles if v.status == 'available')
-    rented = sum(1 for v in vehicles if v.status == 'rented')
-    maintenance = sum(1 for v in vehicles if v.status == 'maintenance')
+    # =========================
+    # BOOKING STATISTICS
+    # =========================
 
-    schedule = []
-    for b in today_bookings[:5]:
-        vehicle_name = f"{b.vehicle.make} {b.vehicle.model}" if b.vehicle else 'Unknown'
-        customer_name = b.user.name if b.user else 'Unknown'
-        schedule.append({
-            'time': b.pickup_date.isoformat() if b.pickup_date else None,
+    today_pickups = Booking.query.filter(
+        db.func.date(Booking.pickup_date) == today
+    ).count()
+
+    today_returns = Booking.query.filter(
+        db.func.date(
+            db.func.coalesce(
+                Booking.dropoff_date,
+                Booking.return_date
+            )
+        ) == today
+    ).count()
+
+    pending_bookings = Booking.query.filter_by(
+        status='pending'
+    ).count()
+
+    active_rentals = Booking.query.filter(
+        Booking.status.in_([
+            'confirmed',
+            'active',
+            'ongoing',
+            'rented'
+        ])
+    ).count()
+
+    # =========================
+    # VEHICLE STATISTICS
+    # =========================
+
+    available_vehicles = Vehicle.query.filter(
+        db.or_(
+            Vehicle.status == 'available',
+            Vehicle.available == True
+        )
+    ).count()
+
+    rented_vehicles = Vehicle.query.filter(
+        db.or_(
+            Vehicle.status.in_([
+                'rented',
+                'booked',
+                'on_rent'
+            ]),
+            Vehicle.available == False
+        )
+    ).count()
+
+    maintenance_vehicles = Vehicle.query.filter(
+        Vehicle.status.in_([
+            'maintenance',
+            'under_maintenance'
+        ])
+    ).count()
+
+    # =========================
+    # TODAY'S SCHEDULE
+    # =========================
+
+    today_bookings = Booking.query.filter(
+        db.or_(
+            db.func.date(Booking.pickup_date) == today,
+            db.func.date(
+                db.func.coalesce(
+                    Booking.dropoff_date,
+                    Booking.return_date
+                )
+            ) == today
+        )
+    ).order_by(
+        Booking.pickup_date.asc()
+    ).all()
+
+    today_schedule = []
+
+    for booking in today_bookings:
+
+        pickup_is_today = (
+            booking.pickup_date
+            and booking.pickup_date.date() == today
+        )
+
+        return_date = (
+            booking.dropoff_date
+            or booking.return_date
+        )
+
+        return_is_today = (
+            return_date
+            and return_date.date() == today
+        )
+
+        if pickup_is_today:
+            action = 'Pickup'
+            schedule_time = booking.pickup_date.strftime('%H:%M')
+
+        elif return_is_today:
+            action = 'Return'
+            schedule_time = return_date.strftime('%H:%M')
+
+        else:
+            continue
+
+        customer_name = (
+            booking.user.name
+            if booking.user
+            else 'N/A'
+        )
+
+        vehicle_name = (
+            f'{booking.vehicle.make} {booking.vehicle.model}'
+            if booking.vehicle
+            else 'N/A'
+        )
+
+        today_schedule.append({
+            'time': schedule_time,
             'customer': customer_name,
             'vehicle': vehicle_name,
-            'action': 'Check-out' if b.pickup_date and b.pickup_date.date() == today else 'Check-in',
-            'status': b.status
+            'action': action,
+            'status': booking.status
         })
 
-    recent = [{
-        '_id': f'BKG-{b.id:04d}',
-        'user': {'name': b.user.name} if b.user else {},
-        'vehicle': {'name': f"{b.vehicle.make} {b.vehicle.model}"} if b.vehicle else {},
-        'pickupDate': b.pickup_date.isoformat() if b.pickup_date else None,
-        'dropoffDate': b.dropoff_date.isoformat() if b.dropoff_date else None,
-        'status': b.status
-    } for b in bookings[:5]]
+    # =========================
+    # RECENT / UPCOMING BOOKINGS
+    # =========================
+
+    recent_bookings = Booking.query.order_by(
+        Booking.created_at.desc()
+    ).limit(10).all()
+
+    recent_booking_data = []
+
+    for booking in recent_bookings:
+
+        recent_booking_data.append({
+            'id': booking.id,
+            '_id': str(booking.id),
+
+            'user': {
+                'id': booking.user.id,
+                'name': booking.user.name,
+                'email': booking.user.email
+            } if booking.user else {},
+
+            'customer': {
+                'id': booking.user.id,
+                'name': booking.user.name
+            } if booking.user else {},
+
+            'vehicle': {
+                'id': booking.vehicle.id,
+                'name': (
+                    f'{booking.vehicle.make} '
+                    f'{booking.vehicle.model}'
+                )
+            } if booking.vehicle else {},
+
+            'pickupDate': (
+                booking.pickup_date.isoformat()
+                if booking.pickup_date
+                else None
+            ),
+
+            'pickup_date': (
+                booking.pickup_date.isoformat()
+                if booking.pickup_date
+                else None
+            ),
+
+            'dropoffDate': (
+                booking.dropoff_date.isoformat()
+                if booking.dropoff_date
+                else (
+                    booking.return_date.isoformat()
+                    if booking.return_date
+                    else None
+                )
+            ),
+
+            'dropoff_date': (
+                booking.dropoff_date.isoformat()
+                if booking.dropoff_date
+                else (
+                    booking.return_date.isoformat()
+                    if booking.return_date
+                    else None
+                )
+            ),
+
+            'status': booking.status
+        })
+
+    # =========================
+    # RESPONSE
+    # =========================
 
     return jsonify({
         'stats': {
-            'todayPickups': pickups,
-            'todayReturns': returns,
-            'pendingTasks': pending,
-            'activeRentals': active
+            'todayPickups': today_pickups,
+            'todayReturns': today_returns,
+            'pendingTasks': pending_bookings,
+            'activeRentals': active_rentals
         },
-        'todaySchedule': schedule,
+
+        'todaySchedule': today_schedule,
+
         'vehicleStatus': {
-            'available': available,
-            'rented': rented,
-            'maintenance': maintenance
+            'available': available_vehicles,
+            'rented': rented_vehicles,
+            'maintenance': maintenance_vehicles
         },
-        'recentBookings': recent
+
+        'recentBookings': recent_booking_data
     }), 200
 
+
+# ============================================================
+# BOOKINGS
+# ============================================================
 
 @bp.route('/bookings', methods=['GET'])
 @role_required('staff', 'admin')
 def get_bookings():
     status = request.args.get('status')
+
     query = Booking.query
+
     if status:
         query = query.filter_by(status=status)
-    bookings = query.all()
-    result = [{
-        '_id': f'BKG-{b.id:04d}',
-        'user': {'name': b.user.name} if b.user else {},
-        'vehicle': {'name': f"{b.vehicle.make} {b.vehicle.model}"} if b.vehicle else {},
-        'pickupDate': b.pickup_date.isoformat() if b.pickup_date else None,
-        'dropoffDate': b.dropoff_date.isoformat() if b.dropoff_date else None,
-        'status': b.status,
-        'pickupLocation': b.pickup_location,
-        'dropoffLocation': b.dropoff_location
-    } for b in bookings]
+
+    bookings = query.order_by(
+        Booking.created_at.desc()
+    ).all()
+
+    result = []
+
+    for b in bookings:
+        result.append({
+            'id': b.id,
+            '_id': str(b.id),
+            'displayId': f'BKG-{b.id:04d}',
+
+            'user': {
+                'id': b.user.id,
+                'name': b.user.name,
+                'email': b.user.email,
+                'phone': b.user.phone
+            } if b.user else {},
+
+            'vehicle': {
+                'id': b.vehicle.id,
+                'name': f'{b.vehicle.make} {b.vehicle.model}',
+                'registrationNumber': b.vehicle.registration_number
+            } if b.vehicle else {},
+
+            'pickupDate': (
+                b.pickup_date.isoformat()
+                if b.pickup_date else None
+            ),
+
+            'dropoffDate': (
+                b.dropoff_date.isoformat()
+                if b.dropoff_date else None
+            ),
+
+            'pickupLocation': b.pickup_location,
+            'dropoffLocation': b.dropoff_location,
+
+            'drivingOption': b.driving_option,
+            'driverId': b.driver_id,
+
+            'totalAmount': b.total_amount,
+            'status': b.status,
+
+            'createdAt': (
+                b.created_at.isoformat()
+                if b.created_at else None
+            )
+        })
+
     return jsonify(result), 200
 
 
 @bp.route('/bookings/pending', methods=['GET'])
 @role_required('staff', 'admin')
 def get_pending_bookings():
-    bookings = Booking.query.filter_by(status='pending').all()
-    result = [{
-        '_id': f'BKG-{b.id:04d}',
-        'user': {'name': b.user.name} if b.user else {},
-        'vehicle': {'name': f"{b.vehicle.make} {b.vehicle.model}"} if b.vehicle else {},
-        'pickupDate': b.pickup_date.isoformat() if b.pickup_date else None,
-        'dropoffDate': b.dropoff_date.isoformat() if b.dropoff_date else None,
-        'status': b.status,
-        'pickupLocation': b.pickup_location,
-        'dropoffLocation': b.dropoff_location
-    } for b in bookings]
+
+    bookings = Booking.query.filter_by(
+        status='pending'
+    ).order_by(
+        Booking.created_at.desc()
+    ).all()
+
+    result = []
+
+    for b in bookings:
+        result.append({
+            'id': b.id,
+            '_id': str(b.id),
+            'displayId': f'BKG-{b.id:04d}',
+
+            'user': {
+                'id': b.user.id,
+                'name': b.user.name,
+                'email': b.user.email,
+                'phone': b.user.phone
+            } if b.user else {},
+
+            'vehicle': {
+                'id': b.vehicle.id,
+                'name': f'{b.vehicle.make} {b.vehicle.model}',
+                'registrationNumber': b.vehicle.registration_number
+            } if b.vehicle else {},
+
+            'pickupDate': (
+                b.pickup_date.isoformat()
+                if b.pickup_date else None
+            ),
+
+            'dropoffDate': (
+                b.dropoff_date.isoformat()
+                if b.dropoff_date else None
+            ),
+
+            'pickupLocation': b.pickup_location,
+            'dropoffLocation': b.dropoff_location,
+
+            'drivingOption': b.driving_option,
+            'driverId': b.driver_id,
+
+            'totalAmount': b.total_amount,
+            'status': b.status,
+
+            'createdAt': (
+                b.created_at.isoformat()
+                if b.created_at else None
+            )
+        })
+
     return jsonify(result), 200
 
 
 @bp.route('/bookings/<int:booking_id>', methods=['GET'])
 @role_required('staff', 'admin')
 def get_booking(booking_id):
+
     b = Booking.query.get_or_404(booking_id)
+
     return jsonify({
-        '_id': f'BKG-{b.id:04d}',
-        'user': {'name': b.user.name} if b.user else {},
-        'vehicle': {'name': f"{b.vehicle.make} {b.vehicle.model}"} if b.vehicle else {},
-        'pickupDate': b.pickup_date.isoformat() if b.pickup_date else None,
-        'dropoffDate': b.dropoff_date.isoformat() if b.dropoff_date else None,
-        'status': b.status,
+        'id': b.id,
+        '_id': str(b.id),
+        'displayId': f'BKG-{b.id:04d}',
+
+        'user': {
+            'id': b.user.id,
+            'name': b.user.name,
+            'email': b.user.email,
+            'phone': b.user.phone
+        } if b.user else {},
+
+        'vehicle': {
+            'id': b.vehicle.id,
+            'name': f'{b.vehicle.make} {b.vehicle.model}',
+            'registrationNumber': b.vehicle.registration_number
+        } if b.vehicle else {},
+
+        'pickupDate': (
+            b.pickup_date.isoformat()
+            if b.pickup_date else None
+        ),
+
+        'dropoffDate': (
+            b.dropoff_date.isoformat()
+            if b.dropoff_date else None
+        ),
+
         'pickupLocation': b.pickup_location,
-        'dropoffLocation': b.dropoff_location
+        'dropoffLocation': b.dropoff_location,
+
+        'drivingOption': b.driving_option,
+        'driverId': b.driver_id,
+
+        'totalAmount': b.total_amount,
+        'status': b.status,
+
+        'createdAt': (
+            b.created_at.isoformat()
+            if b.created_at else None
+        )
     }), 200
 
 
 @bp.route('/bookings/<int:booking_id>/approve', methods=['PUT'])
 @role_required('staff', 'admin')
 def approve_booking(booking_id):
+
     b = Booking.query.get_or_404(booking_id)
+
+    if b.status != 'pending':
+        return jsonify({
+            'message': 'Only pending bookings can be approved'
+        }), 400
+
     b.status = 'confirmed'
+
     db.session.commit()
-    return jsonify({'message': 'Booking approved'}), 200
+
+    return jsonify({
+        'message': 'Booking approved successfully',
+        'booking': b.to_dict()
+    }), 200
 
 
 @bp.route('/bookings/<int:booking_id>/reject', methods=['PUT'])
 @role_required('staff', 'admin')
 def reject_booking(booking_id):
-    b = Booking.query.get_or_404(booking_id)
-    b.status = 'cancelled'
-    db.session.commit()
-    return jsonify({'message': 'Booking rejected'}), 200
 
+    b = Booking.query.get_or_404(booking_id)
+
+    if b.status != 'pending':
+        return jsonify({
+            'message': 'Only pending bookings can be rejected'
+        }), 400
+
+    b.status = 'cancelled'
+
+    db.session.commit()
+
+    return jsonify({
+        'message': 'Booking rejected successfully',
+        'booking': b.to_dict()
+    }), 200
+
+
+# ============================================================
+# FLAG VEHICLE FOR MAINTENANCE
+# ============================================================
+
+@bp.route('/vehicles/<int:vehicle_id>/maintenance', methods=['POST'])
+@role_required('staff', 'admin')
+def flag_vehicle_maintenance(vehicle_id):
+
+    vehicle = Vehicle.query.get_or_404(vehicle_id)
+
+    data = request.get_json() or {}
+
+    issue = data.get('issue', '').strip()
+    priority = data.get('priority', 'Medium')
+
+    if not issue:
+        return jsonify({
+            'message': 'Maintenance issue is required'
+        }), 400
+
+    if priority not in ['Low', 'Medium', 'High']:
+        return jsonify({
+            'message': 'Invalid maintenance priority'
+        }), 400
+
+    # --------------------------------------------------------
+    # Prevent duplicate maintenance requests
+    # --------------------------------------------------------
+
+    existing = Maintenance.query.filter(
+        Maintenance.vehicle_id == vehicle.id,
+        Maintenance.status.in_([
+            'Open',
+            'In Progress',
+            'open',
+            'in_progress'
+        ])
+    ).first()
+
+    if existing:
+        return jsonify({
+            'message': 'Vehicle already has an active maintenance request'
+        }), 400
+
+    # --------------------------------------------------------
+    # Create maintenance request
+    # --------------------------------------------------------
+
+    maintenance = Maintenance(
+        vehicle_id=vehicle.id,
+        issue=issue,
+        priority=priority,
+        status='Open',
+        date=date.today().strftime('%b %d')
+    )
+
+    db.session.add(maintenance)
+
+    # --------------------------------------------------------
+    # Flag vehicle
+    # --------------------------------------------------------
+
+    vehicle.status = 'maintenance'
+    vehicle.available = False
+    vehicle.is_available = False
+
+    # --------------------------------------------------------
+    # Save changes
+    # --------------------------------------------------------
+
+    try:
+        db.session.commit()
+
+    except Exception as e:
+        db.session.rollback()
+
+        print(
+            f'Maintenance flag failed for vehicle '
+            f'{vehicle.id}: {e}'
+        )
+
+        return jsonify({
+            'message': 'Failed to flag vehicle for maintenance'
+        }), 500
+
+    return jsonify({
+        'message': 'Vehicle flagged for maintenance successfully',
+        'maintenance': maintenance.to_dict(),
+        'vehicle': vehicle.to_dict()
+    }), 201
+# ============================================================
+# RELEASE VEHICLE FROM MAINTENANCE
+# ============================================================
+
+@bp.route(
+    '/vehicles/<int:vehicle_id>/maintenance/release',
+    methods=['PUT']
+)
+@role_required('staff', 'admin')
+def release_vehicle_maintenance(vehicle_id):
+
+    vehicle = Vehicle.query.get_or_404(vehicle_id)
+
+    # --------------------------------------------------------
+    # Make vehicle available again
+    # --------------------------------------------------------
+
+    vehicle.status = 'available'
+    vehicle.available = True
+    vehicle.is_available = True
+
+    # --------------------------------------------------------
+    # Close active maintenance requests
+    # --------------------------------------------------------
+
+    active_requests = Maintenance.query.filter(
+        Maintenance.vehicle_id == vehicle.id,
+        Maintenance.status.in_([
+            'Open',
+            'In Progress',
+            'open',
+            'in_progress'
+        ])
+    ).all()
+
+    for maintenance in active_requests:
+        maintenance.status = 'Resolved'
+
+    # --------------------------------------------------------
+    # Save changes
+    # --------------------------------------------------------
+
+    try:
+
+        db.session.commit()
+
+    except Exception as e:
+
+        db.session.rollback()
+
+        print(
+            f'Maintenance release failed for vehicle '
+            f'{vehicle.id}: {e}'
+        )
+
+        return jsonify({
+            'message': 'Failed to release vehicle from maintenance'
+        }), 500
+
+    return jsonify({
+        'message': 'Vehicle released from maintenance successfully',
+        'vehicle': vehicle.to_dict()
+    }), 200
+
+            
+
+    
+
+# ============================================================
+# CHECK-OUT BOOKING
+# ============================================================
 
 @bp.route('/bookings/<int:booking_id>/checkout', methods=['POST'])
 @role_required('staff', 'admin')
 def checkout_booking(booking_id):
-    data = request.get_json()
-    b = Booking.query.get_or_404(booking_id)
-    b.status = 'active'
-    if b.vehicle:
-        b.vehicle.status = 'rented'
-    inspection = Inspection(
-        booking_id=b.id,
-        vehicle_id=b.vehicle_id,
-        type='check-out',
-        mileage=data.get('mileage'),
-        fuel_level=data.get('fuelLevel'),
-        condition=data.get('condition'),
-        status='passed'
-    )
-    db.session.add(inspection)
-    db.session.commit()
-    return jsonify({'message': 'Check-out successful'}), 200
 
+    booking = Booking.query.get_or_404(booking_id)
+
+    # --------------------------------------------------------
+    # Only confirmed bookings can be checked out
+    # --------------------------------------------------------
+
+    if booking.status != 'confirmed':
+        return jsonify({
+            'message': (
+                'Only confirmed bookings can be checked out'
+            )
+        }), 400
+
+    vehicle = Vehicle.query.get(booking.vehicle_id)
+
+    if not vehicle:
+        return jsonify({
+            'message': 'Vehicle not found'
+        }), 404
+
+    # --------------------------------------------------------
+    # Make sure vehicle is actually available
+    # --------------------------------------------------------
+
+    if (
+        vehicle.status not in ['available', 'booked']
+        and vehicle.available is False
+    ):
+        return jsonify({
+            'message': (
+                'Vehicle is not available for check-out'
+            )
+        }), 400
+
+    data = request.get_json() or {}
+
+    # --------------------------------------------------------
+    # Checkout inspection information
+    # --------------------------------------------------------
+
+    mileage = data.get('mileage')
+    fuel_level = data.get('fuelLevel', 'full')
+    condition = data.get('condition', 'good')
+
+    if mileage is None or mileage == 0:
+        mileage = vehicle.mileage or 0
+
+    try:
+        mileage = int(mileage)
+    except (TypeError, ValueError):
+        return jsonify({
+            'message': 'Invalid mileage'
+        }), 400
+
+    if mileage < 0:
+        return jsonify({
+            'message': 'Mileage cannot be negative'
+        }), 400
+
+    current_mileage = vehicle.mileage or 0
+
+    if mileage < current_mileage:
+        return jsonify({
+            'message': (
+                'Checkout mileage cannot be less than '
+                'the vehicle current mileage'
+            )
+        }), 400
+
+    # --------------------------------------------------------
+    # Create checkout inspection
+    # --------------------------------------------------------
+
+    current_user_id = int(get_jwt_identity())
+
+    checkout_inspection = Inspection(
+        booking_id=booking.id,
+        vehicle_id=vehicle.id,
+        inspector_id=current_user_id,
+        type='checkout',
+        mileage=mileage,
+        fuel_level=fuel_level,
+        condition=condition,
+        damage_notes='',
+        status='completed'
+    )
+
+    db.session.add(checkout_inspection)
+
+    # --------------------------------------------------------
+    # Update booking
+    # --------------------------------------------------------
+
+    booking.status = 'active'
+
+    # --------------------------------------------------------
+    # Update vehicle
+    # --------------------------------------------------------
+
+    vehicle.mileage = mileage
+    vehicle.status = 'rented'
+    vehicle.available = False
+    vehicle.is_available = False
+
+    # --------------------------------------------------------
+    # Notify customer
+    # --------------------------------------------------------
+
+    create_notification(
+        booking.user_id,
+        'Vehicle Checked Out',
+        (
+            f'Booking #{booking.id} has been checked out '
+            f'and your rental is now active.'
+        )
+    )
+
+    try:
+        db.session.commit()
+
+    except Exception as e:
+        db.session.rollback()
+
+        print(
+            f'Checkout failed for booking '
+            f'{booking.id}: {e}'
+        )
+
+        return jsonify({
+            'message': 'Failed to check out booking'
+        }), 500
+
+    return jsonify({
+        'message': 'Vehicle checked out successfully',
+        'booking': booking.to_dict(),
+        'vehicle': vehicle.to_dict(),
+        'inspection': checkout_inspection.to_dict()
+    }), 200
+
+
+# ============================================================
+# CHECK-IN BOOKING
+# ============================================================
 
 @bp.route('/bookings/<int:booking_id>/checkin', methods=['POST'])
 @role_required('staff', 'admin')
 def checkin_booking(booking_id):
-    data = request.get_json()
-    b = Booking.query.get_or_404(booking_id)
-    b.status = 'completed'
-    if b.vehicle:
-        b.vehicle.status = 'available'
-    inspection = Inspection(
-        booking_id=b.id,
-        vehicle_id=b.vehicle_id,
-        type='check-in',
-        mileage=data.get('mileage'),
-        fuel_level=data.get('fuelLevel'),
-        condition=data.get('condition'),
-        damage_notes=data.get('damage'),
-        status='passed'
+
+    booking = Booking.query.get_or_404(booking_id)
+
+    # --------------------------------------------------------
+    # Only active bookings can be checked in
+    # --------------------------------------------------------
+
+    if booking.status != 'active':
+        return jsonify({
+            'message': (
+                'Only active bookings can be checked in'
+            )
+        }), 400
+
+    vehicle = Vehicle.query.get(booking.vehicle_id)
+
+    if not vehicle:
+        return jsonify({
+            'message': 'Vehicle not found'
+        }), 404
+
+    data = request.get_json() or {}
+
+    # --------------------------------------------------------
+    # Check-in inspection information
+    # --------------------------------------------------------
+
+    mileage = data.get('mileage')
+    fuel_level = data.get('fuelLevel', 'full')
+    condition = data.get('condition', 'good')
+    damage = data.get('damage', '')
+
+    if mileage is None or mileage == 0:
+        mileage = vehicle.mileage or 0
+
+    try:
+        mileage = int(mileage)
+    except (TypeError, ValueError):
+        return jsonify({
+            'message': 'Invalid mileage'
+        }), 400
+
+    if mileage < 0:
+        return jsonify({
+            'message': 'Mileage cannot be negative'
+        }), 400
+
+    current_mileage = vehicle.mileage or 0
+
+    if mileage < current_mileage:
+        return jsonify({
+            'message': (
+                'Check-in mileage cannot be less than '
+                'the vehicle current mileage'
+            )
+        }), 400
+
+    # --------------------------------------------------------
+    # Create check-in inspection
+    # --------------------------------------------------------
+
+    current_user_id = int(get_jwt_identity())
+
+    checkin_inspection = Inspection(
+        booking_id=booking.id,
+        vehicle_id=vehicle.id,
+        inspector_id=current_user_id,
+        type='checkin',
+        mileage=mileage,
+        fuel_level=fuel_level,
+        condition=condition,
+        damage_notes=damage,
+        status='completed'
     )
-    db.session.add(inspection)
-    db.session.commit()
-    return jsonify({'message': 'Check-in successful'}), 200
 
+    db.session.add(checkin_inspection)
 
-@bp.route('/trips', methods=['GET'])
-@role_required('staff', 'admin')
-def get_trips():
-    trips = Trip.query.all()
-    result = [{
-        '_id': f'TRP-{t.id:03d}',
-        'customer': {'name': t.booking.user.name} if t.booking and t.booking.user else {},
-        'vehicle': {'name': f"{t.booking.vehicle.make} {t.booking.vehicle.model}"} if t.booking and t.booking.vehicle else {},
-        'pickupLocation': t.pickup_location,
-        'dropoffLocation': t.dropoff_location,
-        'pickupTime': t.date.isoformat() if t.date else None,
-        'status': t.status
-    } for t in trips]
-    return jsonify(result), 200
+    # --------------------------------------------------------
+    # Complete booking
+    # --------------------------------------------------------
 
+    booking.status = 'completed'
 
-@bp.route('/trips/<int:trip_id>/status', methods=['PUT'])
-@role_required('staff', 'admin')
-def update_trip_status(trip_id):
-    data = request.get_json()
-    t = Trip.query.get_or_404(trip_id)
-    t.status = data.get('status', t.status)
-    db.session.commit()
-    return jsonify({'message': 'Trip status updated'}), 200
+    # --------------------------------------------------------
+    # Update vehicle
+    # --------------------------------------------------------
 
+    vehicle.mileage = mileage
 
-@bp.route('/vehicles/inspection', methods=['GET'])
-@role_required('staff', 'admin')
-def get_vehicles_for_inspection():
-    vehicles = Vehicle.query.filter(Vehicle.status.in_(['available', 'rented'])).all()
-    result = [{
-        'id': v.id,
-        'name': f"{v.make} {v.model}",
-        'plate': v.registration_number,
-        'status': v.status,
-        'condition': '',
-        'mileage': '',
-        'fuelLevel': '',
-        'notes': '',
-        'type': 'check-out'
-    } for v in vehicles]
-    return jsonify(result), 200
+    # --------------------------------------------------------
+    # DAMAGE FOUND
+    #
+    # The vehicle is NOT made available.
+    # Instead, create a maintenance request for the admin.
+    # --------------------------------------------------------
 
+    if damage and damage.strip():
 
-@bp.route('/vehicles/<int:vehicle_id>/inspection', methods=['PUT'])
-@role_required('staff', 'admin')
-def update_vehicle_inspection(vehicle_id):
-    data = request.get_json()
-    v = Vehicle.query.get_or_404(vehicle_id)
-    v.status = data.get('status', v.status)
-    db.session.commit()
-    return jsonify({'message': 'Vehicle inspection updated'}), 200
+        vehicle.status = 'maintenance'
+        vehicle.available = False
+        vehicle.is_available = False
 
+        # Check whether an open maintenance request
+        # already exists for this vehicle.
+
+        existing_maintenance = Maintenance.query.filter_by(
+            vehicle_id=vehicle.id,
+            status='Open'
+        ).first()
+
+        if not existing_maintenance:
+
+            maintenance = Maintenance(
+                vehicle_id=vehicle.id,
+                issue=damage.strip(),
+                priority='Medium',
+                status='Open',
+                date=date.today().strftime('%b %d')
+            )
+
+            db.session.add(maintenance)
+
+    # --------------------------------------------------------
+    # NO DAMAGE
+    #
+    # Vehicle can return to the available fleet.
+    # --------------------------------------------------------
+
+    else:
+
+        vehicle.status = 'available'
+        vehicle.available = True
+        vehicle.is_available = True
+
+    # --------------------------------------------------------
+    # Notify customer
+    # --------------------------------------------------------
+
+    create_notification(
+        booking.user_id,
+        'Vehicle Checked In',
+        (
+            f'Booking #{booking.id} has been checked in '
+            f'and your rental has been completed.'
+        )
+    )
+
+    try:
+        db.session.commit()
+
+    except Exception as e:
+        db.session.rollback()
+
+        print(
+            f'Check-in failed for booking '
+            f'{booking.id}: {e}'
+        )
+
+        return jsonify({
+            'message': 'Failed to check in booking'
+        }), 500
+
+    return jsonify({
+        'message': 'Vehicle checked in successfully',
+        'booking': booking.to_dict(),
+        'vehicle': vehicle.to_dict(),
+        'inspection': checkin_inspection.to_dict()
+    }), 200
+# ============================================================
+# CUSTOMERS
+# ============================================================
 
 @bp.route('/customers', methods=['GET'])
 @role_required('staff', 'admin')
 def get_customers():
-    customers = User.query.filter_by(role='customer').all()
-    result = [{
-        '_id': f'CUS-{c.id:03d}',
-        'name': c.name,
-        'email': c.email,
-        'phone': c.phone,
-        'licenseNumber': c.license_number,
-        'totalRentals': len(c.customer_bookings),
-        'joined': c.created_at.isoformat()
-    } for c in customers]
-    return jsonify(result), 200
 
+    customers = User.query.filter_by(
+        role='customer'
+    ).order_by(
+        User.created_at.desc()
+    ).all()
 
-@bp.route('/driver-assignments', methods=['GET'])
-@role_required('staff', 'admin')
-def get_driver_requests():
-    assignments = DriverAssignment.query.filter_by(status='pending').all()
     result = []
-    for a in assignments:
-        b = a.booking
+
+    for customer in customers:
         result.append({
-            '_id': f'DRQ-{a.id:03d}',
-            'bookingId': f'BKG-{b.id:04d}',
-            'customer': {'name': b.user.name} if b.user else {},
-            'vehicle': {'name': f"{b.vehicle.make} {b.vehicle.model}"} if b.vehicle else {},
-            'pickupDate': b.pickup_date.isoformat() if b.pickup_date else None,
-            'dropoffDate': b.dropoff_date.isoformat() if b.dropoff_date else None,
-            'pickupLocation': b.pickup_location,
-            'dropoffLocation': b.dropoff_location,
-            'status': a.status,
-            'requestedAt': a.assigned_at.isoformat()
+            'id': customer.id,
+            '_id': str(customer.id),
+            'name': customer.name,
+            'email': customer.email,
+            'phone': customer.phone,
+            'driversLicense': customer.drivers_license,
+            'licenseExpiry': customer.license_expiry,
+            'country': customer.country,
+            'profilePhoto': customer.profile_photo,
+            'isActive': customer.is_active,
+            'createdAt': (
+                customer.created_at.isoformat()
+                if customer.created_at
+                else None
+            )
         })
+
     return jsonify(result), 200
-
-
-@bp.route('/driver-assignments', methods=['POST'])
-@role_required('staff', 'admin')
-def create_driver_assignment():
-    data = request.get_json()
-    booking_id = data.get('bookingId')
-    driver_id = data.get('driverId')
-
-    if not booking_id or not driver_id:
-        return jsonify({'message': 'bookingId and driverId are required'}), 400
-
-    existing = DriverAssignment.query.filter_by(booking_id=booking_id).first()
-    if existing:
-        return jsonify({'message': 'Driver already assigned to this booking'}), 400
-
-    assignment = DriverAssignment(
-        booking_id=booking_id,
-        driver_id=driver_id,
-        status='assigned'
-    )
-    db.session.add(assignment)
-    db.session.commit()
-
-    booking = Booking.query.get(booking_id)
-    driver = User.query.get(driver_id)
-    if driver:
-        create_notification(driver.id, 'New Assignment', f'You have been assigned to booking #{booking_id}.')
-    if booking and booking.user_id:
-        create_notification(booking.user_id, 'Driver Assigned', f'A driver has been assigned to your booking #{booking_id}.')
-
-    return jsonify({'message': 'Driver assigned', 'assignment_id': assignment.id}), 201
-
-
-@bp.route('/reports', methods=['GET'])
-@role_required('staff', 'admin')
-def get_reports():
-    reports = Report.query.all()
-    result = [{
-        '_id': f'RPT-{r.id:03d}',
-        'report_type': r.report_type,
-        'period': r.period,
-        'data': r.data,
-        'created_at': r.created_at.isoformat() if r.created_at else None,
-    } for r in reports]
-    return jsonify(result), 200
-
-
-@bp.route('/notifications', methods=['GET'])
-@role_required('staff', 'admin')
-def get_notifications():
-    notifications = Notification.query.all()
-    result = [n.to_dict() for n in notifications]
-    return jsonify(result), 200
-
-
-@bp.route('/notifications/<int:notification_id>/read', methods=['PUT'])
-@role_required('staff', 'admin')
-def mark_notification_read(notification_id):
-    n = Notification.query.get_or_404(notification_id)
-    n.read = True
-    db.session.commit()
-    return jsonify({'message': 'Notification marked as read'}), 200
-
-
-@bp.route('/vehicles/<int:vehicle_id>/maintenance', methods=['POST'])
-@role_required('staff', 'admin')
-def flag_maintenance(vehicle_id):
-    data = request.get_json() or {}
-    vehicle = Vehicle.query.get_or_404(vehicle_id)
-    notes = data.get('notes', '')
-    vehicle.status = 'maintenance'
-    vehicle.is_available = False
-    db.session.commit()
-
-    maintenance = Maintenance(
-        vehicle_id=vehicle_id,
-        reported_by=int(get_jwt_identity()) if token_required else None,
-        notes=notes,
-        status='pending',
-    )
-    db.session.add(maintenance)
-    db.session.commit()
-
-    admins = User.query.filter_by(role='admin', is_active=True).all()
-    for admin in admins:
-        create_notification(admin.id, 'Maintenance Required', f'Vehicle {vehicle.make} {vehicle.model} ({vehicle.registration_number}) flagged for maintenance.')
-
-    return jsonify({'message': 'Vehicle flagged for maintenance'}), 201

@@ -12,3 +12,4 @@ from app.models.notification import Notification
 from app.models.driver import Driver, Customer
 from app.models.earning import Earning
 from app.models.maintenance import Maintenance
+from app.models.saved_car import SavedCar

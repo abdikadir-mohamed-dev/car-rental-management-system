@@ -1,6 +1,7 @@
 from flask import Blueprint, jsonify, request
 from app.models.vehicle import Vehicle
 from app import db
+from app.utils.auth import token_required, role_required
 
 bp = Blueprint('vehicles', __name__, url_prefix='/api/vehicles')
 
@@ -14,7 +15,19 @@ def get_vehicles():
 
     query = Vehicle.query
     if is_available is not None:
-        query = query.filter_by(is_available=(is_available.lower() == 'true'))
+     requested_available = (
+        is_available.lower() == 'true'
+    )
+
+    query = query.filter(
+        Vehicle.is_available == requested_available
+    )
+
+    if requested_available:
+        query = query.filter(
+            Vehicle.available == True,
+            Vehicle.status != 'maintenance'
+        )
     if vehicle_type:
         query = query.filter_by(vehicle_type=vehicle_type)
     if min_price:
@@ -42,6 +55,7 @@ def get_vehicle(vehicle_id):
     return jsonify({'vehicle': vehicle.to_dict()}), 200
 
 @bp.route('/', methods=['POST'])
+@role_required('admin')
 def create_vehicle():
     data = request.get_json() or {}
     vehicle = Vehicle(
@@ -69,6 +83,7 @@ def create_vehicle():
     return jsonify({'vehicle': vehicle.to_dict()}), 201
 
 @bp.route('/<int:vehicle_id>', methods=['PUT', 'PATCH'])
+@role_required('admin')
 def update_vehicle(vehicle_id):
     vehicle = Vehicle.query.get_or_404(vehicle_id)
     data = request.get_json() or {}
@@ -85,6 +100,7 @@ def update_vehicle(vehicle_id):
     return jsonify({'vehicle': vehicle.to_dict()}), 200
 
 @bp.route('/<int:vehicle_id>', methods=['DELETE'])
+@role_required('admin')
 def delete_vehicle(vehicle_id):
     vehicle = Vehicle.query.get_or_404(vehicle_id)
     db.session.delete(vehicle)

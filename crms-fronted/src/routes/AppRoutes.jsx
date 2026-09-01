@@ -65,14 +65,14 @@ import StaffDriverAssignmentsPage from '../pages/staff/StaffDriverAssignmentsPag
 
 import DriverDashboard from '../pages/driver/DriverDashboard'
 import DriverTripsPage from '../pages/driver/DriverTripsPage'
-import DriverEarningsPage from '../pages/driver/DriverEarningsPage'
+
 import DriverProfilePage from '../pages/driver/DriverProfilePage'
 import DriverAssignmentsPage from '../pages/driver/DriverAssignmentsPage'
 import DriverBookingsPage from '../pages/driver/DriverBookingspage'
-import DriverVehiclesPage from '../pages/driver/DriverVehiclespage'
-import DriverCustomersPage from '../pages/driver/DriverCustomers'
-import DriverMaintenancePage from '../pages/driver/DriverMaintainancepage'
-import DriverReportsPage from '../pages/driver/DriverReportpage'
+
+
+
+
 import DriverNotificationsPage from '../pages/driver/DriverNotifications'
 import DriverCheckinPage from '../pages/driver/DriverCheckinPage'
 import DriverCheckoutPage from '../pages/driver/DriverCheckoutPage'
@@ -176,14 +176,14 @@ function AppRoutes() {
         <Route path="dashboard" element={<DriverDashboard />} />
         <Route path="assignments" element={<DriverAssignmentsPage />} />
         <Route path="trips" element={<DriverTripsPage />} />
-        <Route path="earnings" element={<DriverEarningsPage />} />
+       
         <Route path="bookings" element={<DriverBookingsPage />} />
         <Route path="checkout" element={<DriverCheckoutPage />} />
         <Route path="checkin" element={<DriverCheckinPage />} />
-        <Route path="vehicles" element={<DriverVehiclesPage />} />
-        <Route path="customers" element={<DriverCustomersPage />} />
-        <Route path="maintenance" element={<DriverMaintenancePage />} />
-        <Route path="reports" element={<DriverReportsPage />} />
+       
+        
+       
+       
         <Route path="notifications" element={<DriverNotificationsPage />} />
         <Route path="profile" element={<DriverProfilePage />} />
       </Route>

@@ -1,122 +1,159 @@
-import React from 'react'
+import { useEffect, useState } from 'react'
 import {
-  LayoutGrid, ClipboardList, Calendar, LogOut, LogIn,
-  Car, Users, Wrench, BarChart2, Bell, User, Power,
-  ShipWheel, ChevronDown, DollarSign, MapPin, Clock,
-  Phone, CheckCircle2, XCircle, ChevronRight
+  ClipboardList,
+  Car,
+  MapPin,
+  Clock,
+  Phone,
+  Loader2,
+  User,
 } from 'lucide-react'
-import { toast } from 'react-hot-toast'
+import toast from 'react-hot-toast'
 
-const assignments = [
-  {
-    id: 'ASG-1042',
-    customer: 'John Doe',
-    phone: '+254 712 345 678',
-    vehicle: 'Toyota RAV4',
-    plate: 'KDA 221B',
-    pickup: 'Nairobi CBD',
-    dropoff: 'Westlands Office',
-    date: 'Aug 21, 2026',
-    time: '09:30 AM',
-    fare: 'KSH 32',
-    status: 'Assigned',
-    notes: 'Customer prefers air conditioning on.',
-  },
-  {
-    id: 'ASG-1041',
-    customer: 'Mary Wanjiku',
-    phone: '+254 722 456 789',
-    vehicle: 'Honda Accord',
-    plate: 'KCE 552M',
-    pickup: 'JKIA Terminal 1',
-    dropoff: 'Karen Branch',
-    date: 'Aug 21, 2026',
-    time: '02:00 PM',
-    fare: 'KSH 28',
-    status: 'Upcoming',
-    notes: 'Flight arrival time may shift by 30 mins.',
-  },
-  {
-    id: 'ASG-1038',
-    customer: 'Peter Mwangi',
-    phone: '+254 733 567 890',
-    vehicle: 'BMW 3 Series',
-    plate: 'KDB 774K',
-    pickup: 'Westlands Office',
-    dropoff: 'Two Rivers Mall',
-    date: 'Aug 20, 2026',
-    time: '05:00 PM',
-    fare: 'KSH 35',
-    status: 'Completed',
-    notes: 'Client requested no music during trip.',
-  },
-  {
-    id: 'ASG-1035',
-    customer: 'Amina Yusuf',
-    phone: '+254 744 678 901',
-    vehicle: 'Mazda Demio',
-    plate: 'KCF 108T',
-    pickup: 'Karen Branch',
-    dropoff: 'Nairobi CBD',
-    date: 'Aug 19, 2026',
-    time: '11:00 AM',
-    fare: 'KSH 24',
-    status: 'Completed',
-    notes: 'Luggage space required.',
-  },
-  {
-    id: 'ASG-1032',
-    customer: 'Kevin Njoroge',
-    phone: '+254 755 789 012',
-    vehicle: 'Toyota Prado',
-    plate: 'KDA 221B',
-    pickup: 'Kilimani',
-    dropoff: 'Sarit Centre',
-    date: 'Aug 18, 2026',
-    time: '04:15 PM',
-    fare: 'KSH 40',
-    status: 'Cancelled',
-    notes: 'Cancelled by customer 2 hours before pickup.',
-  },
-];
+import {
+  getAssignments,
+  acceptAssignment,
+} from '../../services/driverService'
 
-const statusStyle = {
-  Assigned: 'badge-success',
-  Upcoming: 'badge-warning',
-  Completed: 'badge-info',
-  Cancelled: 'badge-danger',
-};
+const statusStyles = {
+  assigned: 'badge-success',
+  pending: 'badge-warning',
+  accepted: 'badge-info',
+  completed: 'badge-info',
+  cancelled: 'badge-danger',
+  rejected: 'badge-danger',
+  in_progress: 'badge-warning',
+}
 
 export default function DriverAssignmentsPage() {
-  const [active, setActive] = React.useState('Assignments');
-  const [filter, setFilter] = React.useState('All');
+  const [assignments, setAssignments] = useState([])
+  const [filter, setFilter] = useState('all')
+  const [loading, setLoading] = useState(true)
+  const [acceptingId, setAcceptingId] = useState(null)
 
-  const filtered = filter === 'All' ? assignments : assignments.filter((a) => a.status === filter);
+  useEffect(() => {
+    loadAssignments()
+  }, [])
 
-  const handleAction = (assignment, action) => {
-    toast.success(`Assignment ${assignment.id} ${action}`)
-  };
+  const loadAssignments = async () => {
+    try {
+      setLoading(true)
 
-  const handleCall = (phone) => {
-    toast.success(`Calling ${phone}`)
-  };
+      const data = await getAssignments()
+
+      setAssignments(Array.isArray(data) ? data : [])
+    } catch (error) {
+      console.error(
+        'Failed to load assignments:',
+        error
+      )
+
+      toast.error(
+        error.response?.data?.message ||
+        'Failed to load assignments'
+      )
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // ============================================================
+  // ACCEPT ASSIGNMENT
+  // ============================================================
+
+  const handleAccept = async (assignmentId) => {
+    try {
+      setAcceptingId(assignmentId)
+
+      await acceptAssignment(assignmentId)
+
+      toast.success('Assignment accepted')
+
+      await loadAssignments()
+    } catch (error) {
+      console.error(
+        'Failed to accept assignment:',
+        error
+      )
+
+      toast.error(
+        error.response?.data?.message ||
+        'Failed to accept assignment'
+      )
+    } finally {
+      setAcceptingId(null)
+    }
+  }
+
+  const filteredAssignments =
+    filter === 'all'
+      ? assignments
+      : assignments.filter(
+          (assignment) =>
+            assignment.status?.toLowerCase() === filter
+        )
+
+  const formatDate = (date) => {
+    if (!date) return 'Not specified'
+
+    return new Date(date).toLocaleDateString(
+      'en-KE',
+      {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      }
+    )
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+      </div>
+    )
+  }
 
   return (
-    <div className="p-6 space-y-6 overflow-y-auto">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6">
+
+      {/* ========================================================
+          HEADER
+      ======================================================== */}
+
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">My Assignments</h1>
-          <p className="text-sm text-slate-500">{filtered.length} assignment{filtered.length !== 1 ? 's' : ''}</p>
+          <h1 className="text-2xl font-bold text-slate-800">
+            My Assignments
+          </h1>
+
+          <p className="text-sm text-slate-500 mt-1">
+            {filteredAssignments.length}{' '}
+            assignment
+            {filteredAssignments.length !== 1
+              ? 's'
+              : ''}
+          </p>
         </div>
-        <div className="flex gap-2">
-          {['All', 'Assigned', 'Upcoming', 'Completed', 'Cancelled'].map((status) => (
+
+        {/* FILTERS */}
+
+        <div className="flex flex-wrap gap-2">
+          {[
+            'all',
+            'assigned',
+            'accepted',
+            'completed',
+            'cancelled',
+          ].map((status) => (
             <button
               key={status}
               onClick={() => setFilter(status)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium capitalize ${
                 filter === status
                   ? 'bg-primary text-white'
-                  : 'bg-white border border-slate-200 text-slate-600 hover:text-slate-900'
+                  : 'bg-white border border-slate-200 text-slate-600'
               }`}
             >
               {status}
@@ -125,140 +162,257 @@ export default function DriverAssignmentsPage() {
         </div>
       </div>
 
-      <div className="space-y-4">
-        {filtered.map((assignment) => (
-          <div key={assignment.id} className="bg-white rounded-xl shadow-sm p-5">
-            <div className="flex items-start justify-between">
-              <div className="flex items-start gap-4">
-                <div className={`w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                  assignment.status === 'Assigned' ? 'bg-blue-100 text-primary' :
-                  assignment.status === 'Upcoming' ? 'bg-amber-100 text-amber-600' :
-                  assignment.status === 'Completed' ? 'bg-blue-100 text-primary' :
-                  'bg-red-100 text-danger'
-                }`}>
-                  <ClipboardList size={20} />
-                </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="font-semibold text-slate-800">{assignment.customer}</p>
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${statusStyle[assignment.status]}`}>
-                      {assignment.status}
-                    </span>
+      {/* ========================================================
+          EMPTY STATE
+      ======================================================== */}
+
+      {filteredAssignments.length === 0 ? (
+        <div className="bg-white rounded-xl shadow-sm p-12 text-center">
+
+          <ClipboardList className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+
+          <h3 className="font-semibold text-slate-700">
+            No assignments
+          </h3>
+
+          <p className="text-sm text-slate-400 mt-1">
+            You currently have no assignments matching this filter.
+          </p>
+
+        </div>
+      ) : (
+
+        /* ======================================================
+           ASSIGNMENTS
+        ====================================================== */
+
+        <div className="space-y-4">
+
+          {filteredAssignments.map((assignment) => {
+
+            const booking = assignment.booking
+            const customer = booking?.customer
+            const vehicle = booking?.vehicle
+
+            return (
+              <div
+                key={assignment.id}
+                className="bg-white rounded-xl shadow-sm p-5"
+              >
+
+                <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-5">
+
+                  {/* =================================================
+                      ASSIGNMENT INFORMATION
+                  ================================================= */}
+
+                  <div className="flex items-start gap-4">
+
+                    <div className="w-12 h-12 rounded-lg bg-blue-100 text-primary flex items-center justify-center flex-shrink-0">
+                      <ClipboardList size={20} />
+                    </div>
+
+                    <div className="min-w-0">
+
+                      {/* TITLE + STATUS */}
+
+                      <div className="flex flex-wrap items-center gap-2">
+
+                        <h2 className="font-semibold text-slate-800">
+                          {customer?.name ||
+                            'Customer'}
+                        </h2>
+
+                        <span
+                          className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                            statusStyles[
+                              assignment.status?.toLowerCase()
+                            ] ||
+                            'badge-warning'
+                          }`}
+                        >
+                          {assignment.status ||
+                            'Pending'}
+                        </span>
+
+                      </div>
+
+                      <p className="text-sm text-slate-500 mt-1">
+                        Assignment #{assignment.id}
+                      </p>
+
+                      {/* =================================================
+                          DETAILS
+                      ================================================= */}
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-5">
+
+                        <InfoItem
+                          icon={User}
+                          label="Customer"
+                          value={
+                            customer?.name ||
+                            'Not available'
+                          }
+                        />
+
+                        <InfoItem
+                          icon={Phone}
+                          label="Customer Phone"
+                          value={
+                            customer?.phone ||
+                            'Not available'
+                          }
+                        />
+
+                        <InfoItem
+                          icon={MapPin}
+                          label="Pickup"
+                          value={
+                            booking?.pickupLocation ||
+                            'Not specified'
+                          }
+                        />
+
+                        <InfoItem
+                          icon={MapPin}
+                          label="Drop-off"
+                          value={
+                            booking?.dropoffLocation ||
+                            'Not specified'
+                          }
+                        />
+
+                        <InfoItem
+                          icon={Car}
+                          label="Vehicle"
+                          value={
+                            vehicle?.name ||
+                            'Not available'
+                          }
+                        />
+
+                        <InfoItem
+                          icon={Car}
+                          label="Registration"
+                          value={
+                            vehicle?.registrationNumber ||
+                            'Not available'
+                          }
+                        />
+
+                        <InfoItem
+                          icon={Clock}
+                          label="Pickup Date"
+                          value={formatDate(
+                            booking?.pickupDate
+                          )}
+                        />
+
+                        <InfoItem
+                          icon={ClipboardList}
+                          label="Booking"
+                          value={
+                            booking?.displayId ||
+                            `BKG-${booking?.id || ''}`
+                          }
+                        />
+
+                      </div>
+
+                      {/* =================================================
+                          ASSIGNED DATE
+                      ================================================= */}
+
+                      <div className="mt-4 bg-slate-50 rounded-lg p-3">
+
+                        <p className="text-xs text-slate-400">
+                          Assigned
+                        </p>
+
+                        <p className="text-sm text-slate-600 mt-1">
+                          {formatDate(
+                            assignment.assigned_at
+                          )}
+                        </p>
+
+                      </div>
+
+                    </div>
                   </div>
-                  <p className="text-sm text-slate-500 mt-1">Assignment ID: {assignment.id}</p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4 text-sm">
-                    <div className="flex items-start gap-2">
-                      <MapPin size={14} className="text-slate-400 mt-0.5 flex-shrink-0" />
-                      <div>
-                        <p className="text-slate-400 text-xs">Pickup</p>
-                        <p className="text-slate-700 font-medium">{assignment.pickup}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <MapPin size={14} className="text-slate-400 mt-0.5 flex-shrink-0" />
-                      <div>
-                        <p className="text-slate-400 text-xs">Drop-off</p>
-                        <p className="text-slate-700 font-medium">{assignment.dropoff}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <Car size={14} className="text-slate-400 mt-0.5 flex-shrink-0" />
-                      <div>
-                        <p className="text-slate-400 text-xs">Vehicle</p>
-                        <p className="text-slate-700 font-medium">{assignment.vehicle} ({assignment.plate})</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <Clock size={14} className="text-slate-400 mt-0.5 flex-shrink-0" />
-                      <div>
-                        <p className="text-slate-400 text-xs">Date & Time</p>
-                        <p className="text-slate-700 font-medium">{assignment.date} at {assignment.time}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <DollarSign size={14} className="text-slate-400 mt-0.5 flex-shrink-0" />
-                      <div>
-                        <p className="text-slate-400 text-xs">Fare</p>
-                        <p className="text-slate-700 font-medium">{assignment.fare}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <Phone size={14} className="text-slate-400 mt-0.5 flex-shrink-0" />
-                      <div>
-                        <p className="text-slate-400 text-xs">Customer Phone</p>
-                        <p className="text-slate-700 font-medium">{assignment.phone}</p>
-                      </div>
-                    </div>
+
+                  {/* =================================================
+                      ACTIONS
+                  ================================================= */}
+
+                  <div className="flex flex-col gap-2">
+
+                    {/* ACCEPT ASSIGNMENT */}
+
+                    {assignment.status?.toLowerCase() === 'assigned' && (
+                      <button
+                        onClick={() =>
+                          handleAccept(assignment.id)
+                        }
+                        disabled={
+                          acceptingId === assignment.id
+                        }
+                        className="flex items-center justify-center gap-2 bg-primary hover:bg-primary-hover disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-lg"
+                      >
+                        {acceptingId === assignment.id
+                          ? 'Accepting...'
+                          : 'Accept Assignment'}
+                      </button>
+                    )}
+
+                    {/* CALL CUSTOMER */}
+
+                    {customer?.phone && (
+                      <a
+                        href={`tel:${customer.phone}`}
+                        className="flex items-center justify-center gap-2 bg-primary hover:bg-primary-hover text-white text-sm font-medium px-4 py-2 rounded-lg"
+                      >
+                        <Phone size={15} />
+                        Call Customer
+                      </a>
+                    )}
+
                   </div>
-                  {assignment.notes && (
-                    <div className="mt-3 bg-slate-50 rounded-lg p-3 text-sm text-slate-600">
-                      <span className="font-medium">Notes:</span> {assignment.notes}
-                    </div>
-                  )}
+
                 </div>
               </div>
-              <div className="flex flex-col gap-2 ml-4">
-                {assignment.status === 'Assigned' && (
-                  <>
-                    <button
-                      onClick={() => handleCall(assignment.phone)}
-                      className="flex items-center gap-1.5 bg-primary hover:bg-primary-hover text-white text-xs font-medium px-3 py-2 rounded-lg transition-colors"
-                    >
-                      <Phone size={14} />
-                      Call
-                    </button>
-                    <button
-                      onClick={() => handleAction(assignment, 'accepted')}
-                      className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium px-3 py-2 rounded-lg transition-colors"
-                    >
-                      <CheckCircle2 size={14} />
-                      Accept
-                    </button>
-                    <button
-                      onClick={() => handleAction(assignment, 'rejected')}
-                      className="flex items-center gap-1.5 bg-danger hover:bg-red-700 text-white text-xs font-medium px-3 py-2 rounded-lg transition-colors"
-                    >
-                      <XCircle size={14} />
-                      Decline
-                    </button>
-                  </>
-                )}
-                {assignment.status === 'Upcoming' && (
-                  <>
-                    <button
-                      onClick={() => handleCall(assignment.phone)}
-                      className="flex items-center gap-1.5 bg-primary hover:bg-primary-hover text-white text-xs font-medium px-3 py-2 rounded-lg transition-colors"
-                    >
-                      <Phone size={14} />
-                      Call
-                    </button>
-                    <button
-                      onClick={() => handleAction(assignment, 'started')}
-                      className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium px-3 py-2 rounded-lg transition-colors"
-                    >
-                      <ChevronRight size={14} />
-                      Start Trip
-                    </button>
-                  </>
-                )}
-                {assignment.status === 'Completed' && (
-                  <button
-                    onClick={() => handleAction(assignment, 'viewed')}
-                    className="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium px-3 py-2 rounded-lg transition-colors"
-                  >
-                    View Details
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        ))}
-        {filtered.length === 0 && (
-          <div className="bg-white rounded-xl shadow-sm p-10 text-center text-slate-400 text-sm">
-            No assignments match your filter.
-          </div>
-        )}
-      </div>
+            )
+          })}
+
+        </div>
+      )}
     </div>
-  );
+  )
+}
+
+function InfoItem({
+  icon: Icon,
+  label,
+  value,
+}) {
+  return (
+    <div className="flex items-start gap-2">
+
+      <Icon
+        size={15}
+        className="text-slate-400 mt-0.5 flex-shrink-0"
+      />
+
+      <div>
+        <p className="text-xs text-slate-400">
+          {label}
+        </p>
+
+        <p className="text-sm text-slate-700 font-medium">
+          {value}
+        </p>
+      </div>
+
+    </div>
+  )
 }
