@@ -10,6 +10,7 @@ const bookingService = axios.create({
   },
 })
 
+// Attach the existing JWT token
 setAuthToken(localStorage.getItem('token'), bookingService)
 
 export const getBookings = async (params) => {
@@ -32,18 +33,37 @@ export const updateBooking = async (id, bookingData) => {
   return response.data.booking || response.data
 }
 
-export const cancelBooking = async (id) => {
-  const response = await bookingService.delete(`/${id}`)
+export const cancelBooking = async (id, cancellationReason = '') => {
+  const response = await bookingService.delete(`/${id}`, {
+    data: {
+      cancellationReason,
+    },
+  })
+
   return response.data
 }
 
-export const checkAvailability = async (vehicleId, pickupDate, returnDate) => {
-  const response = await bookingService.get('/availability', { params: { vehicleId, pickupDate, returnDate } })
+export const checkAvailability = async (
+  vehicleId,
+  pickupDate,
+  returnDate
+) => {
+  const response = await bookingService.get('/availability', {
+    params: {
+      vehicleId,
+      pickupDate,
+      returnDate,
+    },
+  })
+
   return response.data
 }
 
 export const updateBookingStatus = async (id, status) => {
-  const response = await bookingService.patch(`/${id}`, { status })
+  const response = await bookingService.patch(`/${id}`, {
+    status,
+  })
+
   return response.data.booking || response.data
 }
 

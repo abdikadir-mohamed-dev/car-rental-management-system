@@ -22,9 +22,11 @@ export const getPayment = async (id) => {
   return response.data.payment || response.data
 }
 
+// Create payment and initiate M-Pesa STK Push
 export const createPayment = async (paymentData) => {
   const response = await paymentService.post('/', paymentData)
-  return response.data.payment || response.data
+
+  return response.data
 }
 
 export const refundPayment = async (id) => {

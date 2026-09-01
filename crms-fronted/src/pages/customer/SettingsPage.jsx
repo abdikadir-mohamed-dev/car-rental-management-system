@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
+import { getProfile, updateProfile } from '../../services/userService'
 
 function SettingsPage() {
   const [settings, setSettings] = useState({
@@ -9,72 +10,168 @@ function SettingsPage() {
     language: 'en',
   })
 
-  const handleSave = () => {
-    toast.success('Settings saved successfully')
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const user = await getProfile()
+
+        setSettings({
+          emailNotifications: user.emailNotifications ?? true,
+          bookingNotifications: user.bookingNotifications ?? true,
+          promotionalNotifications: user.promotionalNotifications ?? false,
+          language: user.language ?? 'en',
+        })
+      } catch (error) {
+        console.error(error)
+        toast.error('Failed to load settings')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadSettings()
+  }, [])
+
+  const handleSave = async () => {
+    try {
+      setSaving(true)
+
+      await updateProfile({
+        email_notifications: settings.emailNotifications,
+        booking_notifications: settings.bookingNotifications,
+        promotional_notifications: settings.promotionalNotifications,
+        language: settings.language,
+      })
+
+      toast.success('Settings saved successfully')
+    } catch (error) {
+      console.error(error)
+      toast.error(
+        error.response?.data?.message || 'Failed to save settings'
+      )
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <p className="text-slate-600">Loading settings...</p>
+      </div>
+    )
   }
 
   return (
     <div>
-      <h1 className="text-3xl font-bold text-slate-900 mb-2">Settings</h1>
-      <p className="text-slate-600 mb-6">Manage your account settings</p>
+      <h1 className="text-3xl font-bold text-slate-900 mb-2">
+        Settings
+      </h1>
+
+      <p className="text-slate-600 mb-6">
+        Manage your account settings
+      </p>
 
       <div className="space-y-6 max-w-2xl">
+
         <div className="card p-6">
-          <h3 className="font-semibold text-slate-900 mb-4">Notification Settings</h3>
+          <h3 className="font-semibold text-slate-900 mb-4">
+            Notification Settings
+          </h3>
+
           <div className="space-y-4">
+
+            {/* Email */}
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium text-slate-900">Email Notifications</p>
-                <p className="text-sm text-slate-600">Receive booking updates via email</p>
+                <p className="font-medium text-slate-900">
+                  Email Notifications
+                </p>
+                <p className="text-sm text-slate-600">
+                  Receive booking updates via email
+                </p>
               </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={settings.emailNotifications}
-                  onChange={(e) => setSettings({ ...settings, emailNotifications: e.target.checked })}
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-slate-200 peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-              </label>
+
+              <input
+                type="checkbox"
+                checked={settings.emailNotifications}
+                onChange={(e) =>
+                  setSettings({
+                    ...settings,
+                    emailNotifications: e.target.checked,
+                  })
+                }
+                className="w-5 h-5"
+              />
             </div>
+
+            {/* Booking */}
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium text-slate-900">Booking Notifications</p>
-                <p className="text-sm text-slate-600">Receive updates about your bookings</p>
+                <p className="font-medium text-slate-900">
+                  Booking Notifications
+                </p>
+                <p className="text-sm text-slate-600">
+                  Receive updates about your bookings
+                </p>
               </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={settings.bookingNotifications}
-                  onChange={(e) => setSettings({ ...settings, bookingNotifications: e.target.checked })}
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-slate-200 peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-              </label>
+
+              <input
+                type="checkbox"
+                checked={settings.bookingNotifications}
+                onChange={(e) =>
+                  setSettings({
+                    ...settings,
+                    bookingNotifications: e.target.checked,
+                  })
+                }
+                className="w-5 h-5"
+              />
             </div>
+
+            {/* Promotional */}
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium text-slate-900">Promotional Notifications</p>
-                <p className="text-sm text-slate-600">Receive offers and promotions</p>
+                <p className="font-medium text-slate-900">
+                  Promotional Notifications
+                </p>
+                <p className="text-sm text-slate-600">
+                  Receive offers and promotions
+                </p>
               </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={settings.promotionalNotifications}
-                  onChange={(e) => setSettings({ ...settings, promotionalNotifications: e.target.checked })}
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-slate-200 peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-              </label>
+
+              <input
+                type="checkbox"
+                checked={settings.promotionalNotifications}
+                onChange={(e) =>
+                  setSettings({
+                    ...settings,
+                    promotionalNotifications: e.target.checked,
+                  })
+                }
+                className="w-5 h-5"
+              />
             </div>
+
           </div>
         </div>
 
         <div className="card p-6">
-          <h3 className="font-semibold text-slate-900 mb-4">Language</h3>
+          <h3 className="font-semibold text-slate-900 mb-4">
+            Language
+          </h3>
+
           <select
             value={settings.language}
-            onChange={(e) => setSettings({ ...settings, language: e.target.value })}
+            onChange={(e) =>
+              setSettings({
+                ...settings,
+                language: e.target.value,
+              })
+            }
             className="input"
           >
             <option value="en">English</option>
@@ -82,7 +179,14 @@ function SettingsPage() {
           </select>
         </div>
 
-        <button onClick={handleSave} className="btn-primary">Save Settings</button>
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="btn-primary disabled:opacity-50"
+        >
+          {saving ? 'Saving...' : 'Save Settings'}
+        </button>
+
       </div>
     </div>
   )
