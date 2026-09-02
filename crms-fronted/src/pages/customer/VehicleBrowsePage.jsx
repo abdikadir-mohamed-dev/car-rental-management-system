@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { Heart, Star, Users, Gauge, Fuel, Calendar } from "lucide-react";
 import VehicleCard from "../../components/vehicles/VehicleCard";
+import VehicleCardSkeleton from "../../components/vehicles/VehicleCardSkeleton";
 import { getVehicles } from "../../services/vehicleService";
 import { getBookings } from "../../services/bookingService";
 import { mapVehicle } from "../../utils/apiMappers";
@@ -144,8 +145,10 @@ function VehicleBrowsePage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[200px]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+        {Array.from({ length: 6 }, (_, index) => (
+          <VehicleCardSkeleton key={index} />
+        ))}
       </div>
     );
   }
