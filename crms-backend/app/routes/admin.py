@@ -1314,20 +1314,35 @@ def admin_get_payments():
 
         payment_dict = p.to_dict()
 
+        # ----------------------------------------------------
+        # CUSTOMER
+        # ----------------------------------------------------
+
         payment_dict['user'] = (
             {
-                'name':
-                    p.customer.name
+                'id': p.customer.id,
+                'name': p.customer.name,
+                'email': p.customer.email,
+                'phone': p.customer.phone,
             }
             if p.customer else None
         )
 
+        # ----------------------------------------------------
+        # BOOKING / VEHICLE
+        # ----------------------------------------------------
+
         payment_dict['booking'] = (
             {
+                'id': p.booking.id,
                 'vehicle': {
-                    'name':
+                    'id': p.booking.vehicle.id,
+                    'name': (
                         f"{p.booking.vehicle.make} "
                         f"{p.booking.vehicle.model}"
+                    ),
+                    'registrationNumber':
+                        p.booking.vehicle.registration_number,
                 }
             }
             if (
@@ -1337,13 +1352,11 @@ def admin_get_payments():
             else None
         )
 
-        result.append(
-            payment_dict
-        )
+        result.append(payment_dict)
 
     return jsonify({
         'payments': result
-    })
+    }), 200
 
 
 @bp.route('/payments/<int:payment_id>', methods=['GET'])
@@ -1356,20 +1369,35 @@ def admin_get_payment(payment_id):
 
     payment_dict = payment.to_dict()
 
+    # --------------------------------------------------------
+    # CUSTOMER
+    # --------------------------------------------------------
+
     payment_dict['user'] = (
         {
-            'name':
-                payment.customer.name
+            'id': payment.customer.id,
+            'name': payment.customer.name,
+            'email': payment.customer.email,
+            'phone': payment.customer.phone,
         }
         if payment.customer else None
     )
 
+    # --------------------------------------------------------
+    # BOOKING / VEHICLE
+    # --------------------------------------------------------
+
     payment_dict['booking'] = (
         {
+            'id': payment.booking.id,
             'vehicle': {
-                'name':
+                'id': payment.booking.vehicle.id,
+                'name': (
                     f"{payment.booking.vehicle.make} "
                     f"{payment.booking.vehicle.model}"
+                ),
+                'registrationNumber':
+                    payment.booking.vehicle.registration_number,
             }
         }
         if (
@@ -1381,10 +1409,84 @@ def admin_get_payment(payment_id):
 
     return jsonify(
         payment_dict
+    ), 200
+
+
+# ============================================================
+# CONFIRM CASH PAYMENT
+# ============================================================
+
+@bp.route(
+    '/payments/<int:payment_id>/confirm',
+    methods=['PUT']
+)
+@role_required('admin')
+def admin_confirm_payment(payment_id):
+
+    payment = Payment.query.get_or_404(
+        payment_id
     )
 
+    # --------------------------------------------------------
+    # ONLY CASH PAYMENTS CAN BE MANUALLY CONFIRMED
+    # --------------------------------------------------------
 
-@bp.route('/payments/<int:payment_id>/refund', methods=['POST'])
+    if str(payment.method).lower() != 'cash':
+
+        return jsonify({
+            'error':
+                'Only cash payments can be manually confirmed'
+        }), 400
+
+    # --------------------------------------------------------
+    # PREVENT DOUBLE CONFIRMATION
+    # --------------------------------------------------------
+
+    if payment.status == 'completed':
+
+        return jsonify({
+            'error':
+                'Payment is already completed'
+        }), 400
+
+    # --------------------------------------------------------
+    # PREVENT CONFIRMING REFUNDED PAYMENT
+    # --------------------------------------------------------
+
+    if payment.status == 'refunded':
+
+        return jsonify({
+            'error':
+                'Refunded payment cannot be confirmed'
+        }), 400
+
+    # --------------------------------------------------------
+    # CONFIRM CASH PAYMENT
+    # --------------------------------------------------------
+
+    payment.status = 'completed'
+    payment.paid_at = datetime.utcnow()
+    payment.updated_at = datetime.utcnow()
+
+    db.session.commit()
+
+    return jsonify({
+        'message':
+            'Cash payment confirmed successfully',
+
+        'payment':
+            payment.to_dict()
+    }), 200
+
+
+# ============================================================
+# REFUND PAYMENT
+# ============================================================
+
+@bp.route(
+    '/payments/<int:payment_id>/refund',
+    methods=['POST']
+)
 @role_required('admin')
 def admin_refund_payment(payment_id):
 
@@ -1392,14 +1494,47 @@ def admin_refund_payment(payment_id):
         payment_id
     )
 
+    # --------------------------------------------------------
+    # PREVENT REFUNDING AN ALREADY REFUNDED PAYMENT
+    # --------------------------------------------------------
+
+    if payment.status == 'refunded':
+
+        return jsonify({
+            'error':
+                'Payment is already refunded'
+        }), 400
+
+    # --------------------------------------------------------
+    # PREVENT REFUNDING A PENDING CASH PAYMENT
+    # --------------------------------------------------------
+
+    if (
+        str(payment.method).lower() == 'cash'
+        and payment.status != 'completed'
+    ):
+
+        return jsonify({
+            'error':
+                'Cash payment must be confirmed before it can be refunded'
+        }), 400
+
+    # --------------------------------------------------------
+    # REFUND
+    # --------------------------------------------------------
+
     payment.status = 'refunded'
+    payment.updated_at = datetime.utcnow()
 
     db.session.commit()
 
     return jsonify({
-        'payment': payment.to_dict()
-    })
+        'message':
+            'Payment refunded successfully',
 
+        'payment':
+            payment.to_dict()
+    }), 200
 
 # ============================================================
 # DRIVERS

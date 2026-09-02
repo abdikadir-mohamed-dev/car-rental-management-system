@@ -9,7 +9,6 @@ import {
 } from 'lucide-react'
 
 import { getVehicle } from '../../services/vehicleService'
-import { getDrivers } from '../../services/driverService'
 import { createBooking } from '../../services/bookingService'
 import { mapVehicle } from '../../utils/apiMappers'
 
@@ -19,7 +18,6 @@ function BookingPage() {
   const { vehicleId } = useParams()
 
   const [vehicle, setVehicle] = useState(null)
-  const [drivers, setDrivers] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
@@ -29,10 +27,18 @@ function BookingPage() {
   const [pickupLocation, setPickupLocation] = useState('')
   const [dropoffLocation, setDropoffLocation] = useState('')
 
+  /*
+   * Customer chooses only:
+   *
+   * self       = customer drives
+   * hire       = customer requests a driver
+   *
+   * The customer DOES NOT select a driver.
+   * Staff will assign an available driver later.
+   */
   const [drivingOption, setDrivingOption] = useState('self')
-  const [selectedDriver, setSelectedDriver] = useState(null)
 
-  // Payment UI is kept for now, but payment processing is NOT connected.
+  // Payment UI
   const [paymentMethod, setPaymentMethod] = useState('cash')
   const [customerPhone, setCustomerPhone] = useState('')
 
@@ -41,26 +47,22 @@ function BookingPage() {
   const [bookingId, setBookingId] = useState('')
 
   /*
-   * Load vehicle and drivers
+   * LOAD VEHICLE
    */
   useEffect(() => {
-    const loadData = async () => {
+    const loadVehicle = async () => {
       try {
         setLoading(true)
         setError(null)
 
-        const [vehicleData, driversData] = await Promise.all([
-          getVehicle(vehicleId),
-          getDrivers(),
-        ])
+        const vehicleData = await getVehicle(vehicleId)
 
         const mappedVehicle = mapVehicle(vehicleData)
 
         setVehicle(mappedVehicle)
-        setDrivers(driversData || [])
 
         /*
-         * Use the vehicle location as the default
+         * Use vehicle location as the default
          * pickup and drop-off location.
          */
         if (mappedVehicle?.location) {
@@ -68,31 +70,45 @@ function BookingPage() {
           setDropoffLocation(mappedVehicle.location)
         }
       } catch (err) {
-        console.error('Failed to load booking data:', err)
+        console.error(
+          'Failed to load booking data:',
+          err
+        )
 
         setError(
           err.response?.data?.message ||
           err.message ||
-          'Failed to load data'
+          'Failed to load vehicle data'
         )
       } finally {
         setLoading(false)
       }
     }
 
-    loadData()
+    if (vehicleId) {
+      loadVehicle()
+    }
   }, [vehicleId])
 
   /*
-   * Read booking information from the URL
+   * READ BOOKING INFORMATION FROM URL
+   *
+   * VehicleDetailsPage sends:
+   *
+   * ?pickup=2026-09-03
+   * &return=2026-09-04
+   * &option=hire
+   *
+   * There is NO driver ID anymore.
    */
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
+    const params = new URLSearchParams(
+      window.location.search
+    )
 
     const pickup = params.get('pickup')
     const returnD = params.get('return')
     const option = params.get('option')
-    const driverId = params.get('driver')
 
     if (pickup) {
       setPickupDate(pickup)
@@ -102,21 +118,15 @@ function BookingPage() {
       setReturnDate(returnD)
     }
 
-    if (option) {
-      setDrivingOption(option)
+    if (option === 'hire') {
+      setDrivingOption('hire')
+    } else {
+      setDrivingOption('self')
     }
-
-    if (driverId && drivers.length > 0) {
-      const driver = drivers.find(
-        d => Number(d.id) === Number(driverId)
-      )
-
-      setSelectedDriver(driver || null)
-    }
-  }, [vehicleId, drivers])
+  }, [])
 
   /*
-   * Calculate rental duration
+   * CALCULATE RENTAL DAYS
    */
   const days =
     pickupDate && returnDate
@@ -133,48 +143,40 @@ function BookingPage() {
       : 1
 
   /*
-   * Calculate vehicle cost
+   * VEHICLE COST
    */
   const vehicleCost =
     days * (vehicle?.pricePerDay || 0)
 
   /*
-   * Calculate driver cost
+   * DRIVER COST
+   *
+   * IMPORTANT:
+   *
+   * The customer does not select a driver.
+   *
+   * If your backend/rental policy has a fixed driver
+   * charge, you can add it here later.
+   *
+   * For now the booking total is the vehicle cost.
    */
-  const driverCost =
-    drivingOption === 'hire' && selectedDriver
-      ? days * (selectedDriver.pricePerDay || 0)
-      : 0
+  const driverCost = 0
 
   /*
-   * Total booking price
+   * TOTAL
    */
   const totalPrice =
     vehicleCost + driverCost
 
   /*
-   * Submit booking
-   *
-   * IMPORTANT:
-   * Payment is intentionally NOT processed here.
-   *
-   * We are first making sure that:
-   *
-   * Customer
-   *    ↓
-   * BookingPage
-   *    ↓
-   * createBooking()
-   *    ↓
-   * Flask /api/bookings/
-   *    ↓
-   * PostgreSQL
-   *
-   * works correctly.
+   * SUBMIT BOOKING
    */
   const handleSubmit = async (e) => {
     e.preventDefault()
 
+    /*
+     * Validate dates
+     */
     if (!pickupDate || !returnDate) {
       toast.error(
         'Please select pickup and return dates'
@@ -182,6 +184,9 @@ function BookingPage() {
       return
     }
 
+    /*
+     * Return date must be after pickup date
+     */
     if (
       new Date(returnDate) <=
       new Date(pickupDate)
@@ -192,6 +197,9 @@ function BookingPage() {
       return
     }
 
+    /*
+     * Validate pickup location
+     */
     if (!pickupLocation.trim()) {
       toast.error(
         'Please enter a pickup location'
@@ -199,19 +207,12 @@ function BookingPage() {
       return
     }
 
+    /*
+     * Validate drop-off location
+     */
     if (!dropoffLocation.trim()) {
       toast.error(
         'Please enter a drop-off location'
-      )
-      return
-    }
-
-    if (
-      drivingOption === 'hire' &&
-      !selectedDriver
-    ) {
-      toast.error(
-        'Please select a driver'
       )
       return
     }
@@ -220,14 +221,10 @@ function BookingPage() {
 
     try {
       /*
-       * Backend expects:
+       * Backend driving option:
        *
-       * drivingOption = "self"
-       * OR
-       * drivingOption = "with_driver"
-       *
-       * The frontend uses "hire",
-       * so convert it before sending.
+       * self
+       * with_driver
        */
       const backendDrivingOption =
         drivingOption === 'hire'
@@ -235,7 +232,13 @@ function BookingPage() {
           : 'self'
 
       /*
-       * Payload expected by Flask
+       * BOOKING PAYLOAD
+       *
+       * Notice:
+       *
+       * driverId is NOT sent.
+       *
+       * Staff will assign the driver later.
        */
       const bookingData = {
         vehicleId: Number(vehicleId),
@@ -256,10 +259,12 @@ function BookingPage() {
         drivingOption:
           backendDrivingOption,
 
-        driverId:
-          drivingOption === 'hire'
-            ? selectedDriver?.id
-            : null,
+        /*
+         * No driver selected by customer.
+         *
+         * Backend can keep this NULL.
+         */
+        driverId: null,
       }
 
       console.log(
@@ -268,7 +273,7 @@ function BookingPage() {
       )
 
       /*
-       * Create REAL booking
+       * CREATE REAL BOOKING
        */
       const booking =
         await createBooking(bookingData)
@@ -279,10 +284,11 @@ function BookingPage() {
       )
 
       /*
-       * Get booking ID returned by backend
+       * GET BOOKING ID
        */
       const createdBookingId =
-        booking?.id || booking?._id
+        booking?.id ||
+        booking?._id
 
       if (!createdBookingId) {
         throw new Error(
@@ -291,21 +297,20 @@ function BookingPage() {
       }
 
       /*
-       * Save booking ID
+       * SAVE BOOKING ID
        */
       setBookingId(
         String(createdBookingId)
       )
 
       /*
-       * Show confirmation
+       * SHOW CONFIRMATION
        */
       setConfirmed(true)
 
       toast.success(
-        'Booking created successfully!'
+        'Booking submitted successfully!'
       )
-
     } catch (err) {
       console.error(
         'Booking error:',
@@ -324,7 +329,7 @@ function BookingPage() {
   }
 
   /*
-   * Loading state
+   * LOADING
    */
   if (loading) {
     return (
@@ -335,7 +340,7 @@ function BookingPage() {
   }
 
   /*
-   * Error state
+   * ERROR
    */
   if (error || !vehicle) {
     return (
@@ -363,7 +368,7 @@ function BookingPage() {
   }
 
   /*
-   * Booking confirmation
+   * BOOKING CONFIRMATION
    */
   if (confirmed) {
     return (
@@ -385,64 +390,78 @@ function BookingPage() {
 
           <div className="card p-6 text-left space-y-3 mb-6">
 
+            {/* BOOKING ID */}
             <p>
               <span className="text-slate-600">
                 Booking ID:
               </span>{' '}
+
               <span className="font-medium text-slate-900">
                 #{bookingId}
               </span>
             </p>
 
+            {/* VEHICLE */}
             <p>
               <span className="text-slate-600">
                 Vehicle:
               </span>{' '}
+
               <span className="font-medium text-slate-900">
                 {vehicle.name}
               </span>
             </p>
 
+            {/* PICKUP DATE */}
             <p>
               <span className="text-slate-600">
                 Pickup:
               </span>{' '}
+
               <span className="font-medium text-slate-900">
                 {pickupDate}
               </span>
             </p>
 
+            {/* RETURN DATE */}
             <p>
               <span className="text-slate-600">
                 Return:
               </span>{' '}
+
               <span className="font-medium text-slate-900">
                 {returnDate}
               </span>
             </p>
 
+            {/* PICKUP LOCATION */}
             <p>
               <span className="text-slate-600">
                 Pickup Location:
               </span>{' '}
+
               <span className="font-medium text-slate-900">
                 {pickupLocation}
               </span>
             </p>
 
+            {/* DROP-OFF LOCATION */}
             <p>
               <span className="text-slate-600">
                 Drop-off Location:
               </span>{' '}
+
               <span className="font-medium text-slate-900">
                 {dropoffLocation}
               </span>
             </p>
 
+            {/* DRIVING OPTION */}
             <p>
               <span className="text-slate-600">
                 Driving Option:
               </span>{' '}
+
               <span className="font-medium text-slate-900">
                 {drivingOption === 'hire'
                   ? 'Hire a Driver'
@@ -450,30 +469,36 @@ function BookingPage() {
               </span>
             </p>
 
-            {selectedDriver && (
+            {/* DRIVER STATUS */}
+            {drivingOption === 'hire' && (
               <p>
                 <span className="text-slate-600">
                   Driver:
                 </span>{' '}
-                <span className="font-medium text-slate-900">
-                  {selectedDriver.name}
+
+                <span className="font-medium text-amber-600">
+                  To be assigned by staff
                 </span>
               </p>
             )}
 
+            {/* PAYMENT */}
             <p>
               <span className="text-slate-600">
                 Payment:
               </span>{' '}
+
               <span className="font-medium text-amber-600">
                 Pending
               </span>
             </p>
 
+            {/* TOTAL */}
             <p>
               <span className="text-slate-600">
                 Total:
               </span>{' '}
+
               <span className="font-bold text-blue-600 text-lg">
                 KES {totalPrice.toLocaleString()}
               </span>
@@ -505,12 +530,12 @@ function BookingPage() {
   }
 
   /*
-   * Main booking page
+   * MAIN BOOKING PAGE
    */
   return (
     <div className="min-h-screen bg-white">
 
-      {/* Header */}
+      {/* HEADER */}
       <section className="bg-slate-900 text-white py-8">
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -535,7 +560,7 @@ function BookingPage() {
 
       </section>
 
-      {/* Booking content */}
+      {/* BOOKING CONTENT */}
       <section className="py-8">
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -548,7 +573,7 @@ function BookingPage() {
             {/* LEFT SIDE */}
             <div className="lg:col-span-2 space-y-6">
 
-              {/* Booking Summary */}
+              {/* BOOKING SUMMARY */}
               <div className="card p-6">
 
                 <h2 className="text-xl font-semibold text-slate-900 mb-4">
@@ -595,24 +620,11 @@ function BookingPage() {
 
                   </div>
 
-                  {drivingOption === 'hire' &&
-                    selectedDriver && (
-                      <div className="flex justify-between">
-
-                        <span className="text-slate-600">
-                          Driver ({days} day{days > 1 ? 's' : ''})
-                        </span>
-
-                        <span className="font-medium text-slate-900">
-                          KES {driverCost.toLocaleString()}
-                        </span>
-
-                      </div>
-                    )}
-
                   <div className="flex justify-between font-bold text-lg pt-2 border-t border-slate-200">
 
-                    <span>Total</span>
+                    <span>
+                      Total
+                    </span>
 
                     <span className="text-blue-600">
                       KES {totalPrice.toLocaleString()}
@@ -624,7 +636,7 @@ function BookingPage() {
 
               </div>
 
-              {/* Rental Locations */}
+              {/* RENTAL LOCATIONS */}
               <div className="card p-6">
 
                 <h2 className="text-xl font-semibold text-slate-900 mb-4">
@@ -681,7 +693,80 @@ function BookingPage() {
 
               </div>
 
-              {/* Payment Method */}
+              {/* DRIVING OPTION */}
+              <div className="card p-6">
+
+                <h2 className="text-xl font-semibold text-slate-900 mb-4">
+                  Driving Option
+                </h2>
+
+                <div className="space-y-3">
+
+                  {/* SELF DRIVE */}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setDrivingOption('self')
+                    }
+                    className={`w-full p-4 rounded-lg border-2 text-left transition-colors ${
+                      drivingOption === 'self'
+                        ? 'border-blue-600 bg-blue-50'
+                        : 'border-slate-200 hover:border-slate-300'
+                    }`}
+                  >
+
+                    <p className="font-medium text-slate-900">
+                      Drive Myself
+                    </p>
+
+                    <p className="text-sm text-slate-600">
+                      I will drive the vehicle myself
+                    </p>
+
+                  </button>
+
+                  {/* HIRE DRIVER */}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setDrivingOption('hire')
+                    }
+                    className={`w-full p-4 rounded-lg border-2 text-left transition-colors ${
+                      drivingOption === 'hire'
+                        ? 'border-blue-600 bg-blue-50'
+                        : 'border-slate-200 hover:border-slate-300'
+                    }`}
+                  >
+
+                    <p className="font-medium text-slate-900">
+                      Hire a Driver
+                    </p>
+
+                    <p className="text-sm text-slate-600">
+                      Request a professional driver. Staff will assign an available driver to your booking.
+                    </p>
+
+                  </button>
+
+                </div>
+
+                {/* STAFF ASSIGNMENT MESSAGE */}
+                {drivingOption === 'hire' && (
+                  <div className="mt-4 p-4 bg-blue-50 border border-blue-100 rounded-lg">
+
+                    <p className="text-sm text-blue-800">
+                      <span className="font-semibold">
+                        Driver assignment:
+                      </span>{' '}
+                      You don't need to choose a driver. Our staff will assign an available driver after reviewing your booking.
+                    </p>
+
+                  </div>
+                )}
+
+              </div>
+
+              {/* PAYMENT METHOD */}
               <div className="card p-6">
 
                 <h2 className="text-xl font-semibold text-slate-900 mb-4">
@@ -779,8 +864,7 @@ function BookingPage() {
 
                 </div>
 
-                {/* M-Pesa phone field is retained visually,
-                    but it is NOT sent to the backend yet. */}
+                {/* MPESA PHONE */}
                 {paymentMethod === 'mpesa' && (
                   <div className="mt-5">
 
@@ -824,6 +908,7 @@ function BookingPage() {
 
                 <div className="space-y-3 text-sm">
 
+                  {/* VEHICLE */}
                   <div className="flex justify-between">
 
                     <span className="text-slate-600">
@@ -836,6 +921,7 @@ function BookingPage() {
 
                   </div>
 
+                  {/* PICKUP DATE */}
                   <div className="flex justify-between">
 
                     <span className="text-slate-600">
@@ -848,6 +934,7 @@ function BookingPage() {
 
                   </div>
 
+                  {/* RETURN DATE */}
                   <div className="flex justify-between">
 
                     <span className="text-slate-600">
@@ -860,6 +947,7 @@ function BookingPage() {
 
                   </div>
 
+                  {/* DURATION */}
                   <div className="flex justify-between">
 
                     <span className="text-slate-600">
@@ -872,6 +960,7 @@ function BookingPage() {
 
                   </div>
 
+                  {/* PICKUP */}
                   <div className="flex justify-between">
 
                     <span className="text-slate-600">
@@ -884,6 +973,7 @@ function BookingPage() {
 
                   </div>
 
+                  {/* DROP-OFF */}
                   <div className="flex justify-between">
 
                     <span className="text-slate-600">
@@ -896,6 +986,7 @@ function BookingPage() {
 
                   </div>
 
+                  {/* DRIVING OPTION */}
                   <div className="flex justify-between">
 
                     <span className="text-slate-600">
@@ -910,20 +1001,22 @@ function BookingPage() {
 
                   </div>
 
-                  {selectedDriver && (
+                  {/* DRIVER ASSIGNMENT */}
+                  {drivingOption === 'hire' && (
                     <div className="flex justify-between">
 
                       <span className="text-slate-600">
                         Driver
                       </span>
 
-                      <span className="font-medium text-slate-900">
-                        {selectedDriver.name}
+                      <span className="font-medium text-amber-600 text-right max-w-[55%]">
+                        To be assigned
                       </span>
 
                     </div>
                   )}
 
+                  {/* PAYMENT METHOD */}
                   <div className="flex justify-between">
 
                     <span className="text-slate-600">
@@ -936,9 +1029,12 @@ function BookingPage() {
 
                   </div>
 
+                  {/* TOTAL */}
                   <div className="flex justify-between font-bold text-lg pt-3 border-t border-slate-200">
 
-                    <span>Total</span>
+                    <span>
+                      Total
+                    </span>
 
                     <span className="text-blue-600">
                       KES {totalPrice.toLocaleString()}

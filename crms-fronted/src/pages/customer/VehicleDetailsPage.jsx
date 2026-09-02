@@ -13,7 +13,7 @@ import {
 } from 'lucide-react'
 
 import { getVehicle } from '../../services/vehicleService'
-import { getDrivers } from '../../services/driverService'
+
 import {
   saveCar,
   removeSavedCar,
@@ -28,7 +28,7 @@ function VehicleDetailsPage() {
   const { id } = useParams()
 
   const [vehicle, setVehicle] = useState(null)
-  const [drivers, setDrivers] = useState([])
+
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
@@ -40,11 +40,15 @@ function VehicleDetailsPage() {
   const [liked, setLiked] = useState(false)
   const [savingCar, setSavingCar] = useState(false)
 
+  // Customer only chooses:
+  // self = drive myself
+  // hire = hire a driver
+  //
+  // The actual driver will be assigned later by staff.
   const [drivingOption, setDrivingOption] = useState('self')
-  const [selectedDriver, setSelectedDriver] = useState(null)
 
   /*
-   * LOAD VEHICLE, DRIVERS AND SAVED STATUS
+   * LOAD VEHICLE AND SAVED STATUS
    */
   useEffect(() => {
     const loadData = async () => {
@@ -52,15 +56,17 @@ function VehicleDetailsPage() {
         setLoading(true)
         setError(null)
 
-        const [vehicleData, driversData] = await Promise.all([
-          getVehicle(id),
-          getDrivers(),
-        ])
+        /*
+         * Load vehicle only.
+         *
+         * We do NOT load drivers here because
+         * customers should not choose a driver.
+         */
+        const vehicleData = await getVehicle(id)
 
         const mappedVehicle = mapVehicle(vehicleData)
 
         setVehicle(mappedVehicle)
-        setDrivers(driversData || [])
 
         /*
          * Check whether this vehicle is already saved
@@ -68,6 +74,7 @@ function VehicleDetailsPage() {
          */
         try {
           const savedStatus = await checkSavedCar(id)
+
           setLiked(savedStatus)
         } catch (savedError) {
           console.error(
@@ -82,7 +89,10 @@ function VehicleDetailsPage() {
           setLiked(false)
         }
       } catch (err) {
-        console.error('Failed to load vehicle details:', err)
+        console.error(
+          'Failed to load vehicle details:',
+          err
+        )
 
         setError(
           err.response?.data?.message ||
@@ -119,7 +129,9 @@ function VehicleDetailsPage() {
 
         setLiked(false)
 
-        toast.success('Car removed from saved cars')
+        toast.success(
+          'Car removed from saved cars'
+        )
       } else {
         /*
          * Vehicle is not saved.
@@ -129,10 +141,15 @@ function VehicleDetailsPage() {
 
         setLiked(true)
 
-        toast.success('Car saved successfully')
+        toast.success(
+          'Car saved successfully'
+        )
       }
     } catch (err) {
-      console.error('Saved car error:', err)
+      console.error(
+        'Saved car error:',
+        err
+      )
 
       toast.error(
         err.response?.data?.message ||
@@ -189,50 +206,65 @@ function VehicleDetailsPage() {
       ? Math.max(
           1,
           Math.ceil(
-            (new Date(returnDate) - new Date(pickupDate)) /
+            (new Date(returnDate) -
+              new Date(pickupDate)) /
               (1000 * 60 * 60 * 24)
           )
         )
       : 1
 
-  const vehicleCost = days * vehicle.pricePerDay
+  /*
+   * VEHICLE COST ONLY
+   *
+   * Driver cost is NOT calculated here.
+   *
+   * Staff will assign the driver later.
+   * If your business charges a driver fee,
+   * that should be handled by the booking/pricing
+   * logic rather than selecting a specific driver here.
+   */
+  const vehicleCost =
+    days * vehicle.pricePerDay
 
-  const driverCost =
-    drivingOption === 'hire' && selectedDriver
-      ? days * selectedDriver.pricePerDay
-      : 0
-
-  const totalPrice = vehicleCost + driverCost
-
-  const availableDrivers = drivers.filter(
-    (driver) => driver.available
-  )
+  const totalPrice = vehicleCost
 
   /*
    * CONTINUE TO BOOKING
    */
   const handleContinue = () => {
+    /*
+     * Customer must select dates.
+     */
     if (!pickupDate || !returnDate) {
-      toast.error('Please select pick-up and return dates')
+      toast.error(
+        'Please select pick-up and return dates'
+      )
+
       return
     }
 
+    /*
+     * Return date cannot be before pickup date.
+     */
     if (returnDate < pickupDate) {
-      toast.error('Return date cannot be before pick-up date')
+      toast.error(
+        'Return date cannot be before pick-up date'
+      )
+
       return
     }
 
-    if (drivingOption === 'hire' && !selectedDriver) {
-      toast.error('Please select a driver')
-      return
-    }
-
+    /*
+     * No driver selection is required.
+     *
+     * If drivingOption === "hire",
+     * staff will assign the driver later.
+     */
     window.location.href =
       `/customer/booking/${vehicle.id}` +
       `?pickup=${pickupDate}` +
       `&return=${returnDate}` +
-      `&option=${drivingOption}` +
-      `&driver=${selectedDriver?.id || ''}`
+      `&option=${drivingOption}`
   }
 
   return (
@@ -240,6 +272,7 @@ function VehicleDetailsPage() {
 
       {/* HEADER */}
       <section className="bg-slate-900 text-white py-8">
+
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
           <Link
@@ -247,6 +280,7 @@ function VehicleDetailsPage() {
             className="inline-flex items-center gap-2 text-slate-300 hover:text-white mb-4"
           >
             <ArrowLeft className="w-4 h-4" />
+
             Back to Browse Cars
           </Link>
 
@@ -259,6 +293,7 @@ function VehicleDetailsPage() {
           </p>
 
         </div>
+
       </section>
 
       {/* MAIN CONTENT */}
@@ -285,23 +320,29 @@ function VehicleDetailsPage() {
               {/* IMAGE THUMBNAILS */}
               <div className="flex gap-3">
 
-                {vehicle.images.map((img, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setSelectedImage(idx)}
-                    className={`w-24 h-16 rounded-lg overflow-hidden border-2 ${
-                      selectedImage === idx
-                        ? 'border-blue-600'
-                        : 'border-transparent'
-                    }`}
-                  >
-                    <img
-                      src={img}
-                      alt=""
-                      className="w-full h-full object-cover"
-                    />
-                  </button>
-                ))}
+                {vehicle.images.map(
+                  (img, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() =>
+                        setSelectedImage(idx)
+                      }
+                      className={`w-24 h-16 rounded-lg overflow-hidden border-2 ${
+                        selectedImage === idx
+                          ? 'border-blue-600'
+                          : 'border-transparent'
+                      }`}
+                    >
+
+                      <img
+                        src={img}
+                        alt=""
+                        className="w-full h-full object-cover"
+                      />
+
+                    </button>
+                  )
+                )}
 
               </div>
 
@@ -327,15 +368,20 @@ function VehicleDetailsPage() {
 
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
 
-                  {vehicle.features.map((feature) => (
-                    <div
-                      key={feature}
-                      className="flex items-center gap-2 text-sm text-slate-600"
-                    >
-                      <Check className="w-4 h-4 text-blue-600" />
-                      {feature}
-                    </div>
-                  ))}
+                  {vehicle.features.map(
+                    (feature) => (
+                      <div
+                        key={feature}
+                        className="flex items-center gap-2 text-sm text-slate-600"
+                      >
+
+                        <Check className="w-4 h-4 text-blue-600" />
+
+                        {feature}
+
+                      </div>
+                    )
+                  )}
 
                 </div>
 
@@ -497,7 +543,9 @@ function VehicleDetailsPage() {
 
                         <input
                           type="text"
-                          value={vehicle.location || ''}
+                          value={
+                            vehicle.location || ''
+                          }
                           className="input pl-9 bg-slate-50"
                           readOnly
                         />
@@ -521,7 +569,9 @@ function VehicleDetailsPage() {
                           type="date"
                           value={pickupDate}
                           onChange={(e) =>
-                            setPickupDate(e.target.value)
+                            setPickupDate(
+                              e.target.value
+                            )
                           }
                           className="input pl-9 bg-slate-50"
                         />
@@ -545,7 +595,9 @@ function VehicleDetailsPage() {
                           type="date"
                           value={returnDate}
                           onChange={(e) =>
-                            setReturnDate(e.target.value)
+                            setReturnDate(
+                              e.target.value
+                            )
                           }
                           className="input pl-9 bg-slate-50"
                         />
@@ -578,11 +630,12 @@ function VehicleDetailsPage() {
 
                   <div className="space-y-3">
 
+                    {/* DRIVE MYSELF */}
                     <button
-                      onClick={() => {
+                      type="button"
+                      onClick={() =>
                         setDrivingOption('self')
-                        setSelectedDriver(null)
-                      }}
+                      }
                       className={`w-full p-4 rounded-lg border-2 text-left transition-colors ${
                         drivingOption === 'self'
                           ? 'border-blue-600 bg-blue-50'
@@ -600,8 +653,12 @@ function VehicleDetailsPage() {
 
                     </button>
 
+                    {/* HIRE DRIVER */}
                     <button
-                      onClick={() => setDrivingOption('hire')}
+                      type="button"
+                      onClick={() =>
+                        setDrivingOption('hire')
+                      }
                       className={`w-full p-4 rounded-lg border-2 text-left transition-colors ${
                         drivingOption === 'hire'
                           ? 'border-blue-600 bg-blue-50'
@@ -614,89 +671,25 @@ function VehicleDetailsPage() {
                       </p>
 
                       <p className="text-sm text-slate-600">
-                        I would like a professional driver
+                        A professional driver will be assigned to you by our staff
                       </p>
 
                     </button>
 
                   </div>
 
-                </div>
+                  {/* STAFF ASSIGNMENT MESSAGE */}
+                  {drivingOption === 'hire' && (
+                    <div className="mt-3 p-3 rounded-lg bg-blue-50 border border-blue-100">
 
-                {/* DRIVER SELECTION */}
-                {drivingOption === 'hire' && (
-
-                  <div className="border-t border-slate-200 pt-4 mb-4">
-
-                    <h3 className="font-semibold text-slate-900 mb-3">
-                      Choose Your Driver
-                    </h3>
-
-                    <div className="space-y-3">
-
-                      {availableDrivers.map((driver) => (
-
-                        <button
-                          key={driver.id}
-                          onClick={() =>
-                            setSelectedDriver(driver)
-                          }
-                          className={`w-full p-4 rounded-lg border-2 text-left transition-colors ${
-                            selectedDriver?.id === driver.id
-                              ? 'border-blue-600 bg-blue-50'
-                              : 'border-slate-200 hover:border-slate-300'
-                          }`}
-                        >
-
-                          <div className="flex items-center gap-3">
-
-                            <img
-                              src={driver.image}
-                              alt={driver.name}
-                              className="w-12 h-12 rounded-full object-cover"
-                            />
-
-                            <div className="flex-1">
-
-                              <p className="font-medium text-slate-900">
-                                {driver.name}
-                              </p>
-
-                              <p className="text-sm text-slate-600">
-                                {driver.experience} · ⭐ {driver.rating}
-                              </p>
-
-                              <p className="text-sm text-slate-600">
-                                {driver.languages}
-                              </p>
-
-                            </div>
-
-                            <div className="text-right">
-
-                              <p className="font-bold text-blue-600">
-                                KES {driver.pricePerDay}/day
-                              </p>
-
-                              {selectedDriver?.id === driver.id && (
-                                <span className="text-xs text-blue-600 font-medium">
-                                  Selected
-                                </span>
-                              )}
-
-                            </div>
-
-                          </div>
-
-                        </button>
-
-                      ))}
+                      <p className="text-sm text-blue-800">
+                        A driver will be assigned to your booking by our staff based on availability.
+                      </p>
 
                     </div>
+                  )}
 
-                  </div>
-
-                )}
+                </div>
 
                 {/* PRICE SUMMARY */}
                 {pickupDate && returnDate && (
@@ -714,22 +707,6 @@ function VehicleDetailsPage() {
                       </span>
 
                     </div>
-
-                    {drivingOption === 'hire' && selectedDriver && (
-
-                      <div className="flex justify-between text-sm mb-1">
-
-                        <span className="text-slate-600">
-                          Driver ({days} day{days > 1 ? 's' : ''})
-                        </span>
-
-                        <span className="font-medium text-slate-900">
-                          KES {driverCost.toLocaleString()}
-                        </span>
-
-                      </div>
-
-                    )}
 
                     <div className="flex justify-between font-bold text-lg mt-2 pt-2 border-t border-slate-200">
 
@@ -749,8 +726,12 @@ function VehicleDetailsPage() {
 
                 {/* BOOK BUTTON */}
                 <button
+                  type="button"
                   onClick={handleContinue}
-                  disabled={!pickupDate || !returnDate}
+                  disabled={
+                    !pickupDate ||
+                    !returnDate
+                  }
                   className="btn-primary w-full py-3 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Continue to Book

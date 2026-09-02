@@ -4,6 +4,7 @@ import {
   CheckCircle,
   XCircle,
   User,
+  Banknote,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -24,6 +25,10 @@ function CheckoutManagement() {
 
   const [idConfirmed, setIdConfirmed] = useState(false)
   const [licenseConfirmed, setLicenseConfirmed] = useState(false)
+
+  // Payment
+  const [paymentMethod, setPaymentMethod] = useState('cash')
+  const [cashConfirmed, setCashConfirmed] = useState(false)
 
   // =========================
   // GET TODAY'S DATE
@@ -81,7 +86,10 @@ function CheckoutManagement() {
 
       setBookings(todaysCheckouts)
     } catch (err) {
-      console.error('Failed to load checkout bookings:', err)
+      console.error(
+        'Failed to load checkout bookings:',
+        err
+      )
 
       const message =
         err?.response?.data?.message ||
@@ -185,6 +193,22 @@ function CheckoutManagement() {
     )
   }
 
+  const getBookingAmount = (booking) => {
+    return (
+      booking?.totalAmount ??
+      booking?.total_amount ??
+      booking?.totalPrice ??
+      booking?.total_price ??
+      0
+    )
+  }
+
+  const formatAmount = (amount) => {
+    const numericAmount = Number(amount || 0)
+
+    return `KSh ${numericAmount.toLocaleString()}`
+  }
+
   // =========================
   // SEARCH
   // =========================
@@ -218,6 +242,10 @@ function CheckoutManagement() {
 
     setIdConfirmed(false)
     setLicenseConfirmed(false)
+
+    // Cash is the payment collected at checkout.
+    setPaymentMethod('cash')
+    setCashConfirmed(false)
   }
 
   // =========================
@@ -243,13 +271,36 @@ function CheckoutManagement() {
       return
     }
 
+    // --------------------------------------------------------
+    // PAYMENT VALIDATION
+    // --------------------------------------------------------
+
+    if (paymentMethod === 'cash' && !cashConfirmed) {
+      toast.error(
+        'Please confirm that the cash payment has been received'
+      )
+      return
+    }
+
     const bookingId = getBookingId(selectedBooking)
+
+    if (!bookingId) {
+      toast.error('Invalid booking ID')
+      return
+    }
 
     try {
       await checkoutBooking(bookingId, {
         mileage: Number(mileage),
         fuelLevel,
         condition,
+
+        // Payment information
+        paymentMethod,
+        cashConfirmed:
+          paymentMethod === 'cash'
+            ? cashConfirmed
+            : false,
       })
 
       /*
@@ -266,8 +317,16 @@ function CheckoutManagement() {
 
       setSelectedBooking(null)
 
+      setMileage('')
+      setFuelLevel('')
+      setCondition('')
+      setIdConfirmed(false)
+      setLicenseConfirmed(false)
+      setPaymentMethod('cash')
+      setCashConfirmed(false)
+
       toast.success(
-        'Vehicle checked out successfully'
+        'Vehicle checked out and cash payment confirmed successfully'
       )
     } catch (err) {
       console.error('Checkout failed:', err)
@@ -592,78 +651,163 @@ function CheckoutManagement() {
                 </div>
               </div>
 
-              {/* Mileage */}
-              <div>
-                <label className="label">
-                  Starting Mileage (km)
-                </label>
+              {/* Vehicle inspection */}
+              <div className="card p-4 bg-slate-50">
+                <h4 className="font-semibold text-slate-900 mb-3">
+                  Vehicle Check-out Inspection
+                </h4>
 
-                <input
-                  type="number"
-                  min="0"
-                  value={mileage}
-                  onChange={(e) =>
-                    setMileage(e.target.value)
-                  }
-                  className="input"
-                  placeholder="e.g. 45000"
-                />
+                {/* Mileage */}
+                <div className="mb-4">
+                  <label className="label">
+                    Starting Mileage (km)
+                  </label>
+
+                  <input
+                    type="number"
+                    min="0"
+                    value={mileage}
+                    onChange={(e) =>
+                      setMileage(e.target.value)
+                    }
+                    className="input"
+                    placeholder="e.g. 45000"
+                  />
+                </div>
+
+                {/* Fuel */}
+                <div className="mb-4">
+                  <label className="label">
+                    Fuel Level
+                  </label>
+
+                  <select
+                    value={fuelLevel}
+                    onChange={(e) =>
+                      setFuelLevel(e.target.value)
+                    }
+                    className="input"
+                  >
+                    <option value="">
+                      Select
+                    </option>
+
+                    <option value="full">
+                      Full
+                    </option>
+
+                    <option value="3/4">
+                      3/4
+                    </option>
+
+                    <option value="1/2">
+                      1/2
+                    </option>
+
+                    <option value="1/4">
+                      1/4
+                    </option>
+
+                    <option value="empty">
+                      Empty
+                    </option>
+                  </select>
+                </div>
+
+                {/* Condition */}
+                <div>
+                  <label className="label">
+                    Vehicle Condition
+                  </label>
+
+                  <input
+                    type="text"
+                    value={condition}
+                    onChange={(e) =>
+                      setCondition(e.target.value)
+                    }
+                    className="input"
+                    placeholder="e.g. Good, minor scratch on bumper"
+                  />
+                </div>
               </div>
 
-              {/* Fuel */}
-              <div>
-                <label className="label">
-                  Fuel Level
-                </label>
+              {/* Payment */}
+              <div className="card p-4 border border-amber-200 bg-amber-50">
+                <h4 className="font-semibold text-slate-900 mb-3 flex items-center gap-2">
+                  <Banknote className="w-5 h-5 text-amber-600" />
+                  Payment at Check-out
+                </h4>
 
-                <select
-                  value={fuelLevel}
-                  onChange={(e) =>
-                    setFuelLevel(e.target.value)
-                  }
-                  className="input"
-                >
-                  <option value="">
-                    Select
-                  </option>
+                {/* Amount */}
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-sm text-slate-600">
+                    Amount Due
+                  </span>
 
-                  <option value="full">
-                    Full
-                  </option>
+                  <span className="text-lg font-bold text-slate-900">
+                    {formatAmount(
+                      getBookingAmount(
+                        selectedBooking
+                      )
+                    )}
+                  </span>
+                </div>
 
-                  <option value="3/4">
-                    3/4
-                  </option>
+                {/* Payment method */}
+                <div className="mb-4">
+                  <label className="label">
+                    Payment Method
+                  </label>
 
-                  <option value="1/2">
-                    1/2
-                  </option>
+                  <select
+                    value={paymentMethod}
+                    onChange={(e) => {
+                      setPaymentMethod(e.target.value)
 
-                  <option value="1/4">
-                    1/4
-                  </option>
+                      if (e.target.value !== 'cash') {
+                        setCashConfirmed(false)
+                      }
+                    }}
+                    className="input"
+                  >
+                    <option value="cash">
+                      Cash
+                    </option>
+                  </select>
+                </div>
 
-                  <option value="empty">
-                    Empty
-                  </option>
-                </select>
-              </div>
+                {/* Cash confirmation */}
+                {paymentMethod === 'cash' && (
+                  <div className="flex items-start gap-3 p-3 bg-white border border-amber-200 rounded-lg">
+                    <input
+                      id="cashConfirmed"
+                      type="checkbox"
+                      checked={cashConfirmed}
+                      onChange={(e) =>
+                        setCashConfirmed(
+                          e.target.checked
+                        )
+                      }
+                      className="w-5 h-5 mt-0.5"
+                    />
 
-              {/* Condition */}
-              <div>
-                <label className="label">
-                  Vehicle Condition
-                </label>
+                    <label
+                      htmlFor="cashConfirmed"
+                      className="cursor-pointer"
+                    >
+                      <p className="text-sm font-medium text-slate-900">
+                        Cash payment received
+                      </p>
 
-                <input
-                  type="text"
-                  value={condition}
-                  onChange={(e) =>
-                    setCondition(e.target.value)
-                  }
-                  className="input"
-                  placeholder="e.g. Good, minor scratch on bumper"
-                />
+                      <p className="text-xs text-slate-500 mt-1">
+                        Confirm that the customer has paid the
+                        amount due in cash before completing
+                        check-out.
+                      </p>
+                    </label>
+                  </div>
+                )}
               </div>
 
             </div>

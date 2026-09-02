@@ -10,7 +10,8 @@ from app.models.inspection import Inspection
 from app.models.report import Report
 from app.models.notification import Notification
 from app.models.maintenance import Maintenance
-from datetime import date
+from app.models.payment import Payment
+from datetime import date, datetime
 from app.utils.auth import role_required
 
 
@@ -668,6 +669,102 @@ def checkout_booking(booking_id):
         }), 404
 
     # --------------------------------------------------------
+    # PAYMENT CHECK
+    #
+    # Cash must already have been recorded when the customer
+    # made the booking.
+    #
+    # If cash is still pending, checkout MUST NOT happen.
+    # The staff/admin must confirm that the cash was received
+    # first.
+    #
+    # M-Pesa must also be completed before checkout.
+    # --------------------------------------------------------
+
+    payments = Payment.query.filter_by(
+        booking_id=booking.id
+    ).order_by(
+        Payment.created_at.desc()
+    ).all()
+
+    if not payments:
+        return jsonify({
+            'message': (
+                'Payment has not been recorded for this booking. '
+                'Checkout cannot proceed.'
+            ),
+            'paymentRequired': True
+        }), 400
+
+    cash_payment = next(
+        (
+            payment
+            for payment in payments
+            if payment.method
+            and payment.method.lower() == 'cash'
+        ),
+        None
+    )
+
+    mpesa_payment = next(
+        (
+            payment
+            for payment in payments
+            if payment.method
+            and payment.method.lower() == 'mpesa'
+        ),
+        None
+    )
+
+    # --------------------------------------------------------
+    # CASH PAYMENT
+    # --------------------------------------------------------
+
+    if cash_payment:
+
+        if cash_payment.status == 'pending':
+            return jsonify({
+                'message': (
+                    'Cash payment is still pending. '
+                    'Confirm that the customer has paid the '
+                    'cash amount before checking out the vehicle.'
+                ),
+                'paymentRequired': True,
+                'paymentPending': True,
+                'paymentMethod': 'cash',
+                'payment': cash_payment.to_dict()
+            }), 400
+
+        if cash_payment.status != 'completed':
+            return jsonify({
+                'message': (
+                    'Cash payment has not been confirmed. '
+                    'Checkout cannot proceed.'
+                ),
+                'paymentRequired': True,
+                'paymentMethod': 'cash',
+                'payment': cash_payment.to_dict()
+            }), 400
+
+    # --------------------------------------------------------
+    # M-PESA PAYMENT
+    # --------------------------------------------------------
+
+    elif mpesa_payment:
+
+        if mpesa_payment.status != 'completed':
+            return jsonify({
+                'message': (
+                    'M-Pesa payment has not been completed. '
+                    'Checkout cannot proceed.'
+                ),
+                'paymentRequired': True,
+                'paymentPending': True,
+                'paymentMethod': 'mpesa',
+                'payment': mpesa_payment.to_dict()
+            }), 400
+
+    # --------------------------------------------------------
     # Make sure vehicle is actually available
     # --------------------------------------------------------
 
@@ -696,6 +793,7 @@ def checkout_booking(booking_id):
 
     try:
         mileage = int(mileage)
+
     except (TypeError, ValueError):
         return jsonify({
             'message': 'Invalid mileage'
@@ -764,10 +862,16 @@ def checkout_booking(booking_id):
         )
     )
 
+    # --------------------------------------------------------
+    # Save everything
+    # --------------------------------------------------------
+
     try:
+
         db.session.commit()
 
     except Exception as e:
+
         db.session.rollback()
 
         print(
@@ -783,10 +887,17 @@ def checkout_booking(booking_id):
         'message': 'Vehicle checked out successfully',
         'booking': booking.to_dict(),
         'vehicle': vehicle.to_dict(),
-        'inspection': checkout_inspection.to_dict()
+        'inspection': checkout_inspection.to_dict(),
+        'payment': (
+            cash_payment.to_dict()
+            if cash_payment
+            else (
+                mpesa_payment.to_dict()
+                if mpesa_payment
+                else None
+            )
+        )
     }), 200
-
-
 # ============================================================
 # CHECK-IN BOOKING
 # ============================================================
