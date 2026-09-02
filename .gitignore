@@ -5,3 +5,4 @@ __pycache__/
 *.pyc
 crms-backend/.env
 crms-backend/.env.local
+node_modules
