@@ -44,7 +44,7 @@ function VehicleBrowsePage() {
     loadData()
   }, [])
 
-  const getBookedVehicleIds = () => {
+  const bookedVehicleIds = useMemo(() => {
     if (!pickupDate || !returnDate) return new Set()
     const pickup = new Date(pickupDate)
     const returnD = new Date(returnDate)
@@ -58,9 +58,7 @@ function VehicleBrowsePage() {
       }
     })
     return bookedIds
-  }
-
-  const bookedVehicleIds = getBookedVehicleIds()
+  }, [pickupDate, returnDate, bookings])
 
   const filteredVehicles = useMemo(() => {
     let result = [...vehicles]
