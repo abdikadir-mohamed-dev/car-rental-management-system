@@ -48,7 +48,7 @@ def register():
         name=name,
         email=email,
         phone=phone,
-        role=data.get("role", "customer"),
+        role="customer",
         password_hash=generate_password_hash(password),
         drivers_license=drivers_license,
         license_expiry=license_expiry,
