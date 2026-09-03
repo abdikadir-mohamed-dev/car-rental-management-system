@@ -41,6 +41,13 @@ export const logoutThunk = createAsyncThunk(
 export const initializeAuth = createAsyncThunk(
   'auth/initialize',
   async (_, { rejectWithValue }) => {
+    const token = localStorage.getItem('token')
+
+    // Guest user — don't call the protected profile endpoint
+    if (!token) {
+      return rejectWithValue(null)
+    }
+
     try {
       const response = await getProfile()
       return response.data.user || response.data

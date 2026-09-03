@@ -243,7 +243,7 @@ function CheckoutManagement() {
     setIdConfirmed(false)
     setLicenseConfirmed(false)
 
-    // Cash is the payment collected at checkout.
+    // Cash is collected at checkout.
     setPaymentMethod('cash')
     setCashConfirmed(false)
   }
@@ -257,12 +257,20 @@ function CheckoutManagement() {
       return
     }
 
+    // --------------------------------------------------------
+    // IDENTITY VALIDATION
+    // --------------------------------------------------------
+
     if (!idConfirmed || !licenseConfirmed) {
       toast.error(
         'Please confirm ID and driver\'s license'
       )
       return
     }
+
+    // --------------------------------------------------------
+    // VEHICLE VALIDATION
+    // --------------------------------------------------------
 
     if (!mileage || !fuelLevel || !condition) {
       toast.error(
@@ -272,7 +280,7 @@ function CheckoutManagement() {
     }
 
     // --------------------------------------------------------
-    // PAYMENT VALIDATION
+    // CASH PAYMENT VALIDATION
     // --------------------------------------------------------
 
     if (paymentMethod === 'cash' && !cashConfirmed) {
@@ -295,9 +303,19 @@ function CheckoutManagement() {
         fuelLevel,
         condition,
 
-        // Payment information
-        paymentMethod,
-        cashConfirmed:
+        /*
+         * IMPORTANT:
+         *
+         * staff.py expects:
+         *
+         * cashPaymentReceived
+         *
+         * NOT:
+         *
+         * cashConfirmed
+         */
+
+        cashPaymentReceived:
           paymentMethod === 'cash'
             ? cashConfirmed
             : false,
@@ -315,13 +333,19 @@ function CheckoutManagement() {
         )
       )
 
+      // ------------------------------------------------------
+      // RESET FORM
+      // ------------------------------------------------------
+
       setSelectedBooking(null)
 
       setMileage('')
       setFuelLevel('')
       setCondition('')
+
       setIdConfirmed(false)
       setLicenseConfirmed(false)
+
       setPaymentMethod('cash')
       setCashConfirmed(false)
 
@@ -329,7 +353,10 @@ function CheckoutManagement() {
         'Vehicle checked out and cash payment confirmed successfully'
       )
     } catch (err) {
-      console.error('Checkout failed:', err)
+      console.error(
+        'Checkout failed:',
+        err
+      )
 
       const message =
         err?.response?.data?.message ||
@@ -736,7 +763,7 @@ function CheckoutManagement() {
               <div className="card p-4 border border-amber-200 bg-amber-50">
                 <h4 className="font-semibold text-slate-900 mb-3 flex items-center gap-2">
                   <Banknote className="w-5 h-5 text-amber-600" />
-                  Payment at Check-out
+                  Cash Payment
                 </h4>
 
                 {/* Amount */}
@@ -754,60 +781,45 @@ function CheckoutManagement() {
                   </span>
                 </div>
 
-                {/* Payment method */}
-                <div className="mb-4">
-                  <label className="label">
-                    Payment Method
-                  </label>
+                {/* Cash confirmation */}
+                <div className="flex items-start gap-3 p-3 bg-white border border-amber-200 rounded-lg">
+                  <input
+                    id="cashConfirmed"
+                    type="checkbox"
+                    checked={cashConfirmed}
+                    onChange={(e) =>
+                      setCashConfirmed(
+                        e.target.checked
+                      )
+                    }
+                    className="w-5 h-5 mt-0.5"
+                  />
 
-                  <select
-                    value={paymentMethod}
-                    onChange={(e) => {
-                      setPaymentMethod(e.target.value)
-
-                      if (e.target.value !== 'cash') {
-                        setCashConfirmed(false)
-                      }
-                    }}
-                    className="input"
+                  <label
+                    htmlFor="cashConfirmed"
+                    className="cursor-pointer"
                   >
-                    <option value="cash">
-                      Cash
-                    </option>
-                  </select>
+                    <p className="text-sm font-medium text-slate-900">
+                      Cash payment received
+                    </p>
+
+                    <p className="text-xs text-slate-500 mt-1">
+                      Confirm that you have physically
+                      received the full amount of{' '}
+                      {formatAmount(
+                        getBookingAmount(
+                          selectedBooking
+                        )
+                      )}{' '}
+                      from the customer.
+                    </p>
+                  </label>
                 </div>
 
-                {/* Cash confirmation */}
-                {paymentMethod === 'cash' && (
-                  <div className="flex items-start gap-3 p-3 bg-white border border-amber-200 rounded-lg">
-                    <input
-                      id="cashConfirmed"
-                      type="checkbox"
-                      checked={cashConfirmed}
-                      onChange={(e) =>
-                        setCashConfirmed(
-                          e.target.checked
-                        )
-                      }
-                      className="w-5 h-5 mt-0.5"
-                    />
-
-                    <label
-                      htmlFor="cashConfirmed"
-                      className="cursor-pointer"
-                    >
-                      <p className="text-sm font-medium text-slate-900">
-                        Cash payment received
-                      </p>
-
-                      <p className="text-xs text-slate-500 mt-1">
-                        Confirm that the customer has paid the
-                        amount due in cash before completing
-                        check-out.
-                      </p>
-                    </label>
-                  </div>
-                )}
+                <p className="text-xs text-slate-500 mt-3">
+                  Cash will be recorded as completed when
+                  you confirm check-out.
+                </p>
               </div>
 
             </div>

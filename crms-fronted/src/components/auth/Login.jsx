@@ -5,24 +5,45 @@ import { useDispatch } from 'react-redux'
 import { loginThunk as login } from '../../redux/slices/authSlice'
 
 function Login() {
-  const [formData, setFormData] = useState({ email: '', password: '' })
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+  })
+
   const [errors, setErrors] = useState({})
   const [loading, setLoading] = useState(false)
+
   const dispatch = useDispatch()
   const navigate = useNavigate()
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value })
-    if (errors[e.target.name]) {
-      setErrors({ ...errors, [e.target.name]: '' })
+    const { name, value } = e.target
+
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }))
+
+    if (errors[name]) {
+      setErrors((prev) => ({
+        ...prev,
+        [name]: '',
+      }))
     }
   }
 
   const handleSubmit = (e) => {
     e.preventDefault()
+
     const newErrors = {}
-    if (!formData.email) newErrors.email = 'Email is required'
-    if (!formData.password) newErrors.password = 'Password is required'
+
+    if (!formData.email.trim()) {
+      newErrors.email = 'Email is required'
+    }
+
+    if (!formData.password) {
+      newErrors.password = 'Password is required'
+    }
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors)
@@ -30,11 +51,19 @@ function Login() {
     }
 
     setLoading(true)
-    dispatch(login({ email: formData.email, password: formData.password }))
+
+    dispatch(
+      login({
+        email: formData.email.trim().toLowerCase(),
+        password: formData.password,
+      })
+    )
       .unwrap()
       .then((res) => {
         toast.success('Login successful!')
+
         const role = res.user?.role
+
         if (role === 'admin') {
           navigate('/admin')
         } else if (role === 'staff') {
@@ -54,44 +83,109 @@ function Login() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-lg p-8 space-y-5">
+    <form
+      onSubmit={handleSubmit}
+      className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md space-y-6"
+    >
+      {/* HEADER */}
+      <div className="text-center">
+        <h2 className="text-2xl font-bold text-slate-900">
+          Welcome Back
+        </h2>
+
+        <p className="text-sm text-slate-500 mt-2">
+          Sign in to your DriveGo account
+        </p>
+      </div>
+
+      {/* EMAIL */}
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
+        <label
+          htmlFor="email"
+          className="block text-sm font-medium text-slate-700 mb-2"
+        >
+          Email Address
+        </label>
+
         <input
+          id="email"
           type="email"
           name="email"
           value={formData.email}
           onChange={handleChange}
-          className={`input ${errors.email ? 'border-red-500' : ''}`}
-          placeholder="customer@drivego.com"
+          autoComplete="email"
+          className={`input w-full ${
+            errors.email ? 'border-red-500 focus:ring-red-500' : ''
+          }`}
+          placeholder="Enter your email"
         />
-        {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
+
+        {errors.email && (
+          <p className="text-red-500 text-sm mt-1">
+            {errors.email}
+          </p>
+        )}
       </div>
+
+      {/* PASSWORD */}
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
+        <label
+          htmlFor="password"
+          className="block text-sm font-medium text-slate-700 mb-2"
+        >
+          Password
+        </label>
+
         <input
+          id="password"
           type="password"
           name="password"
           value={formData.password}
           onChange={handleChange}
-          className={`input ${errors.password ? 'border-red-500' : ''}`}
-          placeholder="password123"
+          autoComplete="current-password"
+          className={`input w-full ${
+            errors.password ? 'border-red-500 focus:ring-red-500' : ''
+          }`}
+          placeholder="Enter your password"
         />
-        {errors.password && <p className="text-red-500 text-sm mt-1">{errors.password}</p>}
+
+        {errors.password && (
+          <p className="text-red-500 text-sm mt-1">
+            {errors.password}
+          </p>
+        )}
       </div>
-      <button type="submit" className="btn-primary w-full" disabled={loading}>
+
+      {/* FORGOT PASSWORD */}
+      <div className="flex justify-end">
+        <Link
+          to="/auth/forgot-password"
+          className="text-sm text-blue-600 hover:text-blue-700 hover:underline font-medium"
+        >
+          Forgot password?
+        </Link>
+      </div>
+
+      {/* SIGN IN */}
+      <button
+        type="submit"
+        className="btn-primary w-full py-3 rounded-lg font-semibold transition-all"
+        disabled={loading}
+      >
         {loading ? 'Signing in...' : 'Sign In'}
       </button>
-      <p className="text-center text-sm text-slate-600">
-        <Link to="/auth/forgot-password" className="text-blue-600 hover:underline">Forgot password?</Link>
-      </p>
-      <p className="text-center text-sm text-slate-600">
-        Don't have an account? <Link to="/auth/register" className="text-blue-600 hover:underline font-medium">Create Account</Link>
-      </p>
-      <div className="bg-slate-50 rounded-lg p-3 text-xs text-slate-500">
-        <p className="font-medium mb-1">Demo credentials:</p>
-        <p>Customer: customer@drivego.com / password123</p>
-        <p>Admin: admin@drivego.com / admin123</p>
+
+      {/* REGISTER */}
+      <div className="pt-2 border-t border-slate-100">
+        <p className="text-center text-sm text-slate-600">
+          Don't have an account?{' '}
+          <Link
+            to="/auth/register"
+            className="text-blue-600 hover:text-blue-700 hover:underline font-semibold"
+          >
+            Create an account
+          </Link>
+        </p>
       </div>
     </form>
   )

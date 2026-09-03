@@ -2,6 +2,7 @@ from flask import jsonify, request
 from app import db
 from app.models.vehicle import Vehicle
 from app.models.user import User
+from app.models.driver import Driver
 from app.models.policy import RentalPolicy
 from app.models.report import Report
 from app.models.shift import Shift
@@ -97,7 +98,11 @@ def admin_dashboard():
 @role_required('admin')
 def get_users():
     users = User.query.all()
-    return jsonify([u.to_dict() for u in users])
+
+    return jsonify([
+        u.to_dict()
+        for u in users
+    ])
 
 
 @bp.route('/users/<int:user_id>', methods=['PUT'])
@@ -120,7 +125,9 @@ def update_user(user_id):
 
     db.session.commit()
 
-    return jsonify(user.to_dict())
+    return jsonify(
+        user.to_dict()
+    )
 
 
 @bp.route('/users/<int:user_id>', methods=['DELETE'])
@@ -1536,6 +1543,7 @@ def admin_refund_payment(payment_id):
             payment.to_dict()
     }), 200
 
+
 # ============================================================
 # DRIVERS
 # ============================================================
@@ -1563,11 +1571,35 @@ def create_driver():
     name = data.get('name')
     email = data.get('email')
     phone = data.get('phone')
+    license_number = data.get('licenseNumber')
+
+    # --------------------------------------------------------
+    # VALIDATION
+    # --------------------------------------------------------
 
     if not name or not email:
         return jsonify({
             'error': 'Name and email are required'
         }), 400
+
+    if not license_number:
+        return jsonify({
+            'error': 'License number is required for drivers'
+        }), 400
+
+    email = email.strip().lower()
+    license_number = str(
+        license_number
+    ).strip()
+
+    if not license_number:
+        return jsonify({
+            'error': 'License number is required for drivers'
+        }), 400
+
+    # --------------------------------------------------------
+    # CHECK DUPLICATE EMAIL
+    # --------------------------------------------------------
 
     if User.query.filter_by(
         email=email
@@ -1577,12 +1609,33 @@ def create_driver():
             'error': 'Email already exists'
         }), 400
 
+    # --------------------------------------------------------
+    # CHECK DUPLICATE LICENSE
+    # --------------------------------------------------------
+
+    if Driver.query.filter_by(
+        license_number=license_number
+    ).first():
+
+        return jsonify({
+            'error':
+                'A driver with this license number already exists'
+        }), 400
+
+    # --------------------------------------------------------
+    # GENERATE TEMPORARY PASSWORD
+    # --------------------------------------------------------
+
     password = generate_password(8)
 
+    # --------------------------------------------------------
+    # CREATE USER ACCOUNT
+    # --------------------------------------------------------
+
     user = User(
-        name=name,
+        name=name.strip(),
         email=email,
-        phone=phone,
+        phone=phone.strip() if phone else None,
         role='driver',
         is_active=data.get(
             'isActive',
@@ -1595,11 +1648,55 @@ def create_driver():
     )
 
     db.session.add(user)
-    db.session.commit()
+    db.session.flush()
+
+    # --------------------------------------------------------
+    # CREATE DRIVER PROFILE
+    # --------------------------------------------------------
+
+    driver = Driver(
+        user_id=user.id,
+        license_number=license_number,
+        status='available',
+        rating=0.0,
+        total_trips=0,
+    )
+
+    db.session.add(driver)
+
+    # --------------------------------------------------------
+    # SAVE USER + DRIVER PROFILE
+    # --------------------------------------------------------
+
+    try:
+
+        db.session.commit()
+
+    except Exception as exc:
+
+        db.session.rollback()
+
+        return jsonify({
+            'error': 'Failed to create driver',
+            'message': str(exc)
+        }), 500
+
+    # --------------------------------------------------------
+    # RESPONSE
+    # --------------------------------------------------------
 
     return jsonify({
-        'user': user.to_dict(),
-        'password': password,
+        'message':
+            'Driver account created successfully',
+
+        'user':
+            user.to_dict(),
+
+        'driver':
+            driver.to_dict(),
+
+        'password':
+            password,
     }), 201
 
 
@@ -1782,27 +1879,32 @@ def seed_data():
                 {
                     'name': 'James Kariuki',
                     'email': 'james.kariuki@drivego.com',
-                    'phone': '0722000001'
+                    'phone': '0722000001',
+                    'licenseNumber': 'DL-DRIVER-001'
                 },
                 {
                     'name': 'David Kamau',
                     'email': 'david.kamau@drivego.com',
-                    'phone': '0722000002'
+                    'phone': '0722000002',
+                    'licenseNumber': 'DL-DRIVER-002'
                 },
                 {
                     'name': 'Aisha Hassan',
                     'email': 'aisha.hassan@drivego.com',
-                    'phone': '0722000003'
+                    'phone': '0722000003',
+                    'licenseNumber': 'DL-DRIVER-003'
                 },
                 {
                     'name': 'John Mwangi',
                     'email': 'john.mwangi@drivego.com',
-                    'phone': '0722000004'
+                    'phone': '0722000004',
+                    'licenseNumber': 'DL-DRIVER-004'
                 },
                 {
                     'name': 'Mary Wanjiku',
                     'email': 'mary.wanjiku@drivego.com',
-                    'phone': '0722000005'
+                    'phone': '0722000005',
+                    'licenseNumber': 'DL-DRIVER-005'
                 },
             ]
 
@@ -1838,7 +1940,8 @@ def seed_data():
                 'available': True,
                 'is_available': True,
                 'location': 'Nairobi CBD',
-                'description': 'Reliable SUV for city and off-road trips.',
+                'description':
+                    'Reliable SUV for city and off-road trips.',
                 'images': [
                     'https://images.unsplash.com/photo-1621007947382-bb3c3968e3bb?w=800&q=80'
                 ],
@@ -1864,7 +1967,8 @@ def seed_data():
                 'available': True,
                 'is_available': True,
                 'location': 'Westlands',
-                'description': 'Comfortable sedan for business trips.',
+                'description':
+                    'Comfortable sedan for business trips.',
                 'images': [
                     'https://images.unsplash.com/photo-1623869675781-80aa31010a6b?w=800&q=80'
                 ],
@@ -1889,7 +1993,8 @@ def seed_data():
                 'available': True,
                 'is_available': True,
                 'location': 'Kilimani',
-                'description': 'Premium executive sedan.',
+                'description':
+                    'Premium executive sedan.',
                 'images': [
                     'https://images.unsplash.com/photo-1555215695-3004980adade?w=800&q=80'
                 ],
@@ -1915,7 +2020,8 @@ def seed_data():
                 'available': True,
                 'is_available': True,
                 'location': 'Karen',
-                'description': 'Luxury sedan with advanced features.',
+                'description':
+                    'Luxury sedan with advanced features.',
                 'images': [
                     'https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?w=800&q=80'
                 ],
@@ -1942,7 +2048,8 @@ def seed_data():
                 'available': True,
                 'is_available': True,
                 'location': 'Nairobi CBD',
-                'description': 'Stylish compact luxury SUV.',
+                'description':
+                    'Stylish compact luxury SUV.',
                 'images': [
                     'https://images.unsplash.com/photo-1606016159991-dfe4f2746ad5?w=800&q=80'
                 ],
@@ -1968,7 +2075,8 @@ def seed_data():
                 'available': True,
                 'is_available': True,
                 'location': 'Westlands',
-                'description': 'Sporty executive sedan.',
+                'description':
+                    'Sporty executive sedan.',
                 'images': [
                     'https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?w=800&q=80'
                 ],
@@ -1994,7 +2102,8 @@ def seed_data():
                 'available': True,
                 'is_available': True,
                 'location': 'Kilimani',
-                'description': 'High-performance sports car.',
+                'description':
+                    'High-performance sports car.',
                 'images': [
                     'https://images.unsplash.com/photo-1584345604476-8ec5f87f4d5a?w=800&q=80'
                 ],
@@ -2024,7 +2133,8 @@ def seed_data():
                 'available': False,
                 'is_available': False,
                 'location': 'Karen',
-                'description': 'Currently under maintenance.',
+                'description':
+                    'Currently under maintenance.',
                 'images': [
                     'https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?w=800&q=80'
                 ],
@@ -2050,7 +2160,8 @@ def seed_data():
                 'available': True,
                 'is_available': True,
                 'location': 'Nairobi CBD',
-                'description': 'Versatile compact SUV.',
+                'description':
+                    'Versatile compact SUV.',
                 'images': [
                     'https://images.unsplash.com/photo-1568844293986-ca4c3579c5e5?w=800&q=80'
                 ],
@@ -2076,7 +2187,8 @@ def seed_data():
                 'available': True,
                 'is_available': True,
                 'location': 'Westlands',
-                'description': 'Spacious family SUV.',
+                'description':
+                    'Spacious family SUV.',
                 'images': [
                     'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=800&q=80'
                 ],
@@ -2101,7 +2213,8 @@ def seed_data():
                 'available': True,
                 'is_available': True,
                 'location': 'Kilimani',
-                'description': 'Compact and efficient hatchback.',
+                'description':
+                    'Compact and efficient hatchback.',
                 'images': [
                     'https://images.unsplash.com/photo-1471479917193-f00955256237?w=800&q=80'
                 ],
@@ -2126,7 +2239,8 @@ def seed_data():
                 'available': True,
                 'is_available': True,
                 'location': 'Karen',
-                'description': 'Stylish SUV with great handling.',
+                'description':
+                    'Stylish SUV with great handling.',
                 'images': [
                     'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=800&q=80'
                 ],
@@ -2152,7 +2266,8 @@ def seed_data():
                 'available': True,
                 'is_available': True,
                 'location': 'Nairobi CBD',
-                'description': 'Adventure-ready SUV with all-wheel drive.',
+                'description':
+                    'Adventure-ready SUV with all-wheel drive.',
                 'images': [
                     'https://images.unsplash.com/photo-1551836022-d5d88e9218df?w=800&q=80'
                 ],
@@ -2178,7 +2293,8 @@ def seed_data():
                 'available': True,
                 'is_available': True,
                 'location': 'Westlands',
-                'description': 'Modern SUV with great fuel efficiency.',
+                'description':
+                    'Modern SUV with great fuel efficiency.',
                 'images': [
                     'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=800&q=80'
                 ],
@@ -2204,7 +2320,8 @@ def seed_data():
                 'available': True,
                 'is_available': True,
                 'location': 'Kilimani',
-                'description': 'Stylish and practical SUV.',
+                'description':
+                    'Stylish and practical SUV.',
                 'images': [
                     'https://images.unsplash.com/photo-1606016159991-dfe4f2746ad5?w=800&q=80'
                 ],
@@ -2230,7 +2347,8 @@ def seed_data():
                 'available': True,
                 'is_available': True,
                 'location': 'Karen',
-                'description': 'Luxury SUV with premium features.',
+                'description':
+                    'Luxury SUV with premium features.',
                 'images': [
                     'https://images.unsplash.com/photo-1606016159991-dfe4f2746ad5?w=800&q=80'
                 ],
@@ -2257,7 +2375,8 @@ def seed_data():
                 'available': True,
                 'is_available': True,
                 'location': 'Westlands',
-                'description': 'High-performance luxury SUV.',
+                'description':
+                    'High-performance luxury SUV.',
                 'images': [
                     'https://images.unsplash.com/photo-1503376763036-066120622c74?w=800&q=80'
                 ],
@@ -2285,7 +2404,8 @@ def seed_data():
                 'available': True,
                 'is_available': True,
                 'location': 'Nairobi CBD',
-                'description': 'Spacious SUV for large groups.',
+                'description':
+                    'Spacious SUV for large groups.',
                 'images': [
                     'https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?w=800&q=80'
                 ],
@@ -2311,7 +2431,8 @@ def seed_data():
                 'available': True,
                 'is_available': True,
                 'location': 'Kilimani',
-                'description': 'Off-road adventure vehicle.',
+                'description':
+                    'Off-road adventure vehicle.',
                 'images': [
                     'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=800&q=80'
                 ],
@@ -2337,7 +2458,8 @@ def seed_data():
                 'available': True,
                 'is_available': True,
                 'location': 'Westlands',
-                'description': 'Heavy-duty pickup truck.',
+                'description':
+                    'Heavy-duty pickup truck.',
                 'images': [
                     'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=800&q=80'
                 ],
@@ -2444,7 +2566,46 @@ def create_driver_internal(
     payload
 ):
 
+    license_number = payload.get(
+        'licenseNumber'
+    )
+
+    if not license_number:
+        raise ValueError(
+            'License number is required for drivers'
+        )
+
+    license_number = str(
+        license_number
+    ).strip()
+
+    if not license_number:
+        raise ValueError(
+            'License number is required for drivers'
+        )
+
+    # --------------------------------------------------------
+    # CHECK DUPLICATE LICENSE
+    # --------------------------------------------------------
+
+    existing_driver = Driver.query.filter_by(
+        license_number=license_number
+    ).first()
+
+    if existing_driver:
+        raise ValueError(
+            'A driver with this license number already exists'
+        )
+
+    # --------------------------------------------------------
+    # GENERATE TEMPORARY PASSWORD
+    # --------------------------------------------------------
+
     password = generate_password(8)
+
+    # --------------------------------------------------------
+    # CREATE USER
+    # --------------------------------------------------------
 
     user = User(
         name=payload['name'],
@@ -2461,6 +2622,21 @@ def create_driver_internal(
     db.session.add(user)
     db.session.flush()
 
+    # --------------------------------------------------------
+    # CREATE DRIVER PROFILE
+    # --------------------------------------------------------
+
+    driver = Driver(
+        user_id=user.id,
+        license_number=license_number,
+        status='available',
+        rating=0.0,
+        total_trips=0,
+    )
+
+    db.session.add(driver)
+    db.session.flush()
+
     return {
         'user': {
             'id': user.id,
@@ -2468,5 +2644,16 @@ def create_driver_internal(
             'email': user.email,
             'role': user.role,
             'password': password
-        }
+        },
+
+        'driver': {
+            'id': driver.id,
+            'userId': driver.user_id,
+            'licenseNumber': driver.license_number,
+            'status': driver.status,
+            'rating': driver.rating,
+            'totalTrips': driver.total_trips,
+        },
+
+        'password': password
     }

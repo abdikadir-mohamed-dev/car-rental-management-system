@@ -7,37 +7,46 @@ import {
   removeSavedCar,
   checkSavedCar,
 } from '../../services/savedCarService'
+import {useSelector } from 'react-redux'
 
 import toast from 'react-hot-toast'
 
 function VehicleCard({ vehicle, to }) {
   const [liked, setLiked] = useState(false)
   const [saving, setSaving] = useState(false)
+  const isAuthenticated = useSelector(
+  (state) => state.auth.isAuthenticated
+)
 
   const linkTo = to || `/vehicles/${vehicle.id}`
 
   // Check whether this vehicle is already saved
   useEffect(() => {
-    let mounted = true
+  if (!isAuthenticated) {
+    setLiked(false)
+    return
+  }
 
-    const checkSaved = async () => {
-      try {
-        const saved = await checkSavedCar(vehicle.id)
+  let mounted = true
 
-        if (mounted) {
-          setLiked(saved)
-        }
-      } catch (err) {
-        console.error('Failed to check saved car:', err)
+  const checkSaved = async () => {
+    try {
+      const saved = await checkSavedCar(vehicle.id)
+
+      if (mounted) {
+        setLiked(saved)
       }
+    } catch (err) {
+      console.error('Failed to check saved car:', err)
     }
+  }
 
-    checkSaved()
+  checkSaved()
 
-    return () => {
-      mounted = false
-    }
-  }, [vehicle.id])
+  return () => {
+    mounted = false
+  }
+}, [vehicle.id, isAuthenticated])
 
   // Save / remove vehicle
   const handleToggleSave = async (e) => {
@@ -89,26 +98,27 @@ function VehicleCard({ vehicle, to }) {
         />
 
         {/* SAVE BUTTON */}
-        <button
-          type="button"
-          onClick={handleToggleSave}
-          disabled={saving}
-          title={
-            liked
-              ? 'Remove from saved cars'
-              : 'Save this car'
-          }
-          className="absolute top-3 right-3 p-2 bg-white/90 rounded-full shadow-sm hover:bg-white disabled:opacity-50"
-        >
-          <Heart
-            className={`w-5 h-5 ${
-              liked
-                ? 'text-red-500 fill-current'
-                : 'text-slate-400'
-            }`}
-          />
-        </button>
-
+        {isAuthenticated && (
+  <button
+    type="button"
+    onClick={handleToggleSave}
+    disabled={saving}
+    title={
+      liked
+        ? 'Remove from saved cars'
+        : 'Save this car'
+    }
+    className="absolute top-3 right-3 p-2 bg-white/90 rounded-full shadow-sm hover:bg-white disabled:opacity-50"
+  >
+    <Heart
+      className={`w-5 h-5 ${
+        liked
+          ? 'text-red-500 fill-current'
+          : 'text-slate-400'
+      }`}
+    />
+  </button>
+)}
         {!vehicle.available && (
           <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
             <span className="bg-red-500 text-white px-3 py-1 rounded-full text-sm font-medium">

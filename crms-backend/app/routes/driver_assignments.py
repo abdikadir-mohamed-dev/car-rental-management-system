@@ -3,7 +3,6 @@ from app.extensions import db
 from app.models.driver_assignment import DriverAssignment
 from app.models.booking import Booking
 from app.models.user import User
-from app.models.vehicle import Vehicle
 from app.models.notification import Notification
 from app.utils.auth import token_required, role_required
 from flask_jwt_extended import get_jwt_identity
@@ -30,8 +29,8 @@ def create_notification(user_id, title, message):
 
         db.session.add(notification)
 
-    except Exception:
-        pass
+    except Exception as e:
+        print(f'Notification creation failed: {e}')
 
 
 # ============================================================
@@ -56,15 +55,29 @@ def serialize_booking(booking):
         'dropoffDate': (
             booking.dropoff_date.isoformat()
             if booking.dropoff_date
-            else None
+            else (
+                booking.return_date.isoformat()
+                if booking.return_date
+                else None
+            )
         ),
 
         'pickupLocation': booking.pickup_location,
-        'dropoffLocation': booking.dropoff_location,
+        'dropoffLocation': (
+            booking.dropoff_location
+            or booking.return_location
+        ),
 
         'status': booking.status,
 
-        'drivingOption': booking.driving_option,
+        'drivingOption': (
+            booking.driving_option
+            or (
+                'with_driver'
+                if booking.driver_option
+                else 'self'
+            )
+        ),
 
         'customer': {
             'id': booking.user.id,
@@ -93,24 +106,103 @@ def serialize_driver(driver):
     return {
         'id': driver.id,
         '_id': str(driver.id),
-
-        'name': getattr(driver, 'name', 'N/A'),
-
-        'phone': getattr(driver, 'phone', None),
+        'name': driver.name,
+        'phone': driver.phone,
 
         'licenseNumber': (
-            getattr(driver, 'license_number', None)
-            or getattr(driver, 'licenseNumber', None)
+            driver.license_number
             or 'N/A'
         ),
 
-        'status': (
-            getattr(driver, 'status', None)
-            or 'available'
-        ),
-
+        'status': 'available',
         'role': driver.role
     }
+
+
+def get_booking_dates(booking):
+    """
+    Return the actual rental period used for
+    driver scheduling.
+    """
+
+    pickup = (
+        booking.pickup_date
+        if booking
+        else None
+    )
+
+    dropoff = None
+
+    if booking:
+        dropoff = (
+            booking.dropoff_date
+            or booking.return_date
+        )
+
+    return pickup, dropoff
+
+
+def driver_has_overlapping_assignment(
+    driver_id,
+    pickup_date,
+    dropoff_date,
+    exclude_booking_id=None
+):
+    """
+    Check whether this driver already has an
+    assignment overlapping the requested booking.
+
+    Date ranges are treated as inclusive because
+    the driver is considered occupied for every
+    rental day.
+    """
+
+    if not pickup_date or not dropoff_date:
+        return False
+
+    assignments = DriverAssignment.query.filter(
+        DriverAssignment.driver_id == driver_id,
+        DriverAssignment.status.in_([
+            'assigned',
+            'accepted'
+        ])
+    ).all()
+
+    for assignment in assignments:
+
+        if (
+            exclude_booking_id
+            and assignment.booking_id == exclude_booking_id
+        ):
+            continue
+
+        existing_booking = Booking.query.get(
+            assignment.booking_id
+        )
+
+        if not existing_booking:
+            continue
+
+        existing_pickup, existing_dropoff = (
+            get_booking_dates(existing_booking)
+        )
+
+        if not existing_pickup or not existing_dropoff:
+            continue
+
+        # Inclusive date overlap:
+        #
+        # existing_start <= new_end
+        # AND
+        # existing_end >= new_start
+        #
+        if (
+            existing_pickup <= dropoff_date
+            and existing_dropoff >= pickup_date
+        ):
+            return True
+
+    return False
 
 
 # ============================================================
@@ -121,9 +213,13 @@ def serialize_driver(driver):
 @token_required
 def get_driver_assignments():
 
-    current_user_id = int(get_jwt_identity())
+    current_user_id = int(
+        get_jwt_identity()
+    )
 
-    current_user = User.query.get(current_user_id)
+    current_user = User.query.get(
+        current_user_id
+    )
 
     if not current_user:
         return jsonify({
@@ -132,17 +228,24 @@ def get_driver_assignments():
 
     if current_user.role == 'driver':
 
-        assignments = DriverAssignment.query.filter_by(
-            driver_id=current_user_id
-        ).order_by(
-            DriverAssignment.assigned_at.desc()
-        ).all()
+        assignments = (
+            DriverAssignment.query
+            .filter_by(driver_id=current_user_id)
+            .order_by(
+                DriverAssignment.assigned_at.desc()
+            )
+            .all()
+        )
 
     else:
 
-        assignments = DriverAssignment.query.order_by(
-            DriverAssignment.assigned_at.desc()
-        ).all()
+        assignments = (
+            DriverAssignment.query
+            .order_by(
+                DriverAssignment.assigned_at.desc()
+            )
+            .all()
+        )
 
     result = []
 
@@ -166,7 +269,6 @@ def get_driver_assignments():
             driver
         )
 
-        # Include the staff member who made the assignment
         if assignment.assigned_by_id:
 
             assigned_by = User.query.get(
@@ -197,15 +299,16 @@ def get_driver_assignments():
 @role_required('staff', 'admin')
 def get_driver_requests():
 
-    bookings = Booking.query.order_by(
-        Booking.created_at.desc()
-    ).all()
+    bookings = (
+        Booking.query
+        .order_by(Booking.created_at.desc())
+        .all()
+    )
 
     result = []
 
     for booking in bookings:
 
-        # Only bookings requesting a driver
         driving_option = (
             booking.driving_option or ''
         ).lower().strip()
@@ -221,15 +324,21 @@ def get_driver_requests():
         if not driver_requested:
             continue
 
-        # Check whether driver has already been assigned
-        existing_assignment = DriverAssignment.query.filter_by(
-            booking_id=booking.id
-        ).first()
+        existing_assignment = (
+            DriverAssignment.query
+            .filter_by(booking_id=booking.id)
+            .first()
+        )
 
         if existing_assignment:
             continue
 
+        pickup_date, dropoff_date = (
+            get_booking_dates(booking)
+        )
+
         result.append({
+
             '_id': f'DRQ-{booking.id:04d}',
 
             'bookingId': (
@@ -252,22 +361,27 @@ def get_driver_requests():
             } if booking.vehicle else {},
 
             'pickupDate': (
-                booking.pickup_date.isoformat()
-                if booking.pickup_date
+                pickup_date.isoformat()
+                if pickup_date
                 else None
             ),
 
             'dropoffDate': (
-                booking.dropoff_date.isoformat()
-                if booking.dropoff_date
+                dropoff_date.isoformat()
+                if dropoff_date
                 else None
             ),
 
-            'pickupLocation': booking.pickup_location,
+            'pickupLocation': (
+                booking.pickup_location
+            ),
 
-            'dropoffLocation': booking.dropoff_location,
+            'dropoffLocation': (
+                booking.dropoff_location
+                or booking.return_location
+            ),
 
-            'status': 'pending',
+            'status': booking.status,
 
             'requestedAt': (
                 booking.created_at.isoformat()
@@ -287,20 +401,81 @@ def get_driver_requests():
 @role_required('staff', 'admin')
 def get_available_drivers():
 
-    drivers = User.query.filter_by(
-        role='driver'
-    ).all()
+    booking_id = request.args.get(
+        'bookingId',
+        type=int
+    )
+
+    if not booking_id:
+        return jsonify({
+            'message': (
+                'bookingId is required to check '
+                'driver availability'
+            )
+        }), 400
+
+    booking = Booking.query.get(
+        booking_id
+    )
+
+    if not booking:
+        return jsonify({
+            'message': 'Booking not found'
+        }), 404
+
+    pickup_date, dropoff_date = (
+        get_booking_dates(booking)
+    )
+
+    if not pickup_date or not dropoff_date:
+        return jsonify({
+            'message': (
+                'Booking does not have valid '
+                'pickup and return dates'
+            )
+        }), 400
+
+    drivers = (
+        User.query
+        .filter_by(
+            role='driver',
+            is_active=True
+        )
+        .order_by(User.name.asc())
+        .all()
+    )
 
     result = []
 
     for driver in drivers:
 
-        status = (
+        # General driver status check.
+        #
+        # We only reject explicitly inactive/banned
+        # statuses. Schedule availability is checked
+        # separately below.
+        driver_status = (
             getattr(driver, 'status', None)
             or 'available'
-        )
+        ).lower()
 
-        if status.lower() != 'available':
+        if driver_status in [
+            'inactive',
+            'unavailable',
+            'suspended'
+        ]:
+            continue
+
+        # ----------------------------------------------------
+        # DATE-SCHEDULE CHECK
+        # ----------------------------------------------------
+
+        if driver_has_overlapping_assignment(
+            driver.id,
+            pickup_date,
+            dropoff_date,
+            exclude_booking_id=booking.id
+        ):
             continue
 
         result.append(
@@ -320,11 +495,20 @@ def create_driver_assignment():
 
     data = request.get_json() or {}
 
-    # User currently making the assignment
-    staff_user_id = int(get_jwt_identity())
+    staff_user_id = int(
+        get_jwt_identity()
+    )
 
-    booking_id = data.get('booking_id')
-    driver_id = data.get('driver_id')
+    # Support both frontend naming styles.
+    booking_id = (
+        data.get('booking_id')
+        or data.get('bookingId')
+    )
+
+    driver_id = (
+        data.get('driver_id')
+        or data.get('driverId')
+    )
 
     if not booking_id or not driver_id:
 
@@ -334,11 +518,9 @@ def create_driver_assignment():
             )
         }), 400
 
-    # --------------------------------------------------------
-    # Check booking
-    # --------------------------------------------------------
-
-    booking = Booking.query.get(booking_id)
+    booking = Booking.query.get(
+        int(booking_id)
+    )
 
     if not booking:
 
@@ -346,11 +528,9 @@ def create_driver_assignment():
             'message': 'Booking not found'
         }), 404
 
-    # --------------------------------------------------------
-    # Check driver
-    # --------------------------------------------------------
-
-    driver = User.query.get(driver_id)
+    driver = User.query.get(
+        int(driver_id)
+    )
 
     if not driver:
 
@@ -365,43 +545,86 @@ def create_driver_assignment():
         }), 400
 
     # --------------------------------------------------------
-    # Check existing assignment
+    # Booking must have a valid rental period
     # --------------------------------------------------------
 
-    existing = DriverAssignment.query.filter_by(
-        booking_id=booking_id
-    ).first()
+    pickup_date, dropoff_date = (
+        get_booking_dates(booking)
+    )
+
+    if not pickup_date or not dropoff_date:
+
+        return jsonify({
+            'message': (
+                'Booking does not have valid '
+                'pickup and return dates'
+            )
+        }), 400
+
+    # --------------------------------------------------------
+    # Check existing assignment for this booking
+    # --------------------------------------------------------
+
+    existing = (
+        DriverAssignment.query
+        .filter_by(booking_id=booking.id)
+        .first()
+    )
 
     if existing:
 
         return jsonify({
             'message': (
-                'Driver already assigned to this booking'
+                'Driver already assigned to '
+                'this booking'
             )
         }), 400
 
     # --------------------------------------------------------
-    # Check driver availability
+    # Check general driver status
     # --------------------------------------------------------
 
     driver_status = (
         getattr(driver, 'status', None)
         or 'available'
-    )
+    ).lower()
 
-    if driver_status.lower() != 'available':
+    if driver_status in [
+        'inactive',
+        'unavailable',
+        'suspended'
+    ]:
 
         return jsonify({
-            'message': 'Driver is not available'
+            'message': (
+                'Driver is not available for assignments'
+            )
         }), 400
 
     # --------------------------------------------------------
-    # Create assignment
+    # CHECK DRIVER SCHEDULE
+    # --------------------------------------------------------
+
+    if driver_has_overlapping_assignment(
+        driver.id,
+        pickup_date,
+        dropoff_date
+    ):
+
+        return jsonify({
+            'message': (
+                'Driver is already assigned to '
+                'another booking during these dates'
+            )
+        }), 400
+
+    # --------------------------------------------------------
+    # CREATE ASSIGNMENT
     # --------------------------------------------------------
 
     assignment = DriverAssignment(
-        booking_id=booking_id,
-        driver_id=driver_id,
+        booking_id=booking.id,
+        driver_id=driver.id,
         status='assigned',
         assigned_by_id=staff_user_id
     )
@@ -409,20 +632,21 @@ def create_driver_assignment():
     db.session.add(assignment)
 
     # --------------------------------------------------------
-    # Update booking
+    # UPDATE BOOKING
     # --------------------------------------------------------
 
-    booking.driver_id = driver_id
+    booking.driver_id = driver.id
+
+    # IMPORTANT:
+    #
+    # Do NOT set driver.status = 'busy'.
+    #
+    # Driver availability is date-based and is
+    # determined from DriverAssignment + Booking dates.
+    #
 
     # --------------------------------------------------------
-    # Update driver status
-    # --------------------------------------------------------
-
-    if hasattr(driver, 'status'):
-        driver.status = 'busy'
-
-    # --------------------------------------------------------
-    # Notify driver
+    # NOTIFY DRIVER
     # --------------------------------------------------------
 
     create_notification(
@@ -436,7 +660,7 @@ def create_driver_assignment():
     )
 
     # --------------------------------------------------------
-    # Notify customer
+    # NOTIFY CUSTOMER
     # --------------------------------------------------------
 
     if booking.user_id:
@@ -451,7 +675,7 @@ def create_driver_assignment():
         )
 
     # --------------------------------------------------------
-    # Save
+    # SAVE
     # --------------------------------------------------------
 
     try:
@@ -474,15 +698,24 @@ def create_driver_assignment():
 
     return jsonify({
 
-        'message': 'Driver assigned successfully',
+        'message': (
+            'Driver assigned successfully'
+        ),
 
         'assignment': {
             'id': assignment.id,
             '_id': str(assignment.id),
+
             'bookingId': booking.id,
+
             'driverId': driver.id,
+
             'status': assignment.status,
-            'assignedById': assignment.assigned_by_id,
+
+            'assignedById': (
+                assignment.assigned_by_id
+            ),
+
             'assignedAt': (
                 assignment.assigned_at.isoformat()
                 if assignment.assigned_at
@@ -510,15 +743,22 @@ def create_driver_assignment():
     methods=['PATCH']
 )
 @role_required('driver')
-def accept_driver_assignment(assignment_id):
+def accept_driver_assignment(
+    assignment_id
+):
 
-    driver_user_id = int(get_jwt_identity())
+    driver_user_id = int(
+        get_jwt_identity()
+    )
 
-    # Only the driver who was assigned can accept it
-    assignment = DriverAssignment.query.filter_by(
-        id=assignment_id,
-        driver_id=driver_user_id
-    ).first()
+    assignment = (
+        DriverAssignment.query
+        .filter_by(
+            id=assignment_id,
+            driver_id=driver_user_id
+        )
+        .first()
+    )
 
     if not assignment:
 
@@ -526,7 +766,6 @@ def accept_driver_assignment(assignment_id):
             'message': 'Assignment not found'
         }), 404
 
-    # Assignment must still be waiting for acceptance
     if assignment.status != 'assigned':
 
         return jsonify({
@@ -537,14 +776,10 @@ def accept_driver_assignment(assignment_id):
             )
         }), 400
 
-    # --------------------------------------------------------
-    # Accept assignment
-    # --------------------------------------------------------
-
     assignment.status = 'accepted'
 
     # --------------------------------------------------------
-    # Notify staff member who assigned the driver
+    # Notify staff member
     # --------------------------------------------------------
 
     if assignment.assigned_by_id:
@@ -568,10 +803,6 @@ def accept_driver_assignment(assignment_id):
             )
         )
 
-    # --------------------------------------------------------
-    # Save
-    # --------------------------------------------------------
-
     try:
 
         db.session.commit()
@@ -591,11 +822,8 @@ def accept_driver_assignment(assignment_id):
         }), 500
 
     return jsonify({
-
         'message': (
             'Assignment accepted successfully'
         ),
-
         'assignment': assignment.to_dict()
-
     }), 200

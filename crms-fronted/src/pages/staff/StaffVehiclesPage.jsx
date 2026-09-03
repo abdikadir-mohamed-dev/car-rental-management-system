@@ -1,26 +1,18 @@
 import { useState, useEffect } from 'react'
 import {
   Search,
-  Wrench,
-  CheckCircle,
-  XCircle,
+  Eye,
+  X,
 } from 'lucide-react'
 import { getVehicles } from '../../services/vehicleService'
-import { flagVehicleMaintenance } from '../../services/maintenanceService'
 import { mapVehicle } from '../../utils/apiMappers'
-import toast from 'react-hot-toast'
 
 function StaffVehiclesPage() {
   const [vehicles, setVehicles] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [search, setSearch] = useState('')
-  const [showMaintenanceOnly, setShowMaintenanceOnly] = useState(false)
-
   const [selectedVehicle, setSelectedVehicle] = useState(null)
-  const [maintenanceNotes, setMaintenanceNotes] = useState('')
-  const [maintenancePriority, setMaintenancePriority] = useState('Medium')
-  const [submittingMaintenance, setSubmittingMaintenance] = useState(false)
 
   // =========================================================
   // LOAD VEHICLES
@@ -35,16 +27,9 @@ function StaffVehiclesPage() {
         const data = await getVehicles()
 
         setVehicles(
-          (data || []).map(v => ({
-            ...mapVehicle(v),
-
-            // Use backend vehicle status to determine
-            // whether the vehicle is already in maintenance.
-            maintenance:
-              v.status === 'maintenance' ||
-              v.status === 'under_maintenance',
-
-            maintenanceNotes: '',
+          (data || []).map((vehicle) => ({
+            ...mapVehicle(vehicle),
+            rawVehicle: vehicle,
           }))
         )
       } catch (err) {
@@ -67,148 +52,36 @@ function StaffVehiclesPage() {
   // FILTER VEHICLES
   // =========================================================
 
-  const filteredVehicles = vehicles.filter(vehicle => {
-    const searchTerm = search.toLowerCase()
+  const filteredVehicles = vehicles.filter((vehicle) => {
+    const searchTerm = search.toLowerCase().trim()
 
-    const matchesSearch =
+    if (!searchTerm) {
+      return true
+    }
+
+    return (
       vehicle.name?.toLowerCase().includes(searchTerm) ||
       vehicle.brand?.toLowerCase().includes(searchTerm) ||
+      vehicle.model?.toLowerCase().includes(searchTerm) ||
+      vehicle.category?.toLowerCase().includes(searchTerm) ||
       vehicle.location?.toLowerCase().includes(searchTerm)
-
-    const matchesFilter =
-      !showMaintenanceOnly || vehicle.maintenance
-
-    return matchesSearch && matchesFilter
+    )
   })
 
   // =========================================================
-  // OPEN MAINTENANCE MODAL
+  // OPEN VEHICLE DETAILS
   // =========================================================
 
-  const handleFlagMaintenance = vehicle => {
+  const handleViewVehicle = (vehicle) => {
     setSelectedVehicle(vehicle)
-    setMaintenanceNotes(vehicle.maintenanceNotes || '')
-    setMaintenancePriority('Medium')
   }
 
   // =========================================================
-  // CONFIRM MAINTENANCE
+  // CLOSE VEHICLE DETAILS
   // =========================================================
 
-  const confirmMaintenance = async () => {
-    if (!selectedVehicle) {
-      return
-    }
-
-    const issue = maintenanceNotes.trim()
-
-    if (!issue) {
-      toast.error('Please describe the maintenance issue')
-      return
-    }
-
-    try {
-      setSubmittingMaintenance(true)
-
-      const response = await flagVehicleMaintenance(
-        selectedVehicle.id,
-        {
-          issue,
-          priority: maintenancePriority,
-        }
-      )
-
-      console.log(
-        'Vehicle maintenance created:',
-        response
-      )
-
-      // Update local UI only after backend succeeds.
-      setVehicles(prevVehicles =>
-        prevVehicles.map(vehicle =>
-          vehicle.id === selectedVehicle.id
-            ? {
-                ...vehicle,
-                maintenance: true,
-                maintenanceNotes: issue,
-                available: false,
-                status: 'maintenance',
-              }
-            : vehicle
-        )
-      )
-
-      toast.success(
-        `${selectedVehicle.name} flagged for maintenance`
-      )
-
-      setSelectedVehicle(null)
-      setMaintenanceNotes('')
-      setMaintenancePriority('Medium')
-
-    } catch (err) {
-      console.error(
-        'Failed to flag vehicle maintenance:',
-        err
-      )
-
-      toast.error(
-        err.response?.data?.message ||
-        'Failed to flag vehicle for maintenance'
-      )
-
-    } finally {
-      setSubmittingMaintenance(false)
-    }
-  }
-
-  // =========================================================
-  // CLOSE MODAL
-  // =========================================================
-
-  const closeMaintenanceModal = () => {
-    if (submittingMaintenance) {
-      return
-    }
-
+  const closeVehicleDetails = () => {
     setSelectedVehicle(null)
-    setMaintenanceNotes('')
-    setMaintenancePriority('Medium')
-  }
-
-  // =========================================================
-  // RELEASE VEHICLE
-  // =========================================================
-
-  const releaseMaintenance = vehicleId => {
-    /*
-     * NOTE:
-     * The current backend does not yet have a release-maintenance
-     * endpoint. Therefore, we should NOT pretend this is persisted
-     * in the database.
-     *
-     * For now this only changes the frontend state.
-     *
-     * We can add the proper backend release endpoint next.
-     */
-
-    setVehicles(prevVehicles =>
-      prevVehicles.map(vehicle =>
-        vehicle.id === vehicleId
-          ? {
-              ...vehicle,
-              maintenance: false,
-              maintenanceNotes: '',
-              available: true,
-              status: 'available',
-            }
-          : vehicle
-      )
-    )
-
-    toast.success(
-      'Vehicle released back to available pool'
-    )
   }
 
   // =========================================================
@@ -217,7 +90,7 @@ function StaffVehiclesPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[200px]">
+      <div className="flex items-center justify-center min-h-[300px]">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     )
@@ -230,9 +103,18 @@ function StaffVehiclesPage() {
   if (error) {
     return (
       <div className="text-center py-12">
-        <p className="text-slate-500">
-          {error}
-        </p>
+        <div className="card p-6 max-w-lg mx-auto">
+          <p className="text-red-600 mb-4">
+            {error}
+          </p>
+
+          <button
+            onClick={() => window.location.reload()}
+            className="btn-primary"
+          >
+            Retry
+          </button>
+        </div>
       </div>
     )
   }
@@ -248,16 +130,14 @@ function StaffVehiclesPage() {
           HEADER
       ====================================================== */}
 
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">
-            Vehicles
-          </h1>
+      <div>
+        <h1 className="text-2xl font-bold text-slate-900">
+          Vehicles
+        </h1>
 
-          <p className="text-slate-600">
-            Manage fleet and flag vehicles for maintenance
-          </p>
-        </div>
+        <p className="text-slate-600 mt-1">
+          View fleet vehicles and their availability
+        </p>
       </div>
 
       {/* =====================================================
@@ -266,41 +146,22 @@ function StaffVehiclesPage() {
 
       <div className="card p-6">
 
-        {/* SEARCH + FILTER */}
+        {/* SEARCH */}
 
-        <div className="flex flex-col sm:flex-row gap-4 mb-4">
+        <div className="mb-6">
+          <div className="relative">
 
-          <div className="relative flex-1">
-
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
 
             <input
               type="text"
-              placeholder="Search by name, brand, or location..."
+              placeholder="Search by name, brand, model, category, or location..."
               value={search}
-              onChange={e => setSearch(e.target.value)}
+              onChange={(e) => setSearch(e.target.value)}
               className="input pl-10"
             />
 
           </div>
-
-          <button
-            onClick={() =>
-              setShowMaintenanceOnly(!showMaintenanceOnly)
-            }
-            className={`btn-secondary flex items-center gap-2 ${
-              showMaintenanceOnly
-                ? 'bg-amber-50 border-amber-200'
-                : ''
-            }`}
-          >
-            <Wrench className="w-4 h-4" />
-
-            {showMaintenanceOnly
-              ? 'Show All Vehicles'
-              : 'Show Maintenance Only'}
-          </button>
-
         </div>
 
         {/* VEHICLE TABLE */}
@@ -341,92 +202,106 @@ function StaffVehiclesPage() {
 
             <tbody>
 
-              {filteredVehicles.map(vehicle => (
+              {filteredVehicles.map((vehicle) => (
 
                 <tr
-                  key={vehicle.id}
-                  className={`border-b border-slate-100 hover:bg-slate-50 ${
-                    vehicle.maintenance
-                      ? 'bg-amber-50'
-                      : ''
-                  }`}
+                  key={vehicle.id ?? vehicle._id}
+                  className="border-b border-slate-100 hover:bg-slate-50"
                 >
 
-                  <td className="py-3 px-4 text-slate-900 font-medium">
-                    {vehicle.name}
-                  </td>
-
-                  <td className="py-3 px-4 text-slate-600">
-                    {vehicle.brand}
-                  </td>
-
-                  <td className="py-3 px-4 text-slate-600">
-                    {vehicle.category}
-                  </td>
-
-                  <td className="py-3 px-4 text-slate-600">
-                    {vehicle.location}
-                  </td>
+                  {/* VEHICLE */}
 
                   <td className="py-3 px-4">
 
-                    {vehicle.maintenance ? (
+                    <div className="flex items-center gap-3">
 
-                      <span className="badge badge-warning">
-                        Maintenance
-                      </span>
-
-                    ) : (
-
-                      <span
-                        className={`badge ${
-                          vehicle.available
-                            ? 'badge-success'
-                            : 'badge-danger'
-                        }`}
-                      >
-                        {vehicle.available
-                          ? 'Available'
-                          : 'Unavailable'}
-                      </span>
-
-                    )}
-
-                  </td>
-
-                  <td className="py-3 px-4">
-
-                    <div className="flex gap-2">
-
-                      {!vehicle.maintenance ? (
-
-                        <button
-                          onClick={() =>
-                            handleFlagMaintenance(vehicle)
+                      {vehicle.image || vehicle.images?.[0] ? (
+                        <img
+                          src={
+                            vehicle.image ||
+                            vehicle.images?.[0]
                           }
-                          className="btn-danger text-sm px-3 py-1 flex items-center gap-1"
-                        >
-                          <Wrench className="w-4 h-4" />
-
-                          Flag Maintenance
-                        </button>
-
+                          alt={vehicle.name || 'Vehicle'}
+                          className="w-14 h-14 object-cover rounded-lg"
+                        />
                       ) : (
-
-                        <button
-                          onClick={() =>
-                            releaseMaintenance(vehicle.id)
-                          }
-                          className="btn-primary text-sm px-3 py-1 flex items-center gap-1"
-                        >
-                          <CheckCircle className="w-4 h-4" />
-
-                          Release
-                        </button>
-
+                        <div className="w-14 h-14 rounded-lg bg-slate-100 flex items-center justify-center">
+                          <span className="text-xs text-slate-400">
+                            No Image
+                          </span>
+                        </div>
                       )}
 
+                      <div>
+
+                        <p className="font-medium text-slate-900">
+                          {vehicle.name || 'Unnamed Vehicle'}
+                        </p>
+
+                        {vehicle.model && (
+                          <p className="text-sm text-slate-500">
+                            {vehicle.model}
+                          </p>
+                        )}
+
+                      </div>
+
                     </div>
+
+                  </td>
+
+                  {/* BRAND */}
+
+                  <td className="py-3 px-4 text-slate-600">
+                    {vehicle.brand || '—'}
+                  </td>
+
+                  {/* CATEGORY */}
+
+                  <td className="py-3 px-4 text-slate-600 capitalize">
+                    {vehicle.category || vehicle.type || '—'}
+                  </td>
+
+                  {/* LOCATION */}
+
+                  <td className="py-3 px-4 text-slate-600">
+                    {vehicle.location || '—'}
+                  </td>
+
+                  {/* STATUS */}
+
+                  <td className="py-3 px-4">
+
+                    <span
+                      className={`badge ${
+                        vehicle.available
+                          ? 'badge-success'
+                          : 'badge-danger'
+                      }`}
+                    >
+                      {vehicle.available
+                        ? 'Available'
+                        : 'Unavailable'}
+                    </span>
+
+                  </td>
+
+                  {/* ACTIONS */}
+
+                  <td className="py-3 px-4">
+
+                    <button
+                      onClick={() =>
+                        handleViewVehicle(vehicle)
+                      }
+                      className="btn-secondary text-sm px-3 py-2 flex items-center gap-2"
+                    >
+
+                      <Eye className="w-4 h-4" />
+
+                      View
+
+                    </button>
 
                   </td>
 
@@ -438,10 +313,16 @@ function StaffVehiclesPage() {
 
           </table>
 
+          {/* EMPTY STATE */}
+
           {filteredVehicles.length === 0 && (
-            <p className="text-center text-slate-500 py-8">
-              No vehicles found.
-            </p>
+            <div className="text-center py-10">
+
+              <p className="text-slate-500">
+                No vehicles found.
+              </p>
+
+            </div>
           )}
 
         </div>
@@ -449,159 +330,261 @@ function StaffVehiclesPage() {
       </div>
 
       {/* =====================================================
-          MAINTENANCE MODAL
+          VEHICLE DETAILS MODAL
       ====================================================== */}
 
       {selectedVehicle && (
 
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
 
-          <div className="bg-white rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
 
             {/* MODAL HEADER */}
 
-            <div className="p-6 border-b border-slate-200 flex items-center justify-between">
+            <div className="flex items-center justify-between p-6 border-b border-slate-200">
 
-              <h3 className="text-lg font-semibold text-slate-900">
-                Flag for Maintenance
-              </h3>
+              <div>
+
+                <h2 className="text-xl font-semibold text-slate-900">
+                  Vehicle Details
+                </h2>
+
+                <p className="text-sm text-slate-500 mt-1">
+                  Vehicle information
+                </p>
+
+              </div>
 
               <button
-                onClick={closeMaintenanceModal}
-                disabled={submittingMaintenance}
-                className="text-slate-400 hover:text-slate-600 disabled:opacity-50"
+                onClick={closeVehicleDetails}
+                className="p-2 hover:bg-slate-100 rounded-lg"
               >
-                <XCircle className="w-5 h-5" />
+                <X className="w-5 h-5 text-slate-500" />
               </button>
 
             </div>
 
             {/* MODAL BODY */}
 
-            <div className="p-6 space-y-4">
+            <div className="p-6 space-y-6">
 
-              <div className="grid grid-cols-2 gap-4">
+              {/* IMAGE */}
 
-                <div>
-                  <p className="text-sm text-slate-500">
-                    Vehicle
-                  </p>
+              <div className="flex justify-center">
 
-                  <p className="font-medium text-slate-900">
-                    {selectedVehicle.name}
-                  </p>
-                </div>
+                {selectedVehicle.image ||
+                selectedVehicle.images?.[0] ? (
 
-                <div>
-                  <p className="text-sm text-slate-500">
-                    Brand
-                  </p>
+                  <img
+                    src={
+                      selectedVehicle.image ||
+                      selectedVehicle.images?.[0]
+                    }
+                    alt={
+                      selectedVehicle.name ||
+                      'Vehicle'
+                    }
+                    className="w-full max-w-md h-56 object-cover rounded-xl"
+                  />
 
-                  <p className="font-medium text-slate-900">
-                    {selectedVehicle.brand}
-                  </p>
-                </div>
+                ) : (
 
-                <div>
-                  <p className="text-sm text-slate-500">
-                    Category
-                  </p>
+                  <div className="w-full max-w-md h-56 rounded-xl bg-slate-100 flex items-center justify-center">
 
-                  <p className="font-medium text-slate-900">
-                    {selectedVehicle.category}
-                  </p>
-                </div>
+                    <span className="text-slate-400">
+                      No vehicle image
+                    </span>
 
-                <div>
-                  <p className="text-sm text-slate-500">
-                    Location
-                  </p>
+                  </div>
 
-                  <p className="font-medium text-slate-900">
-                    {selectedVehicle.location}
-                  </p>
+                )}
+
+              </div>
+
+              {/* BASIC INFORMATION */}
+
+              <div>
+
+                <h3 className="text-lg font-semibold text-slate-900 mb-4">
+                  Vehicle Information
+                </h3>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+
+                  <DetailItem
+                    label="Vehicle"
+                    value={
+                      selectedVehicle.name ||
+                      '—'
+                    }
+                  />
+
+                  <DetailItem
+                    label="Brand"
+                    value={
+                      selectedVehicle.brand ||
+                      '—'
+                    }
+                  />
+
+                  <DetailItem
+                    label="Model"
+                    value={
+                      selectedVehicle.model ||
+                      '—'
+                    }
+                  />
+
+                  <DetailItem
+                    label="Type"
+                    value={
+                      selectedVehicle.category ||
+                      selectedVehicle.type ||
+                      '—'
+                    }
+                  />
+
+                  <DetailItem
+                    label="Year"
+                    value={
+                      selectedVehicle.year ||
+                      '—'
+                    }
+                  />
+
+                  <DetailItem
+                    label="Seats"
+                    value={
+                      selectedVehicle.seats ||
+                      '—'
+                    }
+                  />
+
+                  <DetailItem
+                    label="Transmission"
+                    value={
+                      selectedVehicle.transmission ||
+                      '—'
+                    }
+                  />
+
+                  <DetailItem
+                    label="Fuel Type"
+                    value={
+                      selectedVehicle.fuelType ||
+                      '—'
+                    }
+                  />
+
+                  <DetailItem
+                    label="Location"
+                    value={
+                      selectedVehicle.location ||
+                      '—'
+                    }
+                  />
+
+                  <DetailItem
+                    label="Price Per Day"
+                    value={
+                      selectedVehicle.pricePerDay !==
+                      undefined &&
+                      selectedVehicle.pricePerDay !==
+                      null
+                        ? `KES ${Number(
+                            selectedVehicle.pricePerDay
+                          ).toLocaleString()}`
+                        : '—'
+                    }
+                  />
+
                 </div>
 
               </div>
 
-              {/* ISSUE */}
+              {/* STATUS */}
 
-              <div>
+              <div className="border-t border-slate-200 pt-5">
 
-                <label className="label">
-                  Maintenance Issue
-                </label>
+                <h3 className="text-lg font-semibold text-slate-900 mb-3">
+                  Availability
+                </h3>
 
-                <textarea
-                  value={maintenanceNotes}
-                  onChange={e =>
-                    setMaintenanceNotes(e.target.value)
-                  }
-                  className="input"
-                  rows="3"
-                  placeholder="Describe the maintenance issue..."
-                  disabled={submittingMaintenance}
-                />
-
-              </div>
-
-              {/* PRIORITY */}
-
-              <div>
-
-                <label className="label">
-                  Priority
-                </label>
-
-                <select
-                  value={maintenancePriority}
-                  onChange={e =>
-                    setMaintenancePriority(e.target.value)
-                  }
-                  className="input"
-                  disabled={submittingMaintenance}
+                <span
+                  className={`badge ${
+                    selectedVehicle.available
+                      ? 'badge-success'
+                      : 'badge-danger'
+                  }`}
                 >
-                  <option value="Low">
-                    Low
-                  </option>
-
-                  <option value="Medium">
-                    Medium
-                  </option>
-
-                  <option value="High">
-                    High
-                  </option>
-                </select>
+                  {selectedVehicle.available
+                    ? 'Available'
+                    : 'Unavailable'}
+                </span>
 
               </div>
+
+              {/* FEATURES */}
+
+              {selectedVehicle.features &&
+                selectedVehicle.features.length > 0 && (
+
+                  <div className="border-t border-slate-200 pt-5">
+
+                    <h3 className="text-lg font-semibold text-slate-900 mb-3">
+                      Features
+                    </h3>
+
+                    <div className="flex flex-wrap gap-2">
+
+                      {selectedVehicle.features.map(
+                        (feature, index) => (
+
+                          <span
+                            key={`${feature}-${index}`}
+                            className="px-3 py-1.5 bg-slate-100 text-slate-700 rounded-lg text-sm"
+                          >
+                            {feature}
+                          </span>
+
+                        )
+                      )}
+
+                    </div>
+
+                  </div>
+
+                )}
+
+              {/* DESCRIPTION */}
+
+              {selectedVehicle.description && (
+
+                <div className="border-t border-slate-200 pt-5">
+
+                  <h3 className="text-lg font-semibold text-slate-900 mb-2">
+                    Description
+                  </h3>
+
+                  <p className="text-slate-600 leading-relaxed">
+                    {selectedVehicle.description}
+                  </p>
+
+                </div>
+
+              )}
 
             </div>
 
             {/* MODAL FOOTER */}
 
-            <div className="p-6 border-t border-slate-200 flex justify-end gap-3">
+            <div className="p-6 border-t border-slate-200 flex justify-end">
 
               <button
-                onClick={closeMaintenanceModal}
-                disabled={submittingMaintenance}
+                onClick={closeVehicleDetails}
                 className="btn-secondary"
               >
-                Cancel
-              </button>
-
-              <button
-                onClick={confirmMaintenance}
-                disabled={submittingMaintenance}
-                className="btn-danger flex items-center gap-2 disabled:opacity-50"
-              >
-
-                <Wrench className="w-4 h-4" />
-
-                {submittingMaintenance
-                  ? 'Flagging...'
-                  : 'Flag for Maintenance'}
-
+                Close
               </button>
 
             </div>
@@ -612,6 +595,24 @@ function StaffVehiclesPage() {
 
       )}
 
+    </div>
+  )
+}
+
+// =============================================================
+// DETAIL ITEM
+// =============================================================
+
+function DetailItem({ label, value }) {
+  return (
+    <div>
+      <p className="text-sm text-slate-500">
+        {label}
+      </p>
+
+      <p className="font-medium text-slate-900 mt-1 capitalize">
+        {value}
+      </p>
     </div>
   )
 }

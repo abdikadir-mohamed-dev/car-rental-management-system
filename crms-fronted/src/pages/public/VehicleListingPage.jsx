@@ -4,9 +4,8 @@ import { SlidersHorizontal, Calendar } from 'lucide-react'
 import VehicleCard from '../../components/vehicles/VehicleCard'
 import VehicleFilter from '../../components/vehicles/VehicleFilter'
 import { getVehicles } from '../../services/vehicleService'
-import { getBookings } from '../../services/bookingService'
 import { mapVehicle } from '../../utils/apiMappers'
-import { mapBooking } from '../../utils/apiMappers'
+
 
 function VehicleListingPage() {
   const [searchParams] = useSearchParams()
@@ -29,24 +28,24 @@ function VehicleListingPage() {
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        setLoading(true)
-        setError(null)
-        const [vehiclesData, bookingsData] = await Promise.all([
-          getVehicles(),
-          getBookings(),
-        ])
-        setVehicles((vehiclesData || []).map(mapVehicle))
-        setBookings((bookingsData || []).map(mapBooking))
-      } catch (err) {
-        setError(err.message || 'Failed to load data')
-      } finally {
-        setLoading(false)
-      }
+  const loadData = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      const vehiclesData = await getVehicles()
+
+      setVehicles((vehiclesData || []).map(mapVehicle))
+      setBookings([])
+    } catch (err) {
+      setError(err.message || 'Failed to load vehicles')
+    } finally {
+      setLoading(false)
     }
-    loadData()
-  }, [])
+  }
+
+  loadData()
+}, [])    
 
   const getBookedVehicleIds = () => {
     if (!pickupDate || !returnDate) return new Set()

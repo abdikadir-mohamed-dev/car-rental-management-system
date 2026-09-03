@@ -10,6 +10,7 @@ import {
 
 import { getVehicle } from '../../services/vehicleService'
 import { createBooking } from '../../services/bookingService'
+import { createPayment } from '../../services/paymentService'
 import { mapVehicle } from '../../utils/apiMappers'
 
 import toast from 'react-hot-toast'
@@ -30,15 +31,21 @@ function BookingPage() {
   /*
    * Customer chooses only:
    *
-   * self       = customer drives
-   * hire       = customer requests a driver
+   * self = customer drives
+   * hire = customer requests a driver
    *
-   * The customer DOES NOT select a driver.
+   * Customer DOES NOT select a driver.
    * Staff will assign an available driver later.
    */
   const [drivingOption, setDrivingOption] = useState('self')
 
-  // Payment UI
+  /*
+   * PAYMENT
+   *
+   * card  = coming soon
+   * mpesa = M-Pesa STK Push
+   * cash  = pay at pickup
+   */
   const [paymentMethod, setPaymentMethod] = useState('cash')
   const [customerPhone, setCustomerPhone] = useState('')
 
@@ -151,14 +158,10 @@ function BookingPage() {
   /*
    * DRIVER COST
    *
-   * IMPORTANT:
+   * Customer does not select a driver.
    *
-   * The customer does not select a driver.
-   *
-   * If your backend/rental policy has a fixed driver
-   * charge, you can add it here later.
-   *
-   * For now the booking total is the vehicle cost.
+   * If the backend/rental policy has a fixed
+   * driver charge, it can be added here later.
    */
   const driverCost = 0
 
@@ -217,6 +220,29 @@ function BookingPage() {
       return
     }
 
+    /*
+     * M-Pesa requires a phone number
+     */
+    if (
+      paymentMethod === 'mpesa' &&
+      !customerPhone.trim()
+    ) {
+      toast.error(
+        'Please enter your M-Pesa phone number'
+      )
+      return
+    }
+
+    /*
+     * Card is not implemented yet
+     */
+    if (paymentMethod === 'card') {
+      toast.error(
+        'Card payments are coming soon. Please choose M-Pesa or Cash.'
+      )
+      return
+    }
+
     setProcessing(true)
 
     try {
@@ -234,11 +260,8 @@ function BookingPage() {
       /*
        * BOOKING PAYLOAD
        *
-       * Notice:
-       *
-       * driverId is NOT sent.
-       *
-       * Staff will assign the driver later.
+       * driverId is NOT selected by customer.
+       * Staff assigns a driver later.
        */
       const bookingData = {
         vehicleId: Number(vehicleId),
@@ -259,11 +282,6 @@ function BookingPage() {
         drivingOption:
           backendDrivingOption,
 
-        /*
-         * No driver selected by customer.
-         *
-         * Backend can keep this NULL.
-         */
         driverId: null,
       }
 
@@ -273,7 +291,10 @@ function BookingPage() {
       )
 
       /*
+       * -----------------------------------------
+       * STEP 1
        * CREATE REAL BOOKING
+       * -----------------------------------------
        */
       const booking =
         await createBooking(bookingData)
@@ -297,30 +318,130 @@ function BookingPage() {
       }
 
       /*
+       /*
+ * -----------------------------------------
+ * STEP 2
+ * CREATE PAYMENT
+ * -----------------------------------------
+ *
+ * CASH:
+ * Creates a pending cash payment.
+ * Staff receives and confirms the cash at checkout.
+ *
+ * M-PESA:
+ * Creates a pending payment and sends
+ * an STK Push through Safaricom.
+ *
+ * M-Pesa becomes completed ONLY after
+ * the Safaricom callback.
+ */
+
+if (paymentMethod === 'mpesa') {
+  console.log(
+    'Initiating M-Pesa payment...',
+    {
+      bookingId: createdBookingId,
+      amount: Math.round(totalPrice),
+      phoneNumber: customerPhone.trim(),
+    }
+  )
+
+  toast.loading(
+    'Sending M-Pesa prompt...',
+    {
+      id: 'mpesa-payment',
+    }
+  )
+
+  const payment = await createPayment({
+    bookingId: createdBookingId,
+    amount: Math.round(totalPrice),
+    phoneNumber: customerPhone.trim(),
+    method: 'mpesa',
+  })
+
+  console.log(
+    'M-Pesa payment initiated:',
+    payment
+  )
+
+  toast.success(
+    'M-Pesa prompt sent to your phone. Enter your PIN to complete the payment.',
+    {
+      id: 'mpesa-payment',
+      duration: 6000,
+    }
+  )
+}
+
+if (paymentMethod === 'cash') {
+  console.log(
+    'Creating pending cash payment...',
+    {
+      bookingId: createdBookingId,
+      amount: Math.round(totalPrice),
+    }
+  )
+
+  const payment = await createPayment({
+    bookingId: createdBookingId,
+    amount: Math.round(totalPrice),
+    method: 'cash',
+  })
+
+  console.log(
+    'Cash payment created:',
+    payment
+  )
+
+  toast.success(
+    'Booking submitted. Cash payment will be confirmed when you pay at pickup.'
+  )
+}
+
+      /*
+       * -----------------------------------------
+       * STEP 3
        * SAVE BOOKING ID
+       * -----------------------------------------
        */
       setBookingId(
         String(createdBookingId)
       )
 
       /*
+       * -----------------------------------------
+       * STEP 4
        * SHOW CONFIRMATION
+       * -----------------------------------------
        */
       setConfirmed(true)
 
-      toast.success(
-        'Booking submitted successfully!'
-      )
+      /*
+       * Different confirmation message
+       * depending on payment method.
+       */
+      if (paymentMethod === 'mpesa') {
+        toast.success(
+          'Booking submitted. Check your phone for the M-Pesa prompt.'
+        )
+      } else if (paymentMethod === 'cash') {
+        toast.success(
+          'Booking submitted successfully!'
+        )
+      }
     } catch (err) {
       console.error(
-        'Booking error:',
+        'Booking/payment error:',
         err
       )
+
+      toast.dismiss('mpesa-payment')
 
       const message =
         err.response?.data?.message ||
         err.message ||
-        'Failed to create booking'
+        'Failed to create booking or payment'
 
       toast.error(message)
     } finally {
@@ -384,9 +505,15 @@ function BookingPage() {
             Booking Submitted!
           </h1>
 
-          <p className="text-slate-600 mb-6">
-            Your booking for {vehicle.name} has been submitted and is awaiting confirmation.
-          </p>
+          {paymentMethod === 'mpesa' ? (
+            <p className="text-slate-600 mb-6">
+              Your booking has been submitted. Check your phone for the M-Pesa prompt and enter your PIN to complete the payment.
+            </p>
+          ) : (
+            <p className="text-slate-600 mb-6">
+              Your booking for {vehicle.name} has been submitted and is awaiting confirmation.
+            </p>
+          )}
 
           <div className="card p-6 text-left space-y-3 mb-6">
 
@@ -488,8 +615,25 @@ function BookingPage() {
                 Payment:
               </span>{' '}
 
-              <span className="font-medium text-amber-600">
+              <span
+                className={`font-medium ${
+                  paymentMethod === 'mpesa'
+                    ? 'text-amber-600'
+                    : 'text-amber-600'
+                }`}
+              >
                 Pending
+              </span>
+            </p>
+
+            {/* PAYMENT METHOD */}
+            <p>
+              <span className="text-slate-600">
+                Payment Method:
+              </span>{' '}
+
+              <span className="font-medium text-slate-900 capitalize">
+                {paymentMethod}
               </span>
             </p>
 
@@ -505,6 +649,18 @@ function BookingPage() {
             </p>
 
           </div>
+
+          {paymentMethod === 'mpesa' && (
+            <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg text-left">
+              <p className="font-medium text-green-800">
+                M-Pesa payment requested
+              </p>
+
+              <p className="text-sm text-green-700 mt-1">
+                Check your phone and enter your M-Pesa PIN. Your payment will remain pending until Safaricom confirms the transaction.
+              </p>
+            </div>
+          )}
 
           <div className="flex gap-3">
 
@@ -826,7 +982,7 @@ function BookingPage() {
                       </p>
 
                       <p className="text-sm text-slate-600">
-                        Payment integration coming soon
+                        Pay securely using M-Pesa STK Push
                       </p>
 
                     </div>
@@ -887,7 +1043,7 @@ function BookingPage() {
                     />
 
                     <p className="text-xs text-slate-500 mt-2">
-                      M-Pesa payment will be connected later.
+                      An M-Pesa STK prompt will be sent to this number.
                     </p>
 
                   </div>
@@ -1050,8 +1206,12 @@ function BookingPage() {
                   disabled={processing}
                 >
                   {processing
-                    ? 'Creating Booking...'
-                    : 'Confirm Booking'}
+                    ? paymentMethod === 'mpesa'
+                      ? 'Sending M-Pesa Prompt...'
+                      : 'Creating Booking...'
+                    : paymentMethod === 'mpesa'
+                      ? 'Pay with M-Pesa'
+                      : 'Confirm Booking'}
                 </button>
 
               </div>

@@ -317,6 +317,7 @@ def change_password():
     if not check_password_hash(user.password_hash, current_password):
         return jsonify({"message": "Current password is incorrect"}), 400
     user.password_hash = generate_password_hash(new_password)
+    user.must_change_password = False
     db.session.commit()
     return jsonify({"message": "Password changed successfully"}), 200
 

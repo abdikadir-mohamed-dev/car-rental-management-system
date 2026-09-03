@@ -31,7 +31,7 @@ function Navbar() {
             <Link to="/" className="text-slate-300 hover:text-white transition-colors text-sm font-medium">Home</Link>
             <Link to="/vehicles" className="text-slate-300 hover:text-white transition-colors text-sm font-medium">Browse Cars</Link>
             <Link to="/locations" className="text-slate-300 hover:text-white transition-colors text-sm font-medium">Locations</Link>
-            <Link to="/deals" className="text-slate-300 hover:text-white transition-colors text-sm font-medium">Deals</Link>
+            
             <Link to="/about" className="text-slate-300 hover:text-white transition-colors text-sm font-medium">About Us</Link>
             <Link to="/contact" className="text-slate-300 hover:text-white transition-colors text-sm font-medium">Contact</Link>
           </div>
@@ -84,7 +84,7 @@ function Navbar() {
               <Link to="/" className="text-slate-300 hover:text-white px-3 py-2 rounded-lg hover:bg-slate-800 text-sm font-medium" onClick={() => setMobileOpen(false)}>Home</Link>
               <Link to="/vehicles" className="text-slate-300 hover:text-white px-3 py-2 rounded-lg hover:bg-slate-800 text-sm font-medium" onClick={() => setMobileOpen(false)}>Browse Cars</Link>
               <Link to="/locations" className="text-slate-300 hover:text-white px-3 py-2 rounded-lg hover:bg-slate-800 text-sm font-medium" onClick={() => setMobileOpen(false)}>Locations</Link>
-              <Link to="/deals" className="text-slate-300 hover:text-white px-3 py-2 rounded-lg hover:bg-slate-800 text-sm font-medium" onClick={() => setMobileOpen(false)}>Deals</Link>
+
               <Link to="/about" className="text-slate-300 hover:text-white px-3 py-2 rounded-lg hover:bg-slate-800 text-sm font-medium" onClick={() => setMobileOpen(false)}>About Us</Link>
               <Link to="/contact" className="text-slate-300 hover:text-white px-3 py-2 rounded-lg hover:bg-slate-800 text-sm font-medium" onClick={() => setMobileOpen(false)}>Contact</Link>
               <div className="border-t border-slate-800 pt-2 mt-2">

@@ -46,6 +46,65 @@ def parse_iso_datetime(value):
     return value
 
 
+def add_booking_details(booking):
+    """
+    Add related vehicle, customer and payment information
+    to a booking response.
+    """
+
+    data = booking.to_dict()
+
+    # --------------------------------------------------------
+    # VEHICLE
+    # --------------------------------------------------------
+
+    vehicle = Vehicle.query.get(booking.vehicle_id)
+
+    data['vehicle'] = (
+        vehicle.to_dict()
+        if vehicle
+        else None
+    )
+
+    # --------------------------------------------------------
+    # CUSTOMER
+    # --------------------------------------------------------
+
+    if booking.user:
+        data['customer'] = {
+            'id': str(booking.user.id),
+            'name': booking.user.name,
+            'email': booking.user.email,
+            'phone': booking.user.phone,
+        }
+    else:
+        data['customer'] = None
+
+    # --------------------------------------------------------
+    # PAYMENT
+    # --------------------------------------------------------
+
+    payment = (
+        Payment.query
+        .filter_by(booking_id=booking.id)
+        .order_by(Payment.created_at.desc())
+        .first()
+    )
+
+    if payment:
+        data['paymentStatus'] = payment.status
+        data['paymentMethod'] = payment.method
+        data['paymentId'] = payment.id
+        data['paymentAmount'] = payment.amount
+    else:
+        data['paymentStatus'] = 'pending'
+        data['paymentMethod'] = None
+        data['paymentId'] = None
+        data['paymentAmount'] = None
+
+    return data
+
+
 # ============================================================
 # GET ALL BOOKINGS
 # ============================================================
@@ -53,26 +112,56 @@ def parse_iso_datetime(value):
 @bp.route('/', methods=['GET'])
 @token_required
 def get_bookings():
+
     status = request.args.get('status')
-    page = int(request.args.get('page', 1))
-    limit = int(request.args.get('limit', 20))
+
+    page = int(
+        request.args.get('page', 1)
+    )
+
+    limit = int(
+        request.args.get('limit', 20)
+    )
+
     offset = (page - 1) * limit
 
-    current_user_id = int(get_jwt_identity())
-    current_user = User.query.get(current_user_id)
+    current_user_id = int(
+        get_jwt_identity()
+    )
+
+    current_user = User.query.get(
+        current_user_id
+    )
 
     query = Booking.query
 
-    if status:
-        query = query.filter_by(status=status)
+    # --------------------------------------------------------
+    # STATUS FILTER
+    # --------------------------------------------------------
 
-    # Customers only see their own bookings
+    if status:
+        query = query.filter_by(
+            status=status
+        )
+
+    # --------------------------------------------------------
+    # CUSTOMER ACCESS
+    # --------------------------------------------------------
+
     if current_user.role == 'customer':
-        query = query.filter_by(user_id=current_user_id)
+        query = query.filter_by(
+            user_id=current_user_id
+        )
+
+    # --------------------------------------------------------
+    # GET BOOKINGS
+    # --------------------------------------------------------
 
     bookings = (
         query
-        .order_by(Booking.created_at.desc())
+        .order_by(
+            Booking.created_at.desc()
+        )
         .limit(limit)
         .offset(offset)
         .all()
@@ -80,40 +169,11 @@ def get_bookings():
 
     result = []
 
-    for b in bookings:
-        data = b.to_dict()
+    for booking in bookings:
 
-        # Vehicle information
-        vehicle = Vehicle.query.get(b.vehicle_id)
-
-        if vehicle:
-            data['vehicle'] = vehicle.to_dict()
-        else:
-            data['vehicle'] = None
-
-        # Customer information
-        if b.user:
-            data['customer'] = {
-                'id': str(b.user.id),
-                'name': b.user.name,
-                'email': b.user.email,
-                'phone': b.user.phone,
-            }
-        else:
-            data['customer'] = None
-
-        # Payment status
-        data['paymentStatus'] = 'pending'
-
-        payment = (
-            Payment.query
-            .filter_by(booking_id=b.id)
-            .order_by(Payment.created_at.desc())
-            .first()
+        data = add_booking_details(
+            booking
         )
-
-        if payment:
-            data['paymentStatus'] = payment.status
 
         result.append(data)
 
@@ -129,12 +189,23 @@ def get_bookings():
 @bp.route('/<int:booking_id>', methods=['GET'])
 @token_required
 def get_booking(booking_id):
-    booking = Booking.query.get_or_404(booking_id)
 
-    current_user_id = int(get_jwt_identity())
-    current_user = User.query.get(current_user_id)
+    booking = Booking.query.get_or_404(
+        booking_id
+    )
 
-    # Customers can only access their own booking
+    current_user_id = int(
+        get_jwt_identity()
+    )
+
+    current_user = User.query.get(
+        current_user_id
+    )
+
+    # --------------------------------------------------------
+    # CUSTOMER ACCESS
+    # --------------------------------------------------------
+
     if (
         current_user.role == 'customer'
         and booking.user_id != current_user_id
@@ -143,45 +214,9 @@ def get_booking(booking_id):
             'message': 'Access denied'
         }), 403
 
-    data = booking.to_dict()
-
-    # Payment status
-    data['paymentStatus'] = 'pending'
-
-    payment = (
-        Payment.query
-        .filter_by(booking_id=booking_id)
-        .order_by(Payment.created_at.desc())
-        .first()
+    data = add_booking_details(
+        booking
     )
-
-    if payment:
-        data['paymentStatus'] = payment.status
-
-    # Vehicle information
-    vehicle = Vehicle.query.get(booking.vehicle_id)
-
-    data['vehicle'] = (
-        vehicle.to_dict()
-        if vehicle
-        else None
-    )
-
-    # Customer information
-    customer = None
-
-    if booking.user_id:
-        customer_row = User.query.get(booking.user_id)
-
-        if customer_row:
-            customer = {
-                'id': str(customer_row.id),
-                'name': customer_row.name,
-                'email': customer_row.email,
-                'phone': customer_row.phone,
-            }
-
-    data['customer'] = customer
 
     return jsonify({
         'booking': data
@@ -195,32 +230,56 @@ def get_booking(booking_id):
 @bp.route('/', methods=['POST'])
 @token_required
 def create_booking():
+
     data = request.get_json() or {}
 
-    vehicle_id = data.get('vehicleId')
-    pickup_date = data.get('pickupDate')
+    vehicle_id = data.get(
+        'vehicleId'
+    )
+
+    pickup_date = data.get(
+        'pickupDate'
+    )
 
     dropoff_date = (
         data.get('returnDate')
         or data.get('dropoffDate')
     )
 
-    pickup_location = data.get('pickupLocation')
+    pickup_location = data.get(
+        'pickupLocation'
+    )
 
     dropoff_location = (
         data.get('returnLocation')
         or data.get('dropoffLocation')
     )
 
-    total_amount = data.get('totalAmount')
-    special_requests = data.get('specialRequests')
+    total_amount = data.get(
+        'totalAmount'
+    )
+
+    special_requests = data.get(
+        'specialRequests'
+    )
 
     driving_option = data.get(
         'drivingOption',
         'self'
     )
 
-    driver_id = data.get('driverId')
+    # --------------------------------------------------------
+    # IMPORTANT:
+    #
+    # Customer DOES NOT select a driver.
+    #
+    # driverId may exist in old frontend requests, but we
+    # deliberately ignore it for customer bookings.
+    #
+    # Staff will assign the driver later.
+    # --------------------------------------------------------
+
+    driver_id = None
 
     # ========================================================
     # REQUIRED FIELDS
@@ -236,6 +295,7 @@ def create_booking():
     ]
 
     if not all(required_fields):
+
         return jsonify({
             'message': 'Missing required fields'
         }), 400
@@ -245,26 +305,58 @@ def create_booking():
     # ========================================================
 
     try:
-        vehicle_id = int(vehicle_id)
-        total_amount = float(total_amount)
+
+        vehicle_id = int(
+            vehicle_id
+        )
+
+        total_amount = float(
+            total_amount
+        )
 
     except (TypeError, ValueError):
+
         return jsonify({
-            'message': 'Invalid vehicle ID or total amount'
+            'message': (
+                'Invalid vehicle ID '
+                'or total amount'
+            )
         }), 400
 
     if total_amount <= 0:
+
         return jsonify({
-            'message': 'Total amount must be greater than zero'
+            'message': (
+                'Total amount must be '
+                'greater than zero'
+            )
         }), 400
+
+    # ========================================================
+    # NORMALIZE DRIVING OPTION
+    # ========================================================
+
+    if driving_option in [
+        'hire',
+        'with_driver'
+    ]:
+
+        driving_option = 'with_driver'
+
+    else:
+
+        driving_option = 'self'
 
     # ========================================================
     # GET VEHICLE
     # ========================================================
 
-    vehicle = Vehicle.query.get(vehicle_id)
+    vehicle = Vehicle.query.get(
+        vehicle_id
+    )
 
     if not vehicle:
+
         return jsonify({
             'available': False,
             'message': 'Vehicle not found'
@@ -277,11 +369,16 @@ def create_booking():
     if (
         not vehicle.is_available
         or not vehicle.available
-        or vehicle.status == 'maintenance'
+        or str(vehicle.status).lower()
+        == 'maintenance'
     ):
+
         return jsonify({
             'available': False,
-            'message': 'Vehicle is currently unavailable'
+            'message': (
+                'Vehicle is currently '
+                'unavailable'
+            )
         }), 404
 
     # ========================================================
@@ -289,6 +386,7 @@ def create_booking():
     # ========================================================
 
     try:
+
         pickup = parse_iso_datetime(
             pickup_date
         )
@@ -298,8 +396,12 @@ def create_booking():
         )
 
     except (ValueError, TypeError):
+
         return jsonify({
-            'message': 'Invalid pickup or return date'
+            'message': (
+                'Invalid pickup '
+                'or return date'
+            )
         }), 400
 
     # ========================================================
@@ -309,13 +411,21 @@ def create_booking():
     now = datetime.utcnow()
 
     if pickup < now:
+
         return jsonify({
-            'message': 'Pickup date/time cannot be in the past'
+            'message': (
+                'Pickup date/time '
+                'cannot be in the past'
+            )
         }), 400
 
     if dropoff <= pickup:
+
         return jsonify({
-            'message': 'Return date must be after pickup date'
+            'message': (
+                'Return date must be '
+                'after pickup date'
+            )
         }), 400
 
     duration_hours = (
@@ -340,22 +450,29 @@ def create_booking():
         )
     )
 
-    min_duration = minimum_days * 24
-    max_duration = maximum_days * 24
+    min_duration = (
+        minimum_days * 24
+    )
+
+    max_duration = (
+        maximum_days * 24
+    )
 
     if duration_hours < min_duration:
+
         return jsonify({
             'message': (
-                f'Minimum rental duration is '
-                f'{minimum_days:g} day(s)'
+                f'Minimum rental duration '
+                f'is {minimum_days:g} day(s)'
             )
         }), 400
 
     if duration_hours > max_duration:
+
         return jsonify({
             'message': (
-                f'Maximum rental duration is '
-                f'{maximum_days:g} day(s)'
+                f'Maximum rental duration '
+                f'is {maximum_days:g} day(s)'
             )
         }), 400
 
@@ -375,6 +492,7 @@ def create_booking():
     ).first()
 
     if conflict:
+
         return jsonify({
             'message': (
                 'Vehicle is already booked '
@@ -382,45 +500,23 @@ def create_booking():
             )
         }), 409
 
+    # ========================================================
+    # CURRENT USER
+    # ========================================================
+
     current_user_id = int(
         get_jwt_identity()
     )
 
-    # ========================================================
-    # DRIVER VALIDATION
-    # ========================================================
+    current_user = User.query.get(
+        current_user_id
+    )
 
-    if driving_option == 'hire':
+    if not current_user:
 
-        if not driver_id:
-            return jsonify({
-                'message': (
-                    'driverId is required when '
-                    'booking with a driver'
-                )
-            }), 400
-
-        try:
-            driver_id = int(driver_id)
-
-        except (TypeError, ValueError):
-            return jsonify({
-                'message': 'Invalid driver ID'
-            }), 400
-
-        driver = User.query.filter_by(
-            id=driver_id,
-            role='driver',
-            is_active=True
-        ).first()
-
-        if not driver:
-            return jsonify({
-                'message': 'Driver not found or unavailable'
-            }), 404
-
-    else:
-        driver_id = None
+        return jsonify({
+            'message': 'User not found'
+        }), 404
 
     # ========================================================
     # CREATE BOOKING
@@ -428,38 +524,53 @@ def create_booking():
 
     booking = Booking(
         user_id=current_user_id,
+
         vehicle_id=vehicle_id,
+
         pickup_location=pickup_location,
+
         dropoff_location=dropoff_location,
+
         pickup_date=pickup,
+
         dropoff_date=dropoff,
+
         total_amount=total_amount,
+
         special_requests=special_requests,
+
         driving_option=driving_option,
-        driver_id=driver_id,
+
+        # IMPORTANT:
+        # Customer does not choose driver.
+        driver_id=None,
+
         status='pending'
     )
 
-    db.session.add(booking)
+    db.session.add(
+        booking
+    )
+
     db.session.flush()
 
     # ========================================================
     # DRIVER ASSIGNMENT
     # ========================================================
-
-    if driving_option == 'hire':
-
-        assignment = DriverAssignment(
-            booking_id=booking.id,
-            driver_id=driver_id,
-            status='pending'
-        )
-
-        db.session.add(assignment)
-
-    current_user = User.query.get(
-        current_user_id
-    )
+    #
+    # We DO NOT assign a driver here.
+    #
+    # If customer requested a driver:
+    #
+    #     driving_option = with_driver
+    #
+    # Staff will later choose an available driver
+    # through the driver assignment endpoint.
+    #
+    # Therefore we intentionally do NOT create a
+    # DriverAssignment here because there is no driver_id yet.
+    #
+    # ========================================================
 
     # ========================================================
     # NOTIFY STAFF
@@ -471,11 +582,15 @@ def create_booking():
     ).all()
 
     for staff in staff_users:
+
         create_notification(
             staff.id,
             'New Booking',
-            f'New booking #{booking.id} '
-            f'created by {current_user.name}.'
+            (
+                f'New booking #{booking.id} '
+                f'created by '
+                f'{current_user.name}.'
+            )
         )
 
     # ========================================================
@@ -485,8 +600,11 @@ def create_booking():
     create_notification(
         booking.user_id,
         'Booking Submitted',
-        f'Your booking #{booking.id} '
-        f'has been submitted and is awaiting confirmation.'
+        (
+            f'Your booking #{booking.id} '
+            f'has been submitted and is '
+            f'awaiting confirmation.'
+        )
     )
 
     db.session.commit()
@@ -495,19 +613,9 @@ def create_booking():
     # RESPONSE
     # ========================================================
 
-    booking_data = booking.to_dict()
-
-    vehicle = Vehicle.query.get(
-        booking.vehicle_id
+    booking_data = add_booking_details(
+        booking
     )
-
-    booking_data['vehicle'] = (
-        vehicle.to_dict()
-        if vehicle
-        else None
-    )
-
-    booking_data['paymentStatus'] = 'pending'
 
     return jsonify({
         'booking': booking_data
@@ -521,6 +629,7 @@ def create_booking():
 @bp.route('/<int:booking_id>', methods=['PUT'])
 @token_required
 def update_booking(booking_id):
+
     booking = Booking.query.get_or_404(
         booking_id
     )
@@ -533,19 +642,27 @@ def update_booking(booking_id):
         current_user_id
     )
 
-    # Customer can only edit their own booking
+    # --------------------------------------------------------
+    # CUSTOMER ACCESS
+    # --------------------------------------------------------
+
     if current_user.role == 'customer':
 
         if booking.user_id != current_user_id:
+
             return jsonify({
                 'message': 'Access denied'
             }), 403
 
-    # Completed/cancelled bookings cannot be modified
+    # --------------------------------------------------------
+    # COMPLETED / CANCELLED
+    # --------------------------------------------------------
+
     if booking.status in [
         'completed',
         'cancelled'
     ]:
+
         return jsonify({
             'message': (
                 'Cannot modify a completed '
@@ -585,6 +702,7 @@ def update_booking(booking_id):
         now = datetime.utcnow()
 
         if pickup < now:
+
             return jsonify({
                 'message': (
                     'Pickup date/time '
@@ -593,6 +711,7 @@ def update_booking(booking_id):
             }), 400
 
         if dropoff <= pickup:
+
             return jsonify({
                 'message': (
                     'Return date must be '
@@ -600,7 +719,10 @@ def update_booking(booking_id):
                 )
             }), 400
 
-        # Check conflicts
+        # ----------------------------------------------------
+        # CHECK CONFLICTS
+        # ----------------------------------------------------
+
         conflict = Booking.query.filter(
             Booking.vehicle_id == booking.vehicle_id,
             Booking.id != booking_id,
@@ -614,6 +736,7 @@ def update_booking(booking_id):
         ).first()
 
         if conflict:
+
             return jsonify({
                 'message': (
                     'Vehicle is already booked '
@@ -625,7 +748,7 @@ def update_booking(booking_id):
         booking.dropoff_date = dropoff
 
     # ========================================================
-    # EDITABLE FIELDS
+    # CUSTOMER EDITABLE FIELDS
     # ========================================================
 
     editable_fields = {
@@ -637,6 +760,7 @@ def update_booking(booking_id):
     for request_field, model_field in editable_fields.items():
 
         if request_field in data:
+
             setattr(
                 booking,
                 model_field,
@@ -659,11 +783,13 @@ def update_booking(booking_id):
         if 'totalAmount' in data:
 
             try:
+
                 amount = float(
                     data['totalAmount']
                 )
 
                 if amount <= 0:
+
                     return jsonify({
                         'message': (
                             'Total amount must '
@@ -676,7 +802,9 @@ def update_booking(booking_id):
             except (TypeError, ValueError):
 
                 return jsonify({
-                    'message': 'Invalid total amount'
+                    'message': (
+                        'Invalid total amount'
+                    )
                 }), 400
 
         # ----------------------------------------------------
@@ -685,21 +813,43 @@ def update_booking(booking_id):
 
         if 'drivingOption' in data:
 
-            booking.driving_option = data[
+            driving_option = data[
                 'drivingOption'
             ]
+
+            if driving_option in [
+                'hire',
+                'with_driver'
+            ]:
+
+                booking.driving_option = (
+                    'with_driver'
+                )
+
+            else:
+
+                booking.driving_option = 'self'
 
         # ----------------------------------------------------
         # DRIVER
         # ----------------------------------------------------
+        #
+        # ONLY STAFF / ADMIN can assign a driver.
+        #
+        # Customer cannot do this.
+        #
+        # ----------------------------------------------------
 
         if 'driverId' in data:
 
-            driver_id = data['driverId']
+            driver_id = data[
+                'driverId'
+            ]
 
             if driver_id:
 
                 try:
+
                     driver_id = int(
                         driver_id
                     )
@@ -707,7 +857,9 @@ def update_booking(booking_id):
                 except (TypeError, ValueError):
 
                     return jsonify({
-                        'message': 'Invalid driver ID'
+                        'message': (
+                            'Invalid driver ID'
+                        )
                     }), 400
 
                 driver = User.query.filter_by(
@@ -717,6 +869,7 @@ def update_booking(booking_id):
                 ).first()
 
                 if not driver:
+
                     return jsonify({
                         'message': (
                             'Driver not found '
@@ -726,22 +879,16 @@ def update_booking(booking_id):
 
             booking.driver_id = driver_id
 
+        else:
+
+            # Keep existing driver assignment
+            # if staff/admin didn't send driverId.
+            pass
+
     db.session.commit()
 
-    # ========================================================
-    # RESPONSE
-    # ========================================================
-
-    booking_data = booking.to_dict()
-
-    vehicle = Vehicle.query.get(
-        booking.vehicle_id
-    )
-
-    booking_data['vehicle'] = (
-        vehicle.to_dict()
-        if vehicle
-        else None
+    booking_data = add_booking_details(
+        booking
     )
 
     return jsonify({
@@ -764,7 +911,9 @@ def update_booking_status(booking_id):
 
     data = request.get_json() or {}
 
-    status = data.get('status')
+    status = data.get(
+        'status'
+    )
 
     allowed_statuses = [
         'pending',
@@ -775,6 +924,7 @@ def update_booking_status(booking_id):
     ]
 
     if status not in allowed_statuses:
+
         return jsonify({
             'message': 'Invalid booking status'
         }), 400
@@ -783,16 +933,8 @@ def update_booking_status(booking_id):
 
     db.session.commit()
 
-    booking_data = booking.to_dict()
-
-    vehicle = Vehicle.query.get(
-        booking.vehicle_id
-    )
-
-    booking_data['vehicle'] = (
-        vehicle.to_dict()
-        if vehicle
-        else None
+    booking_data = add_booking_details(
+        booking
     )
 
     # ========================================================
@@ -819,8 +961,10 @@ def update_booking_status(booking_id):
         create_notification(
             booking.user_id,
             'Booking Status Updated',
-            f'Booking #{booking.id}: '
-            f'{status_messages[status]}'
+            (
+                f'Booking #{booking.id}: '
+                f'{status_messages[status]}'
+            )
         )
 
         db.session.commit()
@@ -850,44 +994,75 @@ def cancel_booking(booking_id):
         current_user_id
     )
 
-    # Customers can only cancel their own bookings
+    # ========================================================
+    # CUSTOMER ACCESS
+    # ========================================================
+
     if current_user.role == 'customer':
 
         if booking.user_id != current_user_id:
+
             return jsonify({
                 'message': 'Access denied'
             }), 403
 
+    # ========================================================
+    # BOOKING STATUS
+    # ========================================================
+
     if booking.status in [
         'completed',
-        'cancelled'
+        'cancelled',
+        'active'
     ]:
+
         return jsonify({
-            'message': 'Booking cannot be cancelled'
+            'message': (
+                'Booking cannot be cancelled'
+            )
         }), 400
 
+    # ========================================================
+    # CANCELLATION POLICY
+    # ========================================================
+    #
+    # BUSINESS RULE:
+    #
+    # More than 24 hours before pickup:
+    #     Cancellation allowed
+    #     Fee = 0%
+    #
+    # Within 24 hours of pickup:
+    #     Cancellation allowed
+    #     Fee = 10%
+    #
+    # This matches the agreed customer policy.
+    #
+    # ========================================================
+
     pickup = booking.pickup_date
+
     now = datetime.utcnow()
 
     hours_until = (
         pickup - now
     ).total_seconds() / 3600
 
-    cancellation_window = float(
-        get_policy_value(
-            'cancellationWindow',
-            48
-        )
-    )
+    cancellation_window = 24
 
-    cancellation_percentage = float(
-        get_policy_value(
-            'cancellationFeePercentage',
-            50
-        )
-    )
+    cancellation_percentage = 10
 
-    if hours_until < cancellation_window:
+    if hours_until < 0:
+
+        return jsonify({
+            'message': (
+                'This booking can no longer '
+                'be cancelled because the '
+                'pickup time has passed.'
+            )
+        }), 400
+
+    if hours_until <= cancellation_window:
 
         cancellation_fee = (
             booking.total_amount
@@ -896,18 +1071,21 @@ def cancel_booking(booking_id):
         )
 
     else:
+
         cancellation_fee = 0
 
-    booking.status = 'cancelled'
+    # ========================================================
+    # REFUND
+    # ========================================================
 
-    booking.cancellation_fee = (
-        cancellation_fee
-    )
-
-    booking.refund_amount = (
+    refund_amount = (
         booking.total_amount
         - cancellation_fee
     )
+
+    # ========================================================
+    # CANCELLATION REASON
+    # ========================================================
 
     data = request.get_json(
         silent=True
@@ -918,13 +1096,29 @@ def cancel_booking(booking_id):
         ''
     )
 
+    booking.status = 'cancelled'
+
+    booking.cancellation_fee = (
+        cancellation_fee
+    )
+
+    booking.refund_amount = (
+        refund_amount
+    )
+
     db.session.commit()
+
+    # ========================================================
+    # NOTIFY CUSTOMER
+    # ========================================================
 
     create_notification(
         booking.user_id,
         'Booking Cancelled',
-        f'Your booking #{booking.id} '
-        f'has been cancelled.'
+        (
+            f'Your booking #{booking.id} '
+            f'has been cancelled.'
+        )
     )
 
     db.session.commit()
@@ -933,7 +1127,7 @@ def cancel_booking(booking_id):
         'message': (
             'Booking cancelled successfully'
         ),
-        'refundAmount': booking.refund_amount,
+        'refundAmount': refund_amount,
         'cancellationFee': cancellation_fee
     }), 200
 
@@ -967,6 +1161,7 @@ def check_availability():
         pickup_date,
         dropoff_date
     ]):
+
         return jsonify({
             'available': False,
             'message': 'Missing parameters'
@@ -981,18 +1176,23 @@ def check_availability():
     )
 
     # ========================================================
-    # VEHICLE AVAILABILITY / MAINTENANCE CHECK
+    # VEHICLE AVAILABILITY / MAINTENANCE
     # ========================================================
 
     if (
         not vehicle
         or not vehicle.is_available
         or not vehicle.available
-        or vehicle.status == 'maintenance'
+        or str(vehicle.status).lower()
+        == 'maintenance'
     ):
+
         return jsonify({
             'available': False,
-            'message': 'Vehicle is currently unavailable'
+            'message': (
+                'Vehicle is currently '
+                'unavailable'
+            )
         }), 404
 
     # ========================================================
@@ -1000,6 +1200,7 @@ def check_availability():
     # ========================================================
 
     try:
+
         pickup = parse_iso_datetime(
             pickup_date
         )
@@ -1054,7 +1255,7 @@ def check_availability():
         }), 409
 
     # ========================================================
-    # VEHICLE IS AVAILABLE
+    # VEHICLE AVAILABLE
     # ========================================================
 
     return jsonify({

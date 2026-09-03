@@ -26,6 +26,8 @@ function DriverAssignments() {
     useState('')
 
   const [loading, setLoading] = useState(true)
+  const [loadingDrivers, setLoadingDrivers] =
+    useState(false)
 
   const [assigning, setAssigning] =
     useState(false)
@@ -65,15 +67,10 @@ function DriverAssignments() {
 
       const [
         requestsResponse,
-        driversResponse,
         assignmentsResponse,
       ] = await Promise.all([
         api.get(
           '/api/driver-assignments/requests'
-        ),
-
-        api.get(
-          '/api/driver-assignments/available-drivers'
         ),
 
         api.get(
@@ -85,16 +82,15 @@ function DriverAssignments() {
         requestsResponse.data || []
       )
 
-      setDrivers(
-        driversResponse.data || []
-      )
-
       setAssignments(
         assignmentsResponse.data || []
       )
 
-    } catch (error) {
+      // Drivers are loaded only when a specific
+      // booking is selected.
+      setDrivers([])
 
+    } catch (error) {
       console.error(
         'Failed to load driver assignments:',
         error
@@ -120,7 +116,6 @@ function DriverAssignments() {
 
   const filteredRequests =
     requests.filter((request) => {
-
       const searchText =
         search.toLowerCase()
 
@@ -147,13 +142,43 @@ function DriverAssignments() {
   // OPEN ASSIGN MODAL
   // ==========================================================
 
-  const openAssignModal = (request) => {
+  const openAssignModal = async (request) => {
+    try {
+      setSelectedRequest(request)
+      setSelectedDriverId('')
+      setDrivers([])
+      setError('')
+      setLoadingDrivers(true)
 
-    setSelectedRequest(request)
+      const response = await api.get(
+        '/api/driver-assignments/available-drivers',
+        {
+          params: {
+            bookingId: request.booking_id,
+          },
+        }
+      )
 
-    setSelectedDriverId('')
+      setDrivers(
+        response.data || []
+      )
 
-    setError('')
+    } catch (error) {
+      console.error(
+        'Failed to load available drivers:',
+        error
+      )
+
+      setDrivers([])
+
+      setError(
+        error.response?.data?.message ||
+        'Failed to load available drivers'
+      )
+
+    } finally {
+      setLoadingDrivers(false)
+    }
   }
 
   // ==========================================================
@@ -161,12 +186,12 @@ function DriverAssignments() {
   // ==========================================================
 
   const closeModal = () => {
-
     if (assigning) return
 
     setSelectedRequest(null)
-
     setSelectedDriverId('')
+    setDrivers([])
+    setError('')
   }
 
   // ==========================================================
@@ -174,7 +199,6 @@ function DriverAssignments() {
   // ==========================================================
 
   const handleAssign = async () => {
-
     if (
       !selectedRequest ||
       !selectedDriverId
@@ -183,9 +207,7 @@ function DriverAssignments() {
     }
 
     try {
-
       setAssigning(true)
-
       setError('')
 
       await api.post(
@@ -201,14 +223,13 @@ function DriverAssignments() {
 
       // Close modal
       setSelectedRequest(null)
-
       setSelectedDriverId('')
+      setDrivers([])
 
       // Reload real data
       await loadData()
 
     } catch (error) {
-
       console.error(
         'Failed to assign driver:',
         error
@@ -220,7 +241,6 @@ function DriverAssignments() {
       )
 
     } finally {
-
       setAssigning(false)
     }
   }
@@ -230,7 +250,6 @@ function DriverAssignments() {
   // ==========================================================
 
   if (loading) {
-
     return (
       <div className="card p-10 flex items-center justify-center">
 
@@ -257,7 +276,7 @@ function DriverAssignments() {
           ERROR
       ====================================================== */}
 
-      {error && (
+      {error && !selectedRequest && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
           {error}
         </div>
@@ -765,50 +784,87 @@ function DriverAssignments() {
                   Select Driver
                 </label>
 
-                <select
-                  value={selectedDriverId}
-                  onChange={(e) =>
-                    setSelectedDriverId(
-                      e.target.value
-                    )
-                  }
-                  disabled={assigning}
-                  className="input"
-                >
+                {loadingDrivers ? (
 
-                  <option value="">
-                    -- Choose a driver --
-                  </option>
+                  <div className="
+                    flex
+                    items-center
+                    gap-2
+                    text-sm
+                    text-slate-500
+                    py-3
+                  ">
 
-                  {drivers.map(
-                    (driver) => (
+                    <Loader2 className="w-4 h-4 animate-spin" />
 
-                      <option
-                        key={driver.id}
-                        value={driver.id}
-                      >
+                    Checking driver availability...
 
-                        {driver.name}
+                  </div>
 
-                        {driver.licenseNumber &&
-                          ` (${driver.licenseNumber})`}
+                ) : (
 
-                      </option>
+                  <select
+                    value={selectedDriverId}
+                    onChange={(e) =>
+                      setSelectedDriverId(
+                        e.target.value
+                      )
+                    }
+                    disabled={assigning}
+                    className="input"
+                  >
 
-                    )
+                    <option value="">
+                      -- Choose a driver --
+                    </option>
+
+                    {drivers.map(
+                      (driver) => (
+
+                        <option
+                          key={driver.id}
+                          value={driver.id}
+                        >
+
+                          {driver.name}
+
+                          {driver.licenseNumber &&
+                            ` (${driver.licenseNumber})`}
+
+                        </option>
+
+                      )
+                    )}
+
+                  </select>
+
+                )}
+
+                {!loadingDrivers &&
+                  drivers.length === 0 && (
+
+                    <p className="
+                      text-sm
+                      text-slate-500
+                      mt-1
+                    ">
+
+                      No drivers are available for
+                      this booking's dates.
+
+                    </p>
+
                   )}
 
-                </select>
-
-                {drivers.length === 0 && (
+                {error && (
 
                   <p className="
                     text-sm
-                    text-slate-500
-                    mt-1
+                    text-red-600
+                    mt-2
                   ">
 
-                    No available drivers at the moment.
+                    {error}
 
                   </p>
 
@@ -843,7 +899,8 @@ function DriverAssignments() {
                 onClick={handleAssign}
                 disabled={
                   !selectedDriverId ||
-                  assigning
+                  assigning ||
+                  loadingDrivers
                 }
                 className="
                   btn-primary

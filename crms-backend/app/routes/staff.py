@@ -11,7 +11,7 @@ from app.models.report import Report
 from app.models.notification import Notification
 from app.models.maintenance import Maintenance
 from app.models.payment import Payment
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from app.utils.auth import role_required
 
 
@@ -572,6 +572,8 @@ def flag_vehicle_maintenance(vehicle_id):
         'maintenance': maintenance.to_dict(),
         'vehicle': vehicle.to_dict()
     }), 201
+
+
 # ============================================================
 # RELEASE VEHICLE FROM MAINTENANCE
 # ============================================================
@@ -636,9 +638,6 @@ def release_vehicle_maintenance(vehicle_id):
         'vehicle': vehicle.to_dict()
     }), 200
 
-            
-
-    
 
 # ============================================================
 # CHECK-OUT BOOKING
@@ -668,17 +667,20 @@ def checkout_booking(booking_id):
             'message': 'Vehicle not found'
         }), 404
 
+    data = request.get_json() or {}
+
     # --------------------------------------------------------
     # PAYMENT CHECK
     #
-    # Cash must already have been recorded when the customer
-    # made the booking.
+    # M-Pesa:
+    #   Must already be completed by the Safaricom callback.
     #
-    # If cash is still pending, checkout MUST NOT happen.
-    # The staff/admin must confirm that the cash was received
-    # first.
-    #
-    # M-Pesa must also be completed before checkout.
+    # Cash:
+    #   Customer selected cash during booking.
+    #   Payment exists as PENDING.
+    #   Staff receives the cash at checkout.
+    #   Staff must confirm cashPaymentReceived=true.
+    #   The existing Payment is then marked COMPLETED.
     # --------------------------------------------------------
 
     payments = Payment.query.filter_by(
@@ -722,20 +724,59 @@ def checkout_booking(booking_id):
 
     if cash_payment:
 
-        if cash_payment.status == 'pending':
-            return jsonify({
-                'message': (
-                    'Cash payment is still pending. '
-                    'Confirm that the customer has paid the '
-                    'cash amount before checking out the vehicle.'
-                ),
-                'paymentRequired': True,
-                'paymentPending': True,
-                'paymentMethod': 'cash',
-                'payment': cash_payment.to_dict()
-            }), 400
+        cash_payment_received = data.get(
+            'cashPaymentReceived',
+            False
+        )
 
-        if cash_payment.status != 'completed':
+        # If cash is still pending, staff must confirm
+        # that they physically received the cash.
+
+        if cash_payment.status == 'pending':
+
+            if cash_payment_received is not True:
+                return jsonify({
+                    'message': (
+                        'Confirm that the customer has paid '
+                        'the cash amount before checking out '
+                        'the vehicle.'
+                    ),
+                    'paymentRequired': True,
+                    'paymentPending': True,
+                    'paymentMethod': 'cash',
+                    'payment': cash_payment.to_dict()
+                }), 400
+
+            # ------------------------------------------------
+            # Staff has received the cash.
+            # Mark the EXISTING payment as completed.
+            # ------------------------------------------------
+
+            cash_payment.status = 'completed'
+
+            cash_payment.paid_at = datetime.now(
+                timezone.utc
+            )
+
+            # Cash has no M-Pesa receipt number.
+            cash_payment.transaction_id = (
+                cash_payment.transaction_id
+                if cash_payment.transaction_id
+                else None
+            )
+
+            create_notification(
+                booking.user_id,
+                'Cash Payment Received',
+                (
+                    f'Cash payment of KES '
+                    f'{cash_payment.amount} has been received '
+                    f'for booking #{booking.id}.'
+                )
+            )
+
+        elif cash_payment.status != 'completed':
+
             return jsonify({
                 'message': (
                     'Cash payment has not been confirmed. '
@@ -770,15 +811,13 @@ def checkout_booking(booking_id):
 
     if (
         vehicle.status not in ['available', 'booked']
-        and vehicle.available is False
+        or vehicle.available is False
     ):
         return jsonify({
             'message': (
                 'Vehicle is not available for check-out'
             )
         }), 400
-
-    data = request.get_json() or {}
 
     # --------------------------------------------------------
     # Checkout inspection information
@@ -863,7 +902,13 @@ def checkout_booking(booking_id):
     )
 
     # --------------------------------------------------------
-    # Save everything
+    # Save everything together
+    #
+    # This commits:
+    # - Cash payment completion, if applicable
+    # - Checkout inspection
+    # - Booking activation
+    # - Vehicle rental status
     # --------------------------------------------------------
 
     try:
@@ -898,6 +943,8 @@ def checkout_booking(booking_id):
             )
         )
     }), 200
+
+
 # ============================================================
 # CHECK-IN BOOKING
 # ============================================================
@@ -1073,6 +1120,8 @@ def checkin_booking(booking_id):
         'vehicle': vehicle.to_dict(),
         'inspection': checkin_inspection.to_dict()
     }), 200
+
+
 # ============================================================
 # CUSTOMERS
 # ============================================================
