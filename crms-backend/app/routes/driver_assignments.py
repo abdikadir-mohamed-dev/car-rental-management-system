@@ -309,6 +309,9 @@ def get_driver_requests():
 
     for booking in bookings:
 
+        if booking.status in ['cancelled', 'completed']:
+            continue
+
         driving_option = (
             booking.driving_option or ''
         ).lower().strip()
@@ -527,6 +530,20 @@ def create_driver_assignment():
         return jsonify({
             'message': 'Booking not found'
         }), 404
+
+    # --------------------------------------------------------
+    # A cancelled or completed booking no longer needs a
+    # driver — reject the assignment outright.
+    # --------------------------------------------------------
+
+    if booking.status in ['cancelled', 'completed']:
+
+        return jsonify({
+            'message': (
+                f'Cannot assign a driver to a '
+                f'{booking.status} booking'
+            )
+        }), 400
 
     driver = User.query.get(
         int(driver_id)
