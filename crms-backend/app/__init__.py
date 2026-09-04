@@ -1,7 +1,15 @@
+import os
+
 from flask import Flask
 from flask_cors import CORS
 from app.config import Config
 from app.extensions import db, migrate, jwt
+
+DEFAULT_CORS_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "https://car-rental-management-system-six.vercel.app",
+]
 
 # ============================================================
 # Import all models so SQLAlchemy knows about them
@@ -68,13 +76,16 @@ def create_app():
     # Apply CORS to the entire Flask application.
     # ========================================================
 
+    cors_origins_env = os.environ.get("CORS_ORIGINS")
+    cors_origins = (
+        [origin.strip() for origin in cors_origins_env.split(",") if origin.strip()]
+        if cors_origins_env
+        else DEFAULT_CORS_ORIGINS
+    )
+
     CORS(
         app,
-        origins=[
-            "http://localhost:5173",
-            "http://127.0.0.1:5173",
-            "https://car-rental-management-system-six.vercel.app"
-        ],
+        origins=cors_origins,
         methods=[
             "GET",
             "POST",

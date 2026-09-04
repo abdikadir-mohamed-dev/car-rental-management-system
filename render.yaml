@@ -1,0 +1,65 @@
+databases:
+  - name: crms-db
+    plan: free
+    databaseName: crms_db
+    user: crms
+
+services:
+  - type: web
+    name: crms-backend
+    runtime: python
+    rootDir: crms-backend
+    plan: free
+    buildCommand: "pip install -r requirements.txt && flask db upgrade"
+    startCommand: "gunicorn run:app --bind 0.0.0.0:$PORT"
+    healthCheckPath: /auth/config
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.9"
+      - key: FLASK_APP
+        value: run.py
+      - key: SECRET_KEY
+        generateValue: true
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: crms-db
+          property: connectionString
+      # Comma-separated list of allowed frontend origins. Update this
+      # if your Vercel URL differs from the current default.
+      - key: CORS_ORIGINS
+        value: "https://car-rental-management-system-six.vercel.app"
+      # M-Pesa (Safaricom Daraja) -- fill these in on the Render
+      # dashboard after the service is created. sync: false means
+      # Render will prompt for a value rather than committing one.
+      - key: MPESA_CONSUMER_KEY
+        sync: false
+      - key: MPESA_CONSUMER_SECRET
+        sync: false
+      - key: MPESA_PASSKEY
+        sync: false
+      - key: MPESA_SHORTCODE
+        value: "174379"
+      - key: MPESA_ENVIRONMENT
+        value: sandbox
+      # Set this to https://<your-render-url>/api/payments/mpesa/callback
+      # once you know the assigned Render URL (after first deploy).
+      - key: MPESA_CALLBACK_URL
+        sync: false
+      - key: MPESA_PAYMENT_NUMBER
+        sync: false
+      # Outgoing email for staff invites -- optional. Without these,
+      # invite emails are logged instead of sent (no crash either way).
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USERNAME
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: SMTP_USE_TLS
+        value: "true"
+      - key: MAIL_FROM
+        sync: false
