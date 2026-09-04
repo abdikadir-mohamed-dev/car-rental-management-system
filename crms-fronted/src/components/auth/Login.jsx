@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { useDispatch } from 'react-redux'
 import { loginThunk as login } from '../../redux/slices/authSlice'
+import PasswordInput from '../common/PasswordInput'
 
 function Login() {
   const [formData, setFormData] = useState({
@@ -136,9 +137,8 @@ function Login() {
           Password
         </label>
 
-        <input
+        <PasswordInput
           id="password"
-          type="password"
           name="password"
           value={formData.password}
           onChange={handleChange}

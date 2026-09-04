@@ -4,6 +4,7 @@ import toast from 'react-hot-toast'
 import { useDispatch } from 'react-redux'
 import { CarFront, ShieldCheck, KeyRound } from 'lucide-react'
 import { registerThunk } from '../../redux/slices/authSlice'
+import PasswordInput from '../common/PasswordInput'
 
 function Register() {
   const [formData, setFormData] = useState({
@@ -272,11 +273,11 @@ function Register() {
               Password
             </label>
 
-            <input
-              type="password"
+            <PasswordInput
               name="password"
               value={formData.password}
               onChange={handleChange}
+              autoComplete="new-password"
               className={`input ${
                 errors.password ? 'border-red-500' : ''
               }`}
@@ -296,11 +297,11 @@ function Register() {
               Confirm Password
             </label>
 
-            <input
-              type="password"
+            <PasswordInput
               name="confirmPassword"
               value={formData.confirmPassword}
               onChange={handleChange}
+              autoComplete="new-password"
               className={`input ${
                 errors.confirmPassword ? 'border-red-500' : ''
               }`}
