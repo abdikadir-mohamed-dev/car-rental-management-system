@@ -244,6 +244,19 @@ function VehicleDetailsPage() {
     }
 
     /*
+     * Pickup date cannot be in the past.
+     */
+    const today = new Date().toISOString().split('T')[0]
+
+    if (pickupDate < today) {
+      toast.error(
+        'Pick-up date cannot be in the past'
+      )
+
+      return
+    }
+
+    /*
      * Return date cannot be before pickup date.
      */
     if (returnDate < pickupDate) {
@@ -568,6 +581,7 @@ function VehicleDetailsPage() {
                         <input
                           type="date"
                           value={pickupDate}
+                          min={new Date().toISOString().split('T')[0]}
                           onChange={(e) =>
                             setPickupDate(
                               e.target.value
@@ -594,6 +608,7 @@ function VehicleDetailsPage() {
                         <input
                           type="date"
                           value={returnDate}
+                          min={pickupDate || new Date().toISOString().split('T')[0]}
                           onChange={(e) =>
                             setReturnDate(
                               e.target.value

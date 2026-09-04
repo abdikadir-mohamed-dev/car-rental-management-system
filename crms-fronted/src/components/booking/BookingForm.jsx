@@ -39,7 +39,15 @@ function BookingForm({ vehicle, onClose }) {
     if (!formData.dropoffDate) newErrors.dropoffDate = 'Dropoff date is required'
     if (!formData.pickupLocation) newErrors.pickupLocation = 'Pickup location is required'
     if (!formData.dropoffLocation) newErrors.dropoffLocation = 'Dropoff location is required'
-    if (new Date(formData.dropoffDate) <= new Date(formData.pickupDate)) {
+    const today = new Date().toISOString().split('T')[0]
+    if (formData.pickupDate && formData.pickupDate < today) {
+      newErrors.pickupDate = 'Pickup date cannot be in the past'
+    }
+    if (
+      formData.pickupDate &&
+      formData.dropoffDate &&
+      new Date(formData.dropoffDate) <= new Date(formData.pickupDate)
+    ) {
       newErrors.dropoffDate = 'Dropoff must be after pickup'
     }
 
@@ -72,12 +80,12 @@ function BookingForm({ vehicle, onClose }) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="label">Pickup Date</label>
-              <input type="date" name="pickupDate" value={formData.pickupDate} onChange={handleChange} className={`input ${errors.pickupDate ? 'border-danger' : ''}`} />
+              <input type="date" name="pickupDate" value={formData.pickupDate} min={new Date().toISOString().split('T')[0]} onChange={handleChange} className={`input ${errors.pickupDate ? 'border-danger' : ''}`} />
               {errors.pickupDate && <p className="text-danger text-sm mt-1">{errors.pickupDate}</p>}
             </div>
             <div>
               <label className="label">Dropoff Date</label>
-              <input type="date" name="dropoffDate" value={formData.dropoffDate} onChange={handleChange} className={`input ${errors.dropoffDate ? 'border-danger' : ''}`} />
+              <input type="date" name="dropoffDate" value={formData.dropoffDate} min={formData.pickupDate || new Date().toISOString().split('T')[0]} onChange={handleChange} className={`input ${errors.dropoffDate ? 'border-danger' : ''}`} />
               {errors.dropoffDate && <p className="text-danger text-sm mt-1">{errors.dropoffDate}</p>}
             </div>
             <div>

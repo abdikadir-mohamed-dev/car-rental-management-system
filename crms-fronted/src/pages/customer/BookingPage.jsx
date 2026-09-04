@@ -188,6 +188,18 @@ function BookingPage() {
     }
 
     /*
+     * Pickup date cannot be in the past
+     */
+    const today = new Date().toISOString().split('T')[0]
+
+    if (pickupDate < today) {
+      toast.error(
+        'Pickup date cannot be in the past'
+      )
+      return
+    }
+
+    /*
      * Return date must be after pickup date
      */
     if (
