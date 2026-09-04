@@ -22,6 +22,7 @@ import { BOOKING_STATUS, PAYMENT_STATUS } from '../../utils/constants'
 import StatusBadge from '../../components/common/StatusBadge'
 import Modal from '../../components/common/Modal'
 import Loader from '../../components/common/Loader'
+import PaymentRetryModal from '../../components/payment/PaymentRetryModal'
 import toast from 'react-hot-toast'
 
 function BookingDetailsPage() {
@@ -31,6 +32,7 @@ function BookingDetailsPage() {
   const { currentBooking, loading } = useSelector((state) => state.bookings)
   const [showCancelModal, setShowCancelModal] = useState(false)
   const [showModifyModal, setShowModifyModal] = useState(false)
+  const [showRetryModal, setShowRetryModal] = useState(false)
   const [cancelReason, setCancelReason] = useState('')
   const [modifyData, setModifyData] = useState({
     pickupDate: '',
@@ -268,6 +270,13 @@ function BookingDetailsPage() {
                 <FileText className="w-4 h-4" />
                 View Agreement
               </Link>
+              {currentBooking.paymentStatus === PAYMENT_STATUS.FAILED &&
+                currentBooking.status !== BOOKING_STATUS.CANCELLED && (
+                <button onClick={() => setShowRetryModal(true)} className="btn-primary w-full flex items-center justify-center gap-2">
+                  <CreditCard className="w-4 h-4" />
+                  Retry Payment
+                </button>
+              )}
               {currentBooking.paymentStatus === PAYMENT_STATUS.COMPLETED && (
                 <button className="btn-secondary w-full flex items-center justify-center gap-2" onClick={() => window.print()}>
                   <Printer className="w-4 h-4" />
@@ -346,6 +355,13 @@ function BookingDetailsPage() {
           </div>
         </div>
       </Modal>
+
+      <PaymentRetryModal
+        isOpen={showRetryModal}
+        onClose={() => setShowRetryModal(false)}
+        booking={currentBooking}
+        onSuccess={() => dispatch(fetchBooking(id))}
+      />
     </div>
   )
 }

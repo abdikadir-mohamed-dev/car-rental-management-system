@@ -19,6 +19,7 @@ import {
 } from '../../services/bookingService'
 
 import { mapBooking } from '../../utils/apiMappers'
+import PaymentRetryModal from '../../components/payment/PaymentRetryModal'
 import toast from 'react-hot-toast'
 
 function MyBookingsPage() {
@@ -39,6 +40,9 @@ function MyBookingsPage() {
   const [cancellingBooking, setCancellingBooking] = useState(null)
   const [cancelReason, setCancelReason] = useState('')
   const [cancelling, setCancelling] = useState(false)
+
+  // Retry payment
+  const [retryingBooking, setRetryingBooking] = useState(null)
 
   // =========================
   // LOAD BOOKINGS
@@ -77,6 +81,22 @@ function MyBookingsPage() {
 
     loadData()
   }, [])
+
+  // Re-fetch bookings after a successful payment retry, so the
+  // updated payment/booking status reflects immediately.
+  const refreshBookings = async () => {
+    try {
+      const response = await getBookings()
+
+      const bookingList = Array.isArray(response)
+        ? response
+        : response?.bookings || []
+
+      setBookings(bookingList.map(mapBooking))
+    } catch (err) {
+      console.error('Failed to refresh bookings:', err)
+    }
+  }
 
   // =========================
   // FILTER BOOKINGS
@@ -740,6 +760,18 @@ function MyBookingsPage() {
                   View Agreement
                 </Link>
 
+                {selectedBooking.paymentStatus === 'failed' &&
+                  selectedBooking.status !== 'cancelled' && (
+                  <button
+                    className="btn-primary w-full flex items-center justify-center gap-2"
+                    onClick={() =>
+                      setRetryingBooking(selectedBooking)
+                    }
+                  >
+                    Retry Payment
+                  </button>
+                )}
+
                 {selectedBooking.paymentStatus === 'completed' && (
                   <button
                     className="btn-secondary w-full flex items-center justify-center gap-2"
@@ -1007,6 +1039,13 @@ function MyBookingsPage() {
           </div>
         )}
 
+        <PaymentRetryModal
+          isOpen={!!retryingBooking}
+          onClose={() => setRetryingBooking(null)}
+          booking={retryingBooking}
+          onSuccess={refreshBookings}
+        />
+
       </div>
     )
   }
@@ -1254,6 +1293,18 @@ function MyBookingsPage() {
                         >
                           View Details
                         </Link>
+
+                        {booking.paymentStatus === 'failed' &&
+                          booking.status !== 'cancelled' && (
+                          <button
+                            onClick={() =>
+                              setRetryingBooking(booking)
+                            }
+                            className="btn-primary text-sm"
+                          >
+                            Retry Payment
+                          </button>
+                        )}
 
                         {(
                           booking.status ===
@@ -1561,6 +1612,13 @@ function MyBookingsPage() {
 
         </div>
       )}
+
+      <PaymentRetryModal
+        isOpen={!!retryingBooking}
+        onClose={() => setRetryingBooking(null)}
+        booking={retryingBooking}
+        onSuccess={refreshBookings}
+      />
 
     </div>
   )
