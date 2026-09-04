@@ -260,7 +260,7 @@ export default function DriverBookingsPage() {
 
             <button
               onClick={loadBookings}
-              className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:opacity-90"
+              className="btn-primary px-4 py-2 rounded-lg text-sm font-medium"
             >
               Try Again
             </button>

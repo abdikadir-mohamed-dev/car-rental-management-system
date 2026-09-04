@@ -52,7 +52,7 @@ function LocationsPage() {
     <div>
       <section className="bg-primary text-white py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h1 className="text-4xl font-bold mb-4">Our Locations</h1>
+          <h1 className="text-4xl font-bold mb-4 text-white">Our Locations</h1>
           <p className="text-xl text-blue-100">
             Find us at convenient locations near you
           </p>

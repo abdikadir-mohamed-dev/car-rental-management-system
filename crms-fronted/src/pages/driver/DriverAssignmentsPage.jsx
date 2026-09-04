@@ -150,10 +150,10 @@ export default function DriverAssignmentsPage() {
             <button
               key={status}
               onClick={() => setFilter(status)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium capitalize ${
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium capitalize transition-colors ${
                 filter === status
                   ? 'bg-primary text-white'
-                  : 'bg-white border border-slate-200 text-slate-600'
+                  : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
               }`}
             >
               {status}

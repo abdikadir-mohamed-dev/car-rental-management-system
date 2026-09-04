@@ -230,7 +230,7 @@ function CustomerDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-center">
 
           <div>
-            <h2 className="text-2xl font-bold mb-2">
+            <h2 className="text-2xl font-bold mb-2 text-white">
               Find your perfect car
             </h2>
 

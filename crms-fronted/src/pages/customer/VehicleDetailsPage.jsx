@@ -301,7 +301,7 @@ function VehicleDetailsPage() {
           </Link>
 
           <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-3xl font-bold">
+            <h1 className="text-3xl font-bold text-white">
               {vehicle.name}
             </h1>
 

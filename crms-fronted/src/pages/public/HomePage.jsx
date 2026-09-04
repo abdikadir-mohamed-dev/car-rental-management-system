@@ -187,7 +187,7 @@ function HomePage() {
 
       <section className="py-16 bg-blue-600 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl font-bold mb-4">Get 15% Off Your First Booking</h2>
+          <h2 className="text-3xl font-bold mb-4 text-white">Get 15% Off Your First Booking</h2>
           <p className="text-xl text-blue-100 mb-2">Use code: <span className="font-bold text-white">DRIVE15</span></p>
           <p className="text-blue-100 mb-8">New customers get exclusive discount on their first rental</p>
           <Link to="/vehicles" className="inline-flex items-center gap-2 bg-white text-blue-600 px-8 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-colors">

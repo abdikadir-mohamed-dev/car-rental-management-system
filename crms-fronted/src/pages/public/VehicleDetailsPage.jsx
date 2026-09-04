@@ -71,7 +71,7 @@ function VehicleDetailsPage() {
             Back to Browse Cars
           </Link>
           <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-3xl font-bold">{vehicle.name}</h1>
+            <h1 className="text-3xl font-bold text-white">{vehicle.name}</h1>
             <AvailabilityBadge vehicle={vehicle} />
           </div>
           <p className="text-slate-300">{vehicle.brand} · {vehicle.category} · {vehicle.location}</p>

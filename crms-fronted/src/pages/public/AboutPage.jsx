@@ -5,7 +5,7 @@ function AboutPage() {
     <div>
       <section className="bg-slate-900 text-white py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h1 className="text-4xl font-bold mb-4">About DriveGo</h1>
+          <h1 className="text-4xl font-bold mb-4 text-white">About DriveGo</h1>
           <p className="text-xl text-slate-300">Revolutionizing car rental with technology and trust</p>
         </div>
       </section>

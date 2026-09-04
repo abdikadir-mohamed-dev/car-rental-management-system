@@ -718,7 +718,7 @@ if (paymentMethod === 'cash') {
             Back to Vehicle
           </Link>
 
-          <h1 className="text-3xl font-bold">
+          <h1 className="text-3xl font-bold text-white">
             Complete Your Booking
           </h1>
 
