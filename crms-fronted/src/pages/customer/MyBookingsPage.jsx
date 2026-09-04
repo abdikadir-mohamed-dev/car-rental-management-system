@@ -320,6 +320,55 @@ function MyBookingsPage() {
   }
 
   // =========================
+  // LOCATION MAP (detail view)
+  // =========================
+
+  const [routeMarkers, setRouteMarkers] = useState([])
+
+  useEffect(() => {
+    const pickup = selectedBooking?.pickupLocation
+    const dropoff =
+      selectedBooking?.returnLocation ||
+      selectedBooking?.dropoffLocation ||
+      selectedBooking?.pickupLocation
+
+    let cancelled = false
+
+    if (!pickup && !dropoff) {
+      queueMicrotask(() => {
+        if (!cancelled) setRouteMarkers([])
+      })
+      return () => {
+        cancelled = true
+      }
+    }
+
+    const loadMarkers = async () => {
+      const markers = pickup && dropoff && pickup !== dropoff
+        ? await Promise.all([
+            geocodeLocation(pickup).then((position) => ({ position, label: `Pickup: ${pickup}` })),
+            geocodeLocation(dropoff).then((position) => ({ position, label: `Drop-off: ${dropoff}` })),
+          ])
+        : [
+            {
+              position: await geocodeLocation(pickup || dropoff),
+              label: pickup || dropoff,
+            },
+          ]
+
+      if (!cancelled) {
+        setRouteMarkers(markers)
+      }
+    }
+
+    loadMarkers()
+
+    return () => {
+      cancelled = true
+    }
+  }, [selectedBooking?.pickupLocation, selectedBooking?.returnLocation, selectedBooking?.dropoffLocation])
+
+  // =========================
   // LOADING
   // =========================
 
@@ -643,23 +692,9 @@ function MyBookingsPage() {
 
               </div>
 
-              {(selectedBooking.pickupLocation || returnLocation) && (
+              {routeMarkers.length > 0 && (
                 <div className="mt-4">
-                  <LocationMap
-                    markers={
-                      selectedBooking.pickupLocation && returnLocation
-                        ? [
-                            { position: geocodeLocation(selectedBooking.pickupLocation), label: `Pickup: ${selectedBooking.pickupLocation}` },
-                            { position: geocodeLocation(returnLocation), label: `Drop-off: ${returnLocation}` },
-                          ]
-                        : [
-                            {
-                              position: geocodeLocation(selectedBooking.pickupLocation || returnLocation),
-                              label: selectedBooking.pickupLocation || returnLocation,
-                            },
-                          ]
-                    }
-                  />
+                  <LocationMap markers={routeMarkers} />
                 </div>
               )}
 

@@ -1,32 +1,74 @@
 /*
- * Tiny offline "geocoder" for the handful of Nairobi-area location
- * names this app actually uses (vehicle/branch locations, booking
- * pickup/dropoff). There's no maps API key configured anywhere in
- * this project, so rather than call a live geocoding service, match
- * on known neighbourhood names and fall back to central Nairobi.
+ * Geocoding via the Mapbox Geocoding API -- turns a free-text location
+ * string (a real address, or one of the app's known pickup/drop-off
+ * points) into [lat, lng] map coordinates.
+ *
+ * Requires VITE_MAPBOX_TOKEN (see .env.example). Get a free token at
+ * https://account.mapbox.com/auth/signup/ -- no credit card required,
+ * 100,000 free geocoding requests/month.
+ *
+ * If the token isn't configured, or a lookup fails (no network, no
+ * match, rate limited), this falls back to central Nairobi so the map
+ * always has something reasonable to show rather than breaking.
  */
-const KNOWN_LOCATIONS = [
-  { match: /jomo kenyatta|jkia|airport/i, coords: [-1.3192, 36.9278] },
-  { match: /karen/i, coords: [-1.3197, 36.7076] },
-  { match: /westlands/i, coords: [-1.2647, 36.806] },
-  { match: /kilimani/i, coords: [-1.2914, 36.785] },
-  { match: /industrial area/i, coords: [-1.3103, 36.8514] },
-  { match: /nairobi west/i, coords: [-1.3053, 36.8172] },
-  { match: /cbd|central business/i, coords: [-1.2864, 36.8172] },
-]
+
+const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN
 
 const NAIROBI_CBD = [-1.2864, 36.8172]
 
+// In-memory cache so re-rendering the same location (e.g. a vehicle
+// shown on both the listing and detail page) doesn't re-fetch it.
+const cache = new Map()
+
 /*
- * Returns [lat, lng] for a free-text location string, e.g. "Karen
- * Branch" or "Westlands Office". Falls back to Nairobi CBD for
- * anything unrecognized, so a marker is always shown somewhere
- * sensible rather than the map failing to render.
+ * Returns [lat, lng] for a free-text location string. Async, since it
+ * may call out to the Mapbox API.
  */
-export function geocodeLocation(name) {
+export async function geocodeLocation(name) {
   if (!name) return NAIROBI_CBD
 
-  const found = KNOWN_LOCATIONS.find((entry) => entry.match.test(name))
+  if (cache.has(name)) {
+    return cache.get(name)
+  }
 
-  return found ? found.coords : NAIROBI_CBD
+  if (!MAPBOX_TOKEN) {
+    console.warn(
+      'VITE_MAPBOX_TOKEN is not set -- falling back to Nairobi CBD. ' +
+      'See .env.example for how to add a free Mapbox token.'
+    )
+    return NAIROBI_CBD
+  }
+
+  try {
+    const query = encodeURIComponent(name)
+    const url =
+      `https://api.mapbox.com/geocoding/v5/mapbox.places/${query}.json` +
+      `?access_token=${MAPBOX_TOKEN}` +
+      `&country=ke` +
+      `&proximity=36.8172,-1.2864` +
+      `&limit=1`
+
+    const response = await fetch(url)
+
+    if (!response.ok) {
+      throw new Error(`Mapbox geocoding request failed (${response.status})`)
+    }
+
+    const data = await response.json()
+    const feature = data?.features?.[0]
+
+    if (!feature?.center) {
+      throw new Error(`No geocoding match for "${name}"`)
+    }
+
+    // Mapbox returns [lng, lat]; Leaflet expects [lat, lng].
+    const [lng, lat] = feature.center
+    const coords = [lat, lng]
+
+    cache.set(name, coords)
+    return coords
+  } catch (err) {
+    console.error('Geocoding failed for', name, err)
+    return NAIROBI_CBD
+  }
 }

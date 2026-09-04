@@ -463,6 +463,50 @@ if (paymentMethod === 'cash') {
     }
   }
 
+  const [routeMarkers, setRouteMarkers] = useState([])
+
+  /*
+   * Geocode pickup/drop-off after the user stops typing, rather than
+   * on every keystroke, since these are free-text inputs.
+   */
+  useEffect(() => {
+    const pickup = pickupLocation.trim()
+    const dropoff = dropoffLocation.trim()
+    let cancelled = false
+
+    if (!pickup && !dropoff) {
+      queueMicrotask(() => {
+        if (!cancelled) setRouteMarkers([])
+      })
+      return () => {
+        cancelled = true
+      }
+    }
+
+    const timeoutId = setTimeout(async () => {
+      const markers = pickup && dropoff
+        ? await Promise.all([
+            geocodeLocation(pickup).then((position) => ({ position, label: `Pickup: ${pickup}` })),
+            geocodeLocation(dropoff).then((position) => ({ position, label: `Drop-off: ${dropoff}` })),
+          ])
+        : [
+            {
+              position: await geocodeLocation(pickup || dropoff),
+              label: pickup || dropoff,
+            },
+          ]
+
+      if (!cancelled) {
+        setRouteMarkers(markers)
+      }
+    }, 500)
+
+    return () => {
+      cancelled = true
+      clearTimeout(timeoutId)
+    }
+  }, [pickupLocation, dropoffLocation])
+
   /*
    * LOADING
    */
@@ -859,22 +903,8 @@ if (paymentMethod === 'cash') {
 
                   </div>
 
-                  {(pickupLocation.trim() || dropoffLocation.trim()) && (
-                    <LocationMap
-                      markers={
-                        pickupLocation.trim() && dropoffLocation.trim()
-                          ? [
-                              { position: geocodeLocation(pickupLocation), label: `Pickup: ${pickupLocation}` },
-                              { position: geocodeLocation(dropoffLocation), label: `Drop-off: ${dropoffLocation}` },
-                            ]
-                          : [
-                              {
-                                position: geocodeLocation(pickupLocation || dropoffLocation),
-                                label: pickupLocation || dropoffLocation,
-                              },
-                            ]
-                      }
-                    />
+                  {routeMarkers.length > 0 && (
+                    <LocationMap markers={routeMarkers} />
                   )}
 
                 </div>

@@ -37,6 +37,31 @@ function VehicleDetailsPage() {
     loadVehicle()
   }, [id])
 
+  const [pickupMarkers, setPickupMarkers] = useState([])
+
+  useEffect(() => {
+    let cancelled = false
+
+    if (!vehicle?.location) {
+      queueMicrotask(() => {
+        if (!cancelled) setPickupMarkers([])
+      })
+      return () => {
+        cancelled = true
+      }
+    }
+
+    geocodeLocation(vehicle.location).then((position) => {
+      if (!cancelled) {
+        setPickupMarkers([{ position, label: vehicle.location }])
+      }
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [vehicle?.location])
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
@@ -121,7 +146,7 @@ function VehicleDetailsPage() {
               <div>
                 <h3 className="text-lg font-semibold text-slate-900 mb-4">Pickup Location</h3>
                 <LocationMap
-                  markers={[{ position: geocodeLocation(vehicle.location), label: vehicle.location }]}
+                  markers={pickupMarkers}
                 />
               </div>
 

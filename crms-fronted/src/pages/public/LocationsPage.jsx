@@ -48,6 +48,38 @@ function LocationsPage() {
     loadLocations();
   }, []);
 
+  const [mapMarkers, setMapMarkers] = useState([]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (locations.length === 0) {
+      queueMicrotask(() => {
+        if (!cancelled) setMapMarkers([]);
+      });
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    Promise.all(
+      locations.map(async (location) => {
+        const name =
+          typeof location === "string" ? location : location.name;
+        const position = await geocodeLocation(name);
+        return { position, label: name };
+      }),
+    ).then((markers) => {
+      if (!cancelled) {
+        setMapMarkers(markers);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [locations]);
+
   return (
     <div>
       <section className="bg-primary text-white py-16">
@@ -67,14 +99,7 @@ function LocationsPage() {
           ) : (
             <>
               <div className="mb-8">
-                <LocationMap
-                  height="360px"
-                  markers={locations.map((location) => {
-                    const name =
-                      typeof location === "string" ? location : location.name;
-                    return { position: geocodeLocation(name), label: name };
-                  })}
-                />
+                <LocationMap height="360px" markers={mapMarkers} />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {locations.map((location) => {

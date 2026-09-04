@@ -6,14 +6,12 @@ import {
   ArrowLeft,
   Car,
   Calendar,
-  MapPin,
   CreditCard,
   User,
   FileText,
   Printer,
   Edit,
   XCircle,
-  Download,
   Shield,
 } from 'lucide-react'
 import { formatCurrency } from '../../utils/formatCurrency'
@@ -49,7 +47,7 @@ function BookingDetailsPage() {
     }
   }, [dispatch, id])
 
-  useEffect(() => {
+  const openModifyModal = () => {
     if (currentBooking) {
       setModifyData({
         pickupDate: currentBooking.pickupDate || '',
@@ -58,7 +56,8 @@ function BookingDetailsPage() {
         dropoffLocation: currentBooking.dropoffLocation || '',
       })
     }
-  }, [currentBooking])
+    setShowModifyModal(true)
+  }
 
   const handleCancel = () => {
     if (!cancelReason.trim()) {
@@ -84,6 +83,47 @@ function BookingDetailsPage() {
       })
       .catch((err) => toast.error(err))
   }
+
+  const [routeMarkers, setRouteMarkers] = useState([])
+
+  useEffect(() => {
+    const pickup = currentBooking?.pickupLocation
+    const dropoff = currentBooking?.dropoffLocation
+    let cancelled = false
+
+    if (!pickup && !dropoff) {
+      queueMicrotask(() => {
+        if (!cancelled) setRouteMarkers([])
+      })
+      return () => {
+        cancelled = true
+      }
+    }
+
+    const loadMarkers = async () => {
+      const markers = pickup && dropoff
+        ? await Promise.all([
+            geocodeLocation(pickup).then((position) => ({ position, label: `Pickup: ${pickup}` })),
+            geocodeLocation(dropoff).then((position) => ({ position, label: `Drop-off: ${dropoff}` })),
+          ])
+        : [
+            {
+              position: await geocodeLocation(pickup || dropoff),
+              label: pickup || dropoff,
+            },
+          ]
+
+      if (!cancelled) {
+        setRouteMarkers(markers)
+      }
+    }
+
+    loadMarkers()
+
+    return () => {
+      cancelled = true
+    }
+  }, [currentBooking?.pickupLocation, currentBooking?.dropoffLocation])
 
   if (loading) return <Loader />
 
@@ -190,23 +230,9 @@ function BookingDetailsPage() {
                 <p className="font-medium text-slate-900">{currentBooking.dropoffLocation || '-'}</p>
               </div>
             </div>
-            {(currentBooking.pickupLocation || currentBooking.dropoffLocation) && (
+            {routeMarkers.length > 0 && (
               <div className="mt-4">
-                <LocationMap
-                  markers={
-                    currentBooking.pickupLocation && currentBooking.dropoffLocation
-                      ? [
-                          { position: geocodeLocation(currentBooking.pickupLocation), label: `Pickup: ${currentBooking.pickupLocation}` },
-                          { position: geocodeLocation(currentBooking.dropoffLocation), label: `Drop-off: ${currentBooking.dropoffLocation}` },
-                        ]
-                      : [
-                          {
-                            position: geocodeLocation(currentBooking.pickupLocation || currentBooking.dropoffLocation),
-                            label: currentBooking.pickupLocation || currentBooking.dropoffLocation,
-                          },
-                        ]
-                  }
-                />
+                <LocationMap markers={routeMarkers} />
               </div>
             )}
           </div>
@@ -276,7 +302,7 @@ function BookingDetailsPage() {
             <h2 className="text-lg font-semibold text-slate-900 mb-4">Actions</h2>
             <div className="space-y-2">
               {canModify && (
-                <button onClick={() => setShowModifyModal(true)} className="btn-primary w-full flex items-center justify-center gap-2">
+                <button onClick={openModifyModal} className="btn-primary w-full flex items-center justify-center gap-2">
                   <Edit className="w-4 h-4" />
                   Modify Booking
                 </button>
