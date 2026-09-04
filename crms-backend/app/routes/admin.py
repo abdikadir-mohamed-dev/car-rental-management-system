@@ -11,6 +11,7 @@ from app.models.payment import Payment
 from app.models.maintenance import Maintenance
 from app.routes import bp
 from app.utils.auth import role_required
+from app.utils.email import send_email
 from werkzeug.security import generate_password_hash
 from datetime import datetime
 import random
@@ -843,6 +844,19 @@ def create_staff():
     db.session.add(shift)
 
     db.session.commit()
+
+    send_email(
+        user.email,
+        'Welcome to DriveGo - Your Staff Account',
+        (
+            f'Hi {user.name},\n\n'
+            f'An account has been created for you on DriveGo as staff.\n\n'
+            f'Email: {user.email}\n'
+            f'Temporary password: {password}\n\n'
+            f'Please log in and change your password as soon as possible.\n\n'
+            f'- DriveGo Team'
+        ),
+    )
 
     return jsonify({
         'user': user.to_dict(),
