@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import toast from 'react-hot-toast'
 import { Edit, Trash2, Search } from 'lucide-react'
 import ConfirmDialog from '../../components/common/ConfirmDialog'
@@ -19,7 +19,7 @@ function UserManagement({ users: externalUsers, setUsers: externalSetUsers, onEd
   const users = externalUsers || internalUsers
   const setUsers = externalSetUsers || setInternalUsers
 
-  const loadUsers = async () => {
+  const loadUsers = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
@@ -31,7 +31,7 @@ function UserManagement({ users: externalUsers, setUsers: externalSetUsers, onEd
     } finally {
       setLoading(false)
     }
-  }
+  }, [setUsers])
 
   useEffect(() => {
     if (!externalUsers) {
@@ -39,7 +39,7 @@ function UserManagement({ users: externalUsers, setUsers: externalSetUsers, onEd
     } else {
       setLoading(false)
     }
-  }, [externalUsers])
+  }, [externalUsers, loadUsers])
 
   const handleEdit = (user) => {
     setEditingUser(user)

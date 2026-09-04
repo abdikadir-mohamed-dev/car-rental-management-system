@@ -15,10 +15,6 @@ function Dashboard() {
   const [todayTrips, setTodayTrips] = useState([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    loadDashboard()
-  }, [])
-
   const loadDashboard = async () => {
     try {
       setLoading(true)
@@ -60,6 +56,10 @@ function Dashboard() {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    loadDashboard()
+  }, [])
 
   const formatTime = (time) => {
     if (!time) return '--'

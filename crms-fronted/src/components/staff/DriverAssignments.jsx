@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
   Search,
   UserCheck,
@@ -11,6 +11,24 @@ import axios from 'axios'
 const API_URL =
   import.meta.env.VITE_API_URL ||
   'http://localhost:5000'
+
+const api = axios.create({
+  baseURL: API_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+})
+
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token')
+
+  if (token) {
+    config.headers.Authorization =
+      `Bearer ${token}`
+  }
+
+  return config
+})
 
 function DriverAssignments() {
   const [requests, setRequests] = useState([])
@@ -35,32 +53,10 @@ function DriverAssignments() {
   const [error, setError] = useState('')
 
   // ==========================================================
-  // API CLIENT
-  // ==========================================================
-
-  const api = axios.create({
-    baseURL: API_URL,
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  })
-
-  api.interceptors.request.use((config) => {
-    const token = localStorage.getItem('token')
-
-    if (token) {
-      config.headers.Authorization =
-        `Bearer ${token}`
-    }
-
-    return config
-  })
-
-  // ==========================================================
   // LOAD DATA
   // ==========================================================
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true)
       setError('')
@@ -104,11 +100,11 @@ function DriverAssignments() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
   useEffect(() => {
     loadData()
-  }, [])
+  }, [loadData])
 
   // ==========================================================
   // SEARCH

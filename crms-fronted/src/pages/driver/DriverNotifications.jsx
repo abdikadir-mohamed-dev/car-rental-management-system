@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   CalendarCheck,
   Wallet,
@@ -62,10 +62,6 @@ export default function DriverNotificationsPage() {
   const [notifications, setNotifications] = useState([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    loadNotifications()
-  }, [])
-
   const loadNotifications = async () => {
     try {
       setLoading(true)
@@ -84,6 +80,10 @@ export default function DriverNotificationsPage() {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    loadNotifications()
+  }, [])
 
   const unreadCount = notifications.filter(
     (notification) => !notification.read

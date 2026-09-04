@@ -16,12 +16,7 @@ import {
   LayoutGrid,
   ClipboardList,
   Route,
-  
   Calendar,
-  Car,
-  
-  Wrench,
-  
   Bell,
   User,
   LogOut,
@@ -78,10 +73,6 @@ export default function DriverLayout() {
   const [user, setUser] = useState(null)
   const [loadingUser, setLoadingUser] = useState(true)
 
-  useEffect(() => {
-    loadUser()
-  }, [])
-
   const loadUser = async () => {
     try {
       const response = await getProfile()
@@ -110,6 +101,10 @@ export default function DriverLayout() {
       setLoadingUser(false)
     }
   }
+
+  useEffect(() => {
+    loadUser()
+  }, [])
 
   const handleLogout = async () => {
     try {

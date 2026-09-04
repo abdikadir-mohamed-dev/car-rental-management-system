@@ -31,10 +31,6 @@ export default function DriverAssignmentsPage() {
   const [loading, setLoading] = useState(true)
   const [acceptingId, setAcceptingId] = useState(null)
 
-  useEffect(() => {
-    loadAssignments()
-  }, [])
-
   const loadAssignments = async () => {
     try {
       setLoading(true)
@@ -56,6 +52,10 @@ export default function DriverAssignmentsPage() {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    loadAssignments()
+  }, [])
 
   // ============================================================
   // ACCEPT ASSIGNMENT

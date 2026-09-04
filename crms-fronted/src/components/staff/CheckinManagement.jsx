@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
   Search,
   CheckCircle,
@@ -48,7 +48,7 @@ function CheckinManagement() {
   // LOAD BOOKINGS
   // =========================
 
-  const loadBookings = async () => {
+  const loadBookings = useCallback(async () => {
     try {
       setLoading(true)
 
@@ -106,11 +106,11 @@ function CheckinManagement() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
   useEffect(() => {
     loadBookings()
-  }, [])
+  }, [loadBookings])
 
   // =========================
   // HELPERS

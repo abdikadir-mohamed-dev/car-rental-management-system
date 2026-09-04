@@ -47,10 +47,6 @@ export default function DriverProfilePage() {
   // LOAD PROFILE
   // ============================================================
 
-  useEffect(() => {
-    loadProfile()
-  }, [])
-
   const loadProfile = async () => {
     try {
       setLoading(true)
@@ -79,6 +75,10 @@ export default function DriverProfilePage() {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    loadProfile()
+  }, [])
 
   // ============================================================
   // PROFILE FORM

@@ -52,10 +52,6 @@ function StaffProfilePage() {
   // LOAD PROFILE
   // ============================================================
 
-  useEffect(() => {
-    loadProfile()
-  }, [])
-
   const loadProfile = async () => {
     try {
       setLoading(true)
@@ -84,6 +80,10 @@ function StaffProfilePage() {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    loadProfile()
+  }, [])
 
   // ============================================================
   // PROFILE FORM

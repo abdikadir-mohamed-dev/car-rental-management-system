@@ -27,10 +27,6 @@ function TripAssignments() {
   // LOAD REAL TRIPS FROM BACKEND
   // ============================================================
 
-  useEffect(() => {
-    loadTrips()
-  }, [])
-
   const loadTrips = async () => {
     try {
       setLoading(true)
@@ -49,6 +45,10 @@ function TripAssignments() {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    loadTrips()
+  }, [])
 
   // ============================================================
   // UPDATE TRIP STATUS
