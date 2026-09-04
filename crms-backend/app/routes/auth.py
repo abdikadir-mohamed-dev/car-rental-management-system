@@ -44,6 +44,9 @@ def register():
     if User.query.filter_by(email=email).first():
         return jsonify({"message": "User already exists with this email"}), 400
 
+    if phone and User.query.filter_by(phone=phone).first():
+        return jsonify({"message": "Phone number is already in use"}), 400
+
     user = User(
         name=name,
         email=email,
