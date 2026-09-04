@@ -22,6 +22,7 @@ function VehicleForm({ vehicle, onClose }) {
   // ============================================================
 
   const [formData, setFormData] = useState({
+    registrationNumber: '',
     make: '',
     model: '',
     vehicleType: 'sedan',
@@ -50,6 +51,11 @@ function VehicleForm({ vehicle, onClose }) {
       ''
 
     return {
+      registrationNumber:
+        vehicle?.registrationNumber ||
+        vehicle?.registration_number ||
+        '',
+
       make:
         vehicle?.make ||
         vehicle?.brand ||
@@ -115,6 +121,7 @@ function VehicleForm({ vehicle, onClose }) {
 
   useEffect(() => {
     setFormData(initialFormData)
+    setErrors({})
   }, [initialFormData])
 
   // ============================================================
@@ -149,6 +156,13 @@ function VehicleForm({ vehicle, onClose }) {
       status,
       available: status === 'available',
     }))
+
+    if (errors.status) {
+      setErrors((prev) => ({
+        ...prev,
+        status: '',
+      }))
+    }
   }
 
   // ============================================================
@@ -158,12 +172,19 @@ function VehicleForm({ vehicle, onClose }) {
   const validate = () => {
     const newErrors = {}
 
+    if (!formData.registrationNumber.trim()) {
+      newErrors.registrationNumber =
+        'Number plate is required'
+    }
+
     if (!formData.make.trim()) {
-      newErrors.make = 'Make is required'
+      newErrors.make =
+        'Make is required'
     }
 
     if (!formData.model.trim()) {
-      newErrors.model = 'Model is required'
+      newErrors.model =
+        'Model is required'
     }
 
     if (!formData.dailyRentalRate) {
@@ -198,27 +219,28 @@ function VehicleForm({ vehicle, onClose }) {
     }
 
     /*
-     * IMPORTANT:
+     * These field names match the Flask backend.
      *
-     * These names match the Flask backend:
-     *
-     * make
-     * model
-     * vehicleType
-     * dailyRentalRate
-     * seatingCapacity
-     * fuelType
-     * images
+     * registrationNumber = vehicle number plate
      */
 
     const data = {
-      make: formData.make.trim(),
+      registrationNumber:
+        formData.registrationNumber
+          .trim()
+          .toUpperCase(),
 
-      model: formData.model.trim(),
+      make:
+        formData.make.trim(),
 
-      vehicleType: formData.vehicleType,
+      model:
+        formData.model.trim(),
 
-      year: Number(formData.year),
+      vehicleType:
+        formData.vehicleType,
+
+      year:
+        Number(formData.year),
 
       dailyRentalRate:
         Number(formData.dailyRentalRate),
@@ -238,15 +260,10 @@ function VehicleForm({ vehicle, onClose }) {
           .map((feature) => feature.trim())
           .filter(Boolean),
 
-      /*
-       * Backend expects an ARRAY of images.
-       *
-       * The form currently accepts one image URL,
-       * so we put that URL inside the images array.
-       */
-      images: formData.image.trim()
-        ? [formData.image.trim()]
-        : [],
+      images:
+        formData.image.trim()
+          ? [formData.image.trim()]
+          : [],
 
       description:
         formData.description.trim(),
@@ -262,8 +279,12 @@ function VehicleForm({ vehicle, onClose }) {
       if (isEdit) {
         await dispatch(
           updateVehicle({
-            id: vehicle.id ?? vehicle._id,
-            vehicleData: data,
+            id:
+              vehicle.id ??
+              vehicle._id,
+
+            vehicleData:
+              data,
           })
         ).unwrap()
 
@@ -336,7 +357,42 @@ function VehicleForm({ vehicle, onClose }) {
           onSubmit={handleSubmit}
           className="p-6 space-y-5"
         >
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+            {/* NUMBER PLATE */}
+
+            <div>
+              <label className="label">
+                Number Plate
+              </label>
+
+              <input
+                type="text"
+                name="registrationNumber"
+                value={
+                  formData.registrationNumber
+                }
+                onChange={handleChange}
+                className={`input ${
+                  errors.registrationNumber
+                    ? 'border-danger'
+                    : ''
+                }`}
+                placeholder="KDA 123A"
+                maxLength="20"
+              />
+
+              {errors.registrationNumber && (
+                <p className="text-danger text-sm mt-1">
+                  {errors.registrationNumber}
+                </p>
+              )}
+
+              <p className="text-xs text-slate-500 mt-1">
+                Enter the vehicle registration number.
+              </p>
+            </div>
 
             {/* MAKE */}
 
@@ -405,16 +461,16 @@ function VehicleForm({ vehicle, onClose }) {
                 onChange={handleChange}
                 className="input capitalize"
               >
-                {Object.values(VEHICLE_TYPES).map(
-                  (type) => (
-                    <option
-                      key={type}
-                      value={type}
-                    >
-                      {type}
-                    </option>
-                  )
-                )}
+                {Object.values(
+                  VEHICLE_TYPES
+                ).map((type) => (
+                  <option
+                    key={type}
+                    value={type}
+                  >
+                    {type}
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -432,7 +488,9 @@ function VehicleForm({ vehicle, onClose }) {
                 onChange={handleChange}
                 className="input"
                 min="1900"
-                max={new Date().getFullYear() + 1}
+                max={
+                  new Date().getFullYear() + 1
+                }
               />
             </div>
 
@@ -446,7 +504,9 @@ function VehicleForm({ vehicle, onClose }) {
               <input
                 type="number"
                 name="dailyRentalRate"
-                value={formData.dailyRentalRate}
+                value={
+                  formData.dailyRentalRate
+                }
                 onChange={handleChange}
                 className={`input ${
                   errors.dailyRentalRate
@@ -474,7 +534,9 @@ function VehicleForm({ vehicle, onClose }) {
               <input
                 type="number"
                 name="seatingCapacity"
-                value={formData.seatingCapacity}
+                value={
+                  formData.seatingCapacity
+                }
                 onChange={handleChange}
                 className="input"
                 min="1"
@@ -490,7 +552,9 @@ function VehicleForm({ vehicle, onClose }) {
 
               <select
                 name="transmission"
-                value={formData.transmission}
+                value={
+                  formData.transmission
+                }
                 onChange={handleChange}
                 className="input capitalize"
               >

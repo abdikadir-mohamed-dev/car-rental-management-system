@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react'
 import { Search, Download } from 'lucide-react'
 import axios from 'axios'
 import { setAuthToken } from '../../services/authService'
+import { VITE_API_URL } from '../../utils/constants'
 
-const API_URL = import.meta.env.VITE_API_URL
+const API_URL = VITE_API_URL
 
 const reportService = axios.create({
   baseURL: `${API_URL}/api/reports`,
@@ -14,69 +15,71 @@ const reportService = axios.create({
 
 setAuthToken(localStorage.getItem('token'), reportService)
 
-
 function StaffReports() {
-
   const [reports, setReports] = useState([])
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-
 
   // ==========================================================
   // LOAD REPORTS
   // ==========================================================
 
   useEffect(() => {
-
     const fetchReports = async () => {
-
       try {
-
         setLoading(true)
         setError('')
 
         const response = await reportService.get('/')
 
-        setReports(response.data)
+        // Backend may return:
+        // - an array directly
+        // - { reports: [...] }
+        // - { data: [...] }
+        const data = response.data
 
+        if (Array.isArray(data)) {
+          setReports(data)
+        } else if (Array.isArray(data?.reports)) {
+          setReports(data.reports)
+        } else if (Array.isArray(data?.data)) {
+          setReports(data.data)
+        } else {
+          setReports([])
+        }
       } catch (err) {
-
         console.error('Failed to load reports:', err)
 
         setError(
           err.response?.data?.message ||
+          err.response?.data?.error ||
           'Failed to load reports'
         )
 
+        setReports([])
       } finally {
-
         setLoading(false)
-
       }
     }
 
     fetchReports()
-
   }, [])
-
 
   // ==========================================================
   // SEARCH
   // ==========================================================
 
-  const filtered = reports.filter(report =>
+  const filtered = reports.filter((report) =>
     report.title?.toLowerCase().includes(search.toLowerCase()) ||
     report.type?.toLowerCase().includes(search.toLowerCase())
   )
-
 
   // ==========================================================
   // DOWNLOAD REPORT
   // ==========================================================
 
   const handleDownload = (report) => {
-
     const content = JSON.stringify(
       report.data || report,
       null,
@@ -93,7 +96,7 @@ function StaffReports() {
     const link = document.createElement('a')
 
     link.href = url
-    link.download = `${report._id}-${report.title}.json`
+    link.download = `${report._id || report.id}-${report.title || 'report'}.json`
 
     document.body.appendChild(link)
 
@@ -104,13 +107,11 @@ function StaffReports() {
     URL.revokeObjectURL(url)
   }
 
-
   // ==========================================================
   // LOADING
   // ==========================================================
 
   if (loading) {
-
     return (
       <div className="flex items-center justify-center py-12">
         <p className="text-slate-500">
@@ -118,9 +119,7 @@ function StaffReports() {
         </p>
       </div>
     )
-
   }
-
 
   // ==========================================================
   // PAGE
@@ -145,7 +144,6 @@ function StaffReports() {
 
       </div>
 
-
       {/* ERROR */}
 
       {error && (
@@ -153,7 +151,6 @@ function StaffReports() {
           {error}
         </div>
       )}
-
 
       {/* SEARCH */}
 
@@ -174,7 +171,6 @@ function StaffReports() {
         </div>
 
       </div>
-
 
       {/* TABLE */}
 
@@ -214,30 +210,29 @@ function StaffReports() {
 
           </thead>
 
-
           <tbody>
 
             {filtered.map((report) => (
 
               <tr
-                key={report.id}
+                key={report.id || report._id}
                 className="border-b border-slate-100 hover:bg-slate-50"
               >
 
                 <td className="py-3 px-4 text-slate-900">
-                  #{report._id}
+                  #{report._id || report.id || 'N/A'}
                 </td>
 
                 <td className="py-3 px-4 text-slate-600 font-medium">
-                  {report.title}
+                  {report.title || 'Untitled Report'}
                 </td>
 
                 <td className="py-3 px-4 text-slate-600">
-                  {report.type}
+                  {report.type || 'N/A'}
                 </td>
 
                 <td className="py-3 px-4 text-slate-600">
-                  {report.date}
+                  {report.date || report.created_at || 'N/A'}
                 </td>
 
                 <td className="py-3 px-4">
@@ -249,7 +244,7 @@ function StaffReports() {
                         : 'badge-warning'
                     }`}
                   >
-                    {report.status}
+                    {report.status || 'pending'}
                   </span>
 
                 </td>
@@ -280,7 +275,6 @@ function StaffReports() {
           </tbody>
 
         </table>
-
 
         {filtered.length === 0 && (
 
