@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Search, CheckCircle, XCircle } from 'lucide-react'
+import { Search } from 'lucide-react'
 
 const MOCK_ACTIVE = [
   { _id: 'BKG-1020', customer: 'Mary Wanjiku', vehicle: 'Volkswagen Golf', dropoffDate: '2026-08-20', dropoffLocation: 'Lavington', status: 'active' },

@@ -1,8 +1,7 @@
 import { useState } from 'react'
-import { Calendar, Clock } from 'lucide-react'
-import { formatDate } from '../../utils/formatDate'
+import { Calendar } from 'lucide-react'
 
-function AvailabilityCalendar({ vehicleId, selectedDates, onSelect, unavailableDates = [] }) {
+function AvailabilityCalendar({ selectedDates, onSelect, unavailableDates = [] }) {
   const [currentMonth, setCurrentMonth] = useState(new Date())
 
   const daysInMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate()

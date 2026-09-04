@@ -172,15 +172,6 @@ function PaymentManagement() {
   }
 
 
-  const getCustomerEmail = (payment) => {
-    return (
-      payment?.user?.email ||
-      payment?.customer?.email ||
-      'N/A'
-    )
-  }
-
-
   const getCustomerPhone = (payment) => {
     return (
       payment?.user?.phone ||

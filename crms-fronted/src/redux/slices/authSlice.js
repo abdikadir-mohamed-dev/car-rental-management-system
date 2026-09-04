@@ -51,7 +51,7 @@ export const initializeAuth = createAsyncThunk(
     try {
       const response = await getProfile()
       return response.data.user || response.data
-    } catch (error) {
+    } catch {
       return rejectWithValue(null)
     }
   }

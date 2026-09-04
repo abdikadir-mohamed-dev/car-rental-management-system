@@ -1,4 +1,4 @@
-import { Car, Calendar, MapPin, Users, Star, FileText, CheckCircle } from 'lucide-react'
+import { Car, Calendar, MapPin, Star, FileText, CheckCircle } from 'lucide-react'
 import { formatCurrency } from '../../utils/formatCurrency'
 import { formatDate as formatDateUtil } from '../../utils/formatDate'
 import StatusBadge from '../common/StatusBadge'

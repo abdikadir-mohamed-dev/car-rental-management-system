@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Search, MapPin, Calendar, SlidersHorizontal } from 'lucide-react'
+import { Search, MapPin, Calendar } from 'lucide-react'
 import { VEHICLE_TYPES } from '../../utils/constants'
 
 function VehicleSearch({ onSearch, compact = false }) {
@@ -138,7 +138,7 @@ function VehicleSearch({ onSearch, compact = false }) {
           <label className="label">Category</label>
           <select name="category" value={filters.category} onChange={handleChange} className="input">
             <option value="">All Categories</option>
-            {Object.entries(VEHICLE_TYPES).map(([key, value]) => (
+            {Object.entries(VEHICLE_TYPES).map(([, value]) => (
               <option key={value} value={value}>{value}</option>
             ))}
           </select>

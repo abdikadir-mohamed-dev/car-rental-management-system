@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { BarChart3, Download } from 'lucide-react'
+import { Download } from 'lucide-react'
 import { getReports } from '../../services/adminService'
 
 function Reports() {
@@ -42,7 +42,6 @@ function Reports() {
 
   const revenue = reports?.revenue || { labels: [], values: [] }
   const bookings = reports?.bookings || { labels: [], values: [] }
-  const vehicles = reports?.vehicles || { labels: [], values: [] }
   const fleet = reports?.fleetUtilization || {}
 
   const maxRevenue = Math.max(...(revenue.values || [1]))

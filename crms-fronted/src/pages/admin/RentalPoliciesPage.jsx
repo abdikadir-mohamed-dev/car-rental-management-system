@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import toast from 'react-hot-toast'
-import { FileText, Clock, DollarSign, User, CalendarDays, Shield } from 'lucide-react'
+import { Clock, User, CalendarDays, Shield } from 'lucide-react'
 import { getPolicies, updatePolicies } from '../../services/adminService'
 
 function RentalPoliciesPage() {

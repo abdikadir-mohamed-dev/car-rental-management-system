@@ -149,7 +149,7 @@ function Sidebar({ isOpen, onClose, role }) {
             className={({ isActive }) =>
               `sidebar-link ${isActive ? 'sidebar-link-active' : ''}`
             }
-            onClick={(e) => {
+            onClick={() => {
               handleLogout()
             }}
           >

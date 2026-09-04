@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Search, Mail, Phone } from 'lucide-react'
+import { Search } from 'lucide-react'
 import { getStaffCustomers } from '../../services/staffService'
 
 function CustomerManagement() {

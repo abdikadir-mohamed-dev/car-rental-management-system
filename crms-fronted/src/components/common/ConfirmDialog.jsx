@@ -1,6 +1,3 @@
-import { useState } from 'react'
-import toast from 'react-hot-toast'
-
 function ConfirmDialog({ isOpen, title, message, onConfirm, onCancel, confirmText = 'Yes', cancelText = 'Cancel' }) {
   if (!isOpen) return null
 

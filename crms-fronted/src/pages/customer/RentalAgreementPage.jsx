@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom'
+import { useParams, Link, useSearchParams } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { fetchBooking } from '../../redux/slices/bookingSlice'
 import {
@@ -22,7 +22,6 @@ import { getPublicPolicies } from '../../services/adminService'
 
 function RentalAgreementPage() {
   const { id } = useParams()
-  const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const showConfirmation = searchParams.get('confirmation') === 'true'
   const dispatch = useDispatch()

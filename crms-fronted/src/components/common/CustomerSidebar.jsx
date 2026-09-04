@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { logoutThunk as logout } from '../../redux/slices/authSlice'
 import { getUnreadCount } from '../../services/notificationService'
-import { LayoutDashboard, Car, Calendar, Heart, CreditCard, Bell, User, Settings, HelpCircle, FileText, LogOut, Menu, X } from 'lucide-react'
+import { LayoutDashboard, Car, Calendar, Heart, CreditCard, Bell, User, Settings, HelpCircle, FileText, LogOut, X } from 'lucide-react'
 
 const navItems = [
   { to: '/customer', icon: 'LayoutDashboard', label: 'Dashboard', end: true },

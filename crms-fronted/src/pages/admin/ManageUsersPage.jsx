@@ -278,7 +278,7 @@ function ManageUsersPage() {
       )
 
       toast.success('Temporary password copied')
-    } catch (err) {
+    } catch {
       toast.error('Could not copy password')
     }
   }

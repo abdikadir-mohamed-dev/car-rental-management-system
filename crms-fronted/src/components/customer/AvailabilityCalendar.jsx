@@ -3,7 +3,7 @@ import { getBookings } from '../../services/bookingService'
 import { mapBooking } from '../../utils/apiMappers'
 import Loader from '../../components/common/Loader'
 
-function AvailabilityCalendar({ vehicleId, pickupDate, returnDate, onSelectRange }) {
+function AvailabilityCalendar({ vehicleId, pickupDate, returnDate }) {
   const [bookings, setBookings] = useState([])
   const [loading, setLoading] = useState(true)
 
@@ -13,7 +13,7 @@ function AvailabilityCalendar({ vehicleId, pickupDate, returnDate, onSelectRange
         setLoading(true)
         const data = await getBookings()
         setBookings((data || []).map(mapBooking))
-      } catch (err) {
+      } catch {
         setBookings([])
       } finally {
         setLoading(false)

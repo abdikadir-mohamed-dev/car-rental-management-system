@@ -9,7 +9,6 @@ import { mapVehicle } from '../../utils/apiMappers'
 
 function VehicleListingPage() {
   const [searchParams] = useSearchParams()
-  const [showFilters, setShowFilters] = useState(false)
   const [search, setSearch] = useState(searchParams.get('search') || '')
   const [sortBy, setSortBy] = useState('popular')
   const [pickupDate, setPickupDate] = useState(searchParams.get('pickup') || '')

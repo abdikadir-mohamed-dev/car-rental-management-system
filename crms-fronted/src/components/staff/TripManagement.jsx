@@ -39,7 +39,7 @@ function TripManagement() {
       .catch(() => toast.error('Failed to update status'))
   }
 
-  const handleReportIssue = (id) => {
+  const handleReportIssue = () => {
     if (!issueNote.trim()) {
       toast.error('Please enter an issue description')
       return

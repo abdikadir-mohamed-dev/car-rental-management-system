@@ -12,7 +12,7 @@ function CustomerPoliciesPage() {
         setLoading(true)
         const data = await getPublicPolicies()
         setPolicies(data)
-      } catch (err) {
+      } catch {
         toast.error('Failed to load policies')
       } finally {
         setLoading(false)

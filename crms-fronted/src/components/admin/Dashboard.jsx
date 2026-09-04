@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Users, Car, Calendar, DollarSign, TrendingUp, Clock, UserCheck } from 'lucide-react'
 import { formatCurrencyKES } from '../../utils/formatCurrency'
-import { BOOKING_STATUS } from '../../utils/constants'
 import { getDashboardStats } from '../../services/adminService'
 
 function Dashboard() {

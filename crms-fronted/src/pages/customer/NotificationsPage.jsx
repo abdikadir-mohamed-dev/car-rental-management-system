@@ -30,7 +30,7 @@ function NotificationsPage() {
     try {
       await markAsRead(id)
       setNotifications(notifications.map(n => n.id === id ? { ...n, read: true } : n))
-    } catch (err) {
+    } catch {
       // ignore
     }
   }
@@ -39,7 +39,7 @@ function NotificationsPage() {
     try {
       await markAllAsRead()
       setNotifications(notifications.map(n => ({ ...n, read: true })))
-    } catch (err) {
+    } catch {
       // ignore
     }
   }

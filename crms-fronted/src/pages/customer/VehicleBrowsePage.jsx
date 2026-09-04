@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { Heart, Star, Users, Gauge, Fuel, Calendar } from "lucide-react";
+import { Calendar } from "lucide-react";
 import VehicleCard from "../../components/vehicles/VehicleCard";
 import VehicleCardSkeleton from "../../components/vehicles/VehicleCardSkeleton";
 import { getVehicles } from "../../services/vehicleService";

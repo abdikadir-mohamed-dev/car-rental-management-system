@@ -1,4 +1,4 @@
-import { Shield, DollarSign, Clock, Users, Car, Award } from 'lucide-react'
+import { Shield, DollarSign, Clock, Users, Car } from 'lucide-react'
 
 function AboutPage() {
   return (
