@@ -23,6 +23,7 @@ import {
 import { mapVehicle } from '../../utils/apiMappers'
 import toast from 'react-hot-toast'
 import AvailabilityCalendar from '../../components/customer/AvailabilityCalendar'
+import AvailabilityBadge from '../../components/vehicles/AvailabilityBadge'
 
 function VehicleDetailsPage() {
   const { id } = useParams()
@@ -297,9 +298,13 @@ function VehicleDetailsPage() {
             Back to Browse Cars
           </Link>
 
-          <h1 className="text-3xl font-bold">
-            {vehicle.name}
-          </h1>
+          <div className="flex items-center gap-3 flex-wrap">
+            <h1 className="text-3xl font-bold">
+              {vehicle.name}
+            </h1>
+
+            <AvailabilityBadge vehicle={vehicle} />
+          </div>
 
           <p className="text-slate-300">
             {vehicle.brand} · {vehicle.category} · {vehicle.location}

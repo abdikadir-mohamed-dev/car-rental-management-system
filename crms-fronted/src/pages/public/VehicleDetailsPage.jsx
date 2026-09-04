@@ -5,6 +5,7 @@ import { getVehicle } from '../../services/vehicleService'
 import { mapVehicle } from '../../utils/apiMappers'
 import toast from 'react-hot-toast'
 import { useSelector } from 'react-redux'
+import AvailabilityBadge from '../../components/vehicles/AvailabilityBadge'
 
 function VehicleDetailsPage() {
   const { id } = useParams()
@@ -67,7 +68,10 @@ function VehicleDetailsPage() {
             <ArrowLeft className="w-4 h-4" />
             Back to Browse Cars
           </Link>
-          <h1 className="text-3xl font-bold">{vehicle.name}</h1>
+          <div className="flex items-center gap-3 flex-wrap">
+            <h1 className="text-3xl font-bold">{vehicle.name}</h1>
+            <AvailabilityBadge vehicle={vehicle} />
+          </div>
           <p className="text-slate-300">{vehicle.brand} · {vehicle.category} · {vehicle.location}</p>
         </div>
       </section>

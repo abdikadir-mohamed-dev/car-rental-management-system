@@ -10,6 +10,7 @@ import {
 import {useSelector } from 'react-redux'
 
 import toast from 'react-hot-toast'
+import AvailabilityBadge from './AvailabilityBadge'
 
 function VehicleCard({ vehicle, to }) {
   const [liked, setLiked] = useState(false)
@@ -147,6 +148,9 @@ function VehicleCard({ vehicle, to }) {
             {vehicle.brand}
           </p>
         </div>
+
+        {/* AVAILABILITY */}
+        <AvailabilityBadge vehicle={vehicle} />
 
         {/* RATING */}
         <div className="flex items-center gap-1">
