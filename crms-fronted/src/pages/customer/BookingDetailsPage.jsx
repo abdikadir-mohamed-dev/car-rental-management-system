@@ -268,10 +268,12 @@ function BookingDetailsPage() {
                 <FileText className="w-4 h-4" />
                 View Agreement
               </Link>
-              <button className="btn-secondary w-full flex items-center justify-center gap-2" onClick={() => window.print()}>
-                <Printer className="w-4 h-4" />
-                Print Receipt
-              </button>
+              {currentBooking.paymentStatus === PAYMENT_STATUS.COMPLETED && (
+                <button className="btn-secondary w-full flex items-center justify-center gap-2" onClick={() => window.print()}>
+                  <Printer className="w-4 h-4" />
+                  Print Receipt
+                </button>
+              )}
             </div>
           </div>
         </div>

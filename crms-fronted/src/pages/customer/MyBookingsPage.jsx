@@ -740,15 +740,17 @@ function MyBookingsPage() {
                   View Agreement
                 </Link>
 
-                <button
-                  className="btn-secondary w-full flex items-center justify-center gap-2"
-                  onClick={() =>
-                    window.print()
-                  }
-                >
-                  <Printer className="w-4 h-4" />
-                  Print Receipt
-                </button>
+                {selectedBooking.paymentStatus === 'completed' && (
+                  <button
+                    className="btn-secondary w-full flex items-center justify-center gap-2"
+                    onClick={() =>
+                      window.print()
+                    }
+                  >
+                    <Printer className="w-4 h-4" />
+                    Print Receipt
+                  </button>
+                )}
 
               </div>
 
