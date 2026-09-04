@@ -1077,11 +1077,28 @@ def cancel_booking(booking_id):
     # ========================================================
     # REFUND
     # ========================================================
+    #
+    # If the customer already paid (a completed payment exists
+    # for this booking), the amount above the cancellation fee
+    # is refunded: mark that payment 'refunded'. Pending/failed
+    # payments are left alone — nothing was collected, so there
+    # is nothing to refund.
+    # ========================================================
 
     refund_amount = (
         booking.total_amount
         - cancellation_fee
     )
+
+    paid_payment = (
+        Payment.query
+        .filter_by(booking_id=booking.id, status='completed')
+        .order_by(Payment.created_at.desc())
+        .first()
+    )
+
+    if paid_payment:
+        paid_payment.status = 'refunded'
 
     # ========================================================
     # CANCELLATION REASON
@@ -1107,6 +1124,21 @@ def cancel_booking(booking_id):
     )
 
     db.session.commit()
+
+    if paid_payment:
+        create_notification(
+            booking.user_id,
+            'Refund Processed',
+            (
+                f'A refund of KES {refund_amount:.0f} for booking '
+                f'#{booking.id} has been processed'
+                + (
+                    f' (KES {cancellation_fee:.0f} cancellation fee applied).'
+                    if cancellation_fee
+                    else '.'
+                )
+            )
+        )
 
     # ========================================================
     # NOTIFY CUSTOMER
