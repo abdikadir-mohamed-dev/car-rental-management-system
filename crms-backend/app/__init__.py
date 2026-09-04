@@ -73,6 +73,7 @@ def create_app():
         origins=[
             "http://localhost:5173",
             "http://127.0.0.1:5173",
+            "https://car-rental-management-system-six.vercel.app"
         ],
         methods=[
             "GET",
