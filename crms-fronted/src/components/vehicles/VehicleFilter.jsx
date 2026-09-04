@@ -14,14 +14,8 @@ const locations = [
   'Nairobi West',
 ]
 
-function VehicleFilter({ filters, onChange, onReset, sortBy, onSortChange }) {
-  const [isOpen, setIsOpen] = useState(false)
-
-  const handleChange = (name, value) => {
-    onChange({ ...filters, [name]: value })
-  }
-
-  const FilterContent = () => (
+function FilterFields({ filters, onFieldChange, onReset, onSortChange }) {
+  return (
     <div className="space-y-5">
       <div>
         <h3 className="font-semibold text-slate-900 mb-3">Filters</h3>
@@ -32,7 +26,7 @@ function VehicleFilter({ filters, onChange, onReset, sortBy, onSortChange }) {
         <label className="block text-sm font-medium text-slate-700 mb-2">Location</label>
         <select
           value={filters.location || ''}
-          onChange={(e) => handleChange('location', e.target.value)}
+          onChange={(e) => onFieldChange('location', e.target.value)}
           className="input"
         >
           <option value="">All Locations</option>
@@ -46,7 +40,7 @@ function VehicleFilter({ filters, onChange, onReset, sortBy, onSortChange }) {
         <label className="block text-sm font-medium text-slate-700 mb-2">Category</label>
         <select
           value={filters.category || ''}
-          onChange={(e) => handleChange('category', e.target.value)}
+          onChange={(e) => onFieldChange('category', e.target.value)}
           className="input"
         >
           <option value="">All Categories</option>
@@ -63,14 +57,14 @@ function VehicleFilter({ filters, onChange, onReset, sortBy, onSortChange }) {
             type="number"
             placeholder="Min"
             value={filters.minPrice || ''}
-            onChange={(e) => handleChange('minPrice', e.target.value)}
+            onChange={(e) => onFieldChange('minPrice', e.target.value)}
             className="input"
           />
           <input
             type="number"
             placeholder="Max"
             value={filters.maxPrice || ''}
-            onChange={(e) => handleChange('maxPrice', e.target.value)}
+            onChange={(e) => onFieldChange('maxPrice', e.target.value)}
             className="input"
           />
         </div>
@@ -80,7 +74,7 @@ function VehicleFilter({ filters, onChange, onReset, sortBy, onSortChange }) {
         <label className="block text-sm font-medium text-slate-700 mb-2">Transmission</label>
         <select
           value={filters.transmission || ''}
-          onChange={(e) => handleChange('transmission', e.target.value)}
+          onChange={(e) => onFieldChange('transmission', e.target.value)}
           className="input"
         >
           <option value="">All</option>
@@ -94,7 +88,7 @@ function VehicleFilter({ filters, onChange, onReset, sortBy, onSortChange }) {
         <label className="block text-sm font-medium text-slate-700 mb-2">Fuel Type</label>
         <select
           value={filters.fuelType || ''}
-          onChange={(e) => handleChange('fuelType', e.target.value)}
+          onChange={(e) => onFieldChange('fuelType', e.target.value)}
           className="input"
         >
           <option value="">All</option>
@@ -105,6 +99,14 @@ function VehicleFilter({ filters, onChange, onReset, sortBy, onSortChange }) {
       </div>
     </div>
   )
+}
+
+function VehicleFilter({ filters, onChange, onReset, onSortChange }) {
+  const [isOpen, setIsOpen] = useState(false)
+
+  const handleChange = (name, value) => {
+    onChange({ ...filters, [name]: value })
+  }
 
   return (
     <>
@@ -120,7 +122,7 @@ function VehicleFilter({ filters, onChange, onReset, sortBy, onSortChange }) {
 
       <div className="hidden lg:block">
         <div className="bg-white rounded-xl border border-slate-200 p-5">
-          <FilterContent />
+          <FilterFields filters={filters} onFieldChange={handleChange} onReset={onReset} onSortChange={onSortChange} />
         </div>
       </div>
 
@@ -135,7 +137,7 @@ function VehicleFilter({ filters, onChange, onReset, sortBy, onSortChange }) {
               </button>
             </div>
             <div className="p-4">
-              <FilterContent />
+              <FilterFields filters={filters} onFieldChange={handleChange} onReset={onReset} onSortChange={onSortChange} />
             </div>
           </div>
         </div>
