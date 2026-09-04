@@ -12,6 +12,8 @@ import { getVehicle } from '../../services/vehicleService'
 import { createBooking } from '../../services/bookingService'
 import { createPayment } from '../../services/paymentService'
 import { mapVehicle } from '../../utils/apiMappers'
+import LocationMap from '../../components/common/LocationMap'
+import { geocodeLocation } from '../../utils/geocode'
 
 import toast from 'react-hot-toast'
 
@@ -856,6 +858,24 @@ if (paymentMethod === 'cash') {
                     />
 
                   </div>
+
+                  {(pickupLocation.trim() || dropoffLocation.trim()) && (
+                    <LocationMap
+                      markers={
+                        pickupLocation.trim() && dropoffLocation.trim()
+                          ? [
+                              { position: geocodeLocation(pickupLocation), label: `Pickup: ${pickupLocation}` },
+                              { position: geocodeLocation(dropoffLocation), label: `Drop-off: ${dropoffLocation}` },
+                            ]
+                          : [
+                              {
+                                position: geocodeLocation(pickupLocation || dropoffLocation),
+                                label: pickupLocation || dropoffLocation,
+                              },
+                            ]
+                      }
+                    />
+                  )}
 
                 </div>
 

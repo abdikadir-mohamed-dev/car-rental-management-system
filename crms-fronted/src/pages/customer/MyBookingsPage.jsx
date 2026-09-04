@@ -20,6 +20,8 @@ import {
 
 import { mapBooking } from '../../utils/apiMappers'
 import PaymentRetryModal from '../../components/payment/PaymentRetryModal'
+import LocationMap from '../../components/common/LocationMap'
+import { geocodeLocation } from '../../utils/geocode'
 import toast from 'react-hot-toast'
 
 function MyBookingsPage() {
@@ -640,6 +642,26 @@ function MyBookingsPage() {
                 </div>
 
               </div>
+
+              {(selectedBooking.pickupLocation || returnLocation) && (
+                <div className="mt-4">
+                  <LocationMap
+                    markers={
+                      selectedBooking.pickupLocation && returnLocation
+                        ? [
+                            { position: geocodeLocation(selectedBooking.pickupLocation), label: `Pickup: ${selectedBooking.pickupLocation}` },
+                            { position: geocodeLocation(returnLocation), label: `Drop-off: ${returnLocation}` },
+                          ]
+                        : [
+                            {
+                              position: geocodeLocation(selectedBooking.pickupLocation || returnLocation),
+                              label: selectedBooking.pickupLocation || returnLocation,
+                            },
+                          ]
+                    }
+                  />
+                </div>
+              )}
 
             </div>
 

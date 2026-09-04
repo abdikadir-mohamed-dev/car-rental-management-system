@@ -6,6 +6,8 @@ import { mapVehicle } from '../../utils/apiMappers'
 import toast from 'react-hot-toast'
 import { useSelector } from 'react-redux'
 import AvailabilityBadge from '../../components/vehicles/AvailabilityBadge'
+import LocationMap from '../../components/common/LocationMap'
+import { geocodeLocation } from '../../utils/geocode'
 
 function VehicleDetailsPage() {
   const { id } = useParams()
@@ -114,6 +116,13 @@ function VehicleDetailsPage() {
                     </div>
                   ))}
                 </div>
+              </div>
+
+              <div>
+                <h3 className="text-lg font-semibold text-slate-900 mb-4">Pickup Location</h3>
+                <LocationMap
+                  markers={[{ position: geocodeLocation(vehicle.location), label: vehicle.location }]}
+                />
               </div>
 
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

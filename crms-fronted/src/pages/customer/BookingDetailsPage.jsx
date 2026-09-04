@@ -23,6 +23,8 @@ import StatusBadge from '../../components/common/StatusBadge'
 import Modal from '../../components/common/Modal'
 import Loader from '../../components/common/Loader'
 import PaymentRetryModal from '../../components/payment/PaymentRetryModal'
+import LocationMap from '../../components/common/LocationMap'
+import { geocodeLocation } from '../../utils/geocode'
 import toast from 'react-hot-toast'
 
 function BookingDetailsPage() {
@@ -188,6 +190,25 @@ function BookingDetailsPage() {
                 <p className="font-medium text-slate-900">{currentBooking.dropoffLocation || '-'}</p>
               </div>
             </div>
+            {(currentBooking.pickupLocation || currentBooking.dropoffLocation) && (
+              <div className="mt-4">
+                <LocationMap
+                  markers={
+                    currentBooking.pickupLocation && currentBooking.dropoffLocation
+                      ? [
+                          { position: geocodeLocation(currentBooking.pickupLocation), label: `Pickup: ${currentBooking.pickupLocation}` },
+                          { position: geocodeLocation(currentBooking.dropoffLocation), label: `Drop-off: ${currentBooking.dropoffLocation}` },
+                        ]
+                      : [
+                          {
+                            position: geocodeLocation(currentBooking.pickupLocation || currentBooking.dropoffLocation),
+                            label: currentBooking.pickupLocation || currentBooking.dropoffLocation,
+                          },
+                        ]
+                  }
+                />
+              </div>
+            )}
           </div>
 
           {currentBooking.specialRequests && (

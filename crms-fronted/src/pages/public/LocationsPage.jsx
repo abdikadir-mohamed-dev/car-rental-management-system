@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { MapPin } from "lucide-react";
 import { getVehicles } from "../../services/vehicleService";
 import { mapVehicle } from "../../utils/apiMappers";
+import LocationMap from "../../components/common/LocationMap";
+import { geocodeLocation } from "../../utils/geocode";
 
 const fallbackLocations = [
   "Nairobi CBD",
@@ -63,7 +65,18 @@ function LocationsPage() {
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <>
+              <div className="mb-8">
+                <LocationMap
+                  height="360px"
+                  markers={locations.map((location) => {
+                    const name =
+                      typeof location === "string" ? location : location.name;
+                    return { position: geocodeLocation(name), label: name };
+                  })}
+                />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {locations.map((location) => {
                 const name =
                   typeof location === "string" ? location : location.name;
@@ -86,7 +99,8 @@ function LocationsPage() {
                   </div>
                 );
               })}
-            </div>
+              </div>
+            </>
           )}
         </div>
       </section>
