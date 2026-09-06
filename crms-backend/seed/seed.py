@@ -75,12 +75,12 @@ with app.app_context():
 
     # Create Vehicles
     vehicles = [
-        Vehicle(make='Toyota', model='Prado', year=2022, registration_number='KDA 221B', vehicle_type='SUV', status='available', daily_rental_rate=80, location='Nairobi CBD', available=True, is_available=True),
-        Vehicle(make='Subaru', model='Forester', year=2021, registration_number='KDB 774K', vehicle_type='SUV', status='rented', daily_rental_rate=70, location='Westlands', available=False, is_available=False),
-        Vehicle(make='Mazda', model='Demio', year=2020, registration_number='KCF 108T', vehicle_type='Hatchback', status='rented', daily_rental_rate=50, location='Kilimani', available=False, is_available=False),
-        Vehicle(make='Honda', model='Accord', year=2023, registration_number='KCE 552M', vehicle_type='Sedan', status='available', daily_rental_rate=60, location='Karen', available=True, is_available=True),
-        Vehicle(make='Nissan', model='X-Trail', year=2019, registration_number='KDC 340L', vehicle_type='SUV', status='maintenance', daily_rental_rate=65, location='Nairobi CBD', available=False, is_available=False),
-        Vehicle(make='Mercedes', model='C-Class', year=2022, registration_number='KDD 901R', vehicle_type='Luxury', status='unavailable', daily_rental_rate=120, location='Kilimani', available=False, is_available=False),
+        Vehicle(make='Toyota', model='Prado', year=2022, registration_number='KDA 221B', vehicle_type='SUV', status='available', daily_rental_rate=80, location='Nairobi CBD', available=True, is_available=True, image='https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=800'),
+        Vehicle(make='Subaru', model='Forester', year=2021, registration_number='KDB 774K', vehicle_type='SUV', status='rented', daily_rental_rate=70, location='Westlands', available=False, is_available=False, image='https://images.unsplash.com/photo-1568844293986-8d0400bd4745?w=800'),
+        Vehicle(make='Mazda', model='Demio', year=2020, registration_number='KCF 108T', vehicle_type='Hatchback', status='rented', daily_rental_rate=50, location='Kilimani', available=False, is_available=False, image='https://images.unsplash.com/photo-1502877338535-766e1452684a?w=800'),
+        Vehicle(make='Honda', model='Accord', year=2023, registration_number='KCE 552M', vehicle_type='Sedan', status='available', daily_rental_rate=60, location='Karen', available=True, is_available=True, image='https://images.unsplash.com/photo-1590362891991-f776e747a588?w=800'),
+        Vehicle(make='Nissan', model='X-Trail', year=2019, registration_number='KDC 340L', vehicle_type='SUV', status='maintenance', daily_rental_rate=65, location='Nairobi CBD', available=False, is_available=False, image='https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?w=800'),
+        Vehicle(make='Mercedes', model='C-Class', year=2022, registration_number='KDD 901R', vehicle_type='Luxury', status='unavailable', daily_rental_rate=120, location='Kilimani', available=False, is_available=False, image='https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?w=800'),
     ]
     for v in vehicles:
         db.session.add(v)
