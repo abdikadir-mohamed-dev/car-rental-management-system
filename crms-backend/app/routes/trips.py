@@ -1,13 +1,13 @@
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required
 from app.extensions import db
 from app.models.trip import Trip
+from app.utils.auth import role_required
 
 bp = Blueprint("trips", __name__, url_prefix="/api/trips")
 
 
 @bp.route("/", methods=["GET"])
-@jwt_required()
+@role_required("admin", "staff")
 def get_trips():
     trips = Trip.query.all()
     result = [t.to_dict() for t in trips]
@@ -15,7 +15,7 @@ def get_trips():
 
 
 @bp.route("/<int:trip_id>/status", methods=["PUT"])
-@jwt_required()
+@role_required("admin", "staff")
 def update_trip_status(trip_id):
     data = request.get_json()
     t = Trip.query.get_or_404(trip_id)
