@@ -18,25 +18,25 @@ def send_email(to_address, subject, body_text):
     over it.
     """
 
-    smtp_host = os.environ.get('SMTP_HOST')
+    smtp_host = os.environ.get("SMTP_HOST")
 
     if not smtp_host:
         print(
-            f'SMTP not configured (SMTP_HOST unset); logging email '
-            f'instead of sending.\nTo: {to_address}\nSubject: {subject}\n\n{body_text}'
+            f"SMTP not configured (SMTP_HOST unset); logging email instead of sending.\n"
+            f"To: {to_address}\nSubject: {subject}"
         )
         return False
 
-    smtp_port = int(os.environ.get('SMTP_PORT', 587))
-    smtp_username = os.environ.get('SMTP_USERNAME')
-    smtp_password = os.environ.get('SMTP_PASSWORD')
-    use_tls = os.environ.get('SMTP_USE_TLS', 'true').lower() != 'false'
-    mail_from = os.environ.get('MAIL_FROM') or smtp_username or 'no-reply@drivego.com'
+    smtp_port = int(os.environ.get("SMTP_PORT", 587))
+    smtp_username = os.environ.get("SMTP_USERNAME")
+    smtp_password = os.environ.get("SMTP_PASSWORD")
+    use_tls = os.environ.get("SMTP_USE_TLS", "true").lower() != "false"
+    mail_from = os.environ.get("MAIL_FROM") or smtp_username or "no-reply@drivego.com"
 
     message = MIMEText(body_text)
-    message['Subject'] = subject
-    message['From'] = mail_from
-    message['To'] = to_address
+    message["Subject"] = subject
+    message["From"] = mail_from
+    message["To"] = to_address
 
     try:
         with smtplib.SMTP(smtp_host, smtp_port, timeout=10) as server:
@@ -47,5 +47,5 @@ def send_email(to_address, subject, body_text):
             server.sendmail(mail_from, [to_address], message.as_string())
         return True
     except Exception as e:
-        print(f'Failed to send email to {to_address}: {e}')
+        print(f"Failed to send email to {to_address}: {e}")
         return False
