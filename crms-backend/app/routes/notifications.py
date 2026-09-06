@@ -1,5 +1,4 @@
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required
 from app.extensions import db
 from app.models.notification import Notification
 from app.utils.auth import token_required
@@ -33,9 +32,16 @@ def get_unread_count():
 
 
 @bp.route("/<int:notification_id>/read", methods=["PUT"])
-@jwt_required()
+@token_required
 def mark_read(notification_id):
+    from flask_jwt_extended import get_jwt_identity
+
     n = Notification.query.get_or_404(notification_id)
+    current_user_id = int(get_jwt_identity())
+
+    if n.user_id != current_user_id:
+        return jsonify({"message": "Forbidden"}), 403
+
     n.read = True
     db.session.commit()
     return jsonify({"message": "Notification marked as read"}), 200
