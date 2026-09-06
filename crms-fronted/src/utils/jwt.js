@@ -3,16 +3,20 @@
 // needs to verify the signature — this is just a cheap client-side
 // check to avoid treating an obviously expired token as valid).
 export const isTokenExpired = (token) => {
-  if (!token) return true
+  if (!token) return true;
 
   try {
-    const base64Payload = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')
-    const payload = JSON.parse(atob(base64Payload))
+    let base64Payload = token
+      .split(".")[1]
+      .replace(/-/g, "+")
+      .replace(/_/g, "/");
+    base64Payload += "=".repeat((4 - (base64Payload.length % 4)) % 4);
+    const payload = JSON.parse(atob(base64Payload));
 
-    if (!payload.exp) return false
+    if (!payload.exp) return false;
 
-    return payload.exp * 1000 < Date.now()
+    return payload.exp * 1000 < Date.now();
   } catch {
-    return true
+    return true;
   }
-}
+};
